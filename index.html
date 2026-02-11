@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -131,11 +134,38 @@
         
         .product-item {
             background: var(--bg-card); padding: 14px 16px;
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; justify-content: space-between; align-items: center; gap: 10px;
         }
         .product-item:hover { background: var(--bg-input); }
         .product-item.in-cart { background: rgba(79, 172, 254, 0.15); }
         .product-item.no-stock { opacity: 0.6; }
+        
+        .product-thumb {
+            width: 40px; height: 40px; border-radius: 6px; object-fit: cover;
+            background: var(--bg-input); cursor: pointer; flex-shrink: 0;
+            border: 1px solid var(--border); display: none;
+        }
+        .show-images .product-thumb { display: block; }
+        .product-thumb-placeholder {
+            width: 40px; height: 40px; border-radius: 6px; background: var(--bg-input);
+            display: none; align-items: center; justify-content: center; font-size: 1em;
+            flex-shrink: 0; border: 1px solid var(--border);
+        }
+        .show-images .product-thumb-placeholder { display: flex; }
+        
+        .img-modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            z-index: 400; align-items: center; justify-content: center; padding: 20px;
+        }
+        .img-modal-overlay.show { display: flex; }
+        .img-modal-overlay img {
+            max-width: 90vw; max-height: 80vh; border-radius: 12px; object-fit: contain;
+        }
+        .img-modal-close {
+            position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2);
+            border: none; color: white; font-size: 1.5em; width: 40px; height: 40px;
+            border-radius: 50%; cursor: pointer;
+        }
         
         .product-info { flex: 1; min-width: 0; }
         .product-name { 
@@ -448,6 +478,7 @@
                 <div class="filter-chip low" data-stock="low">⚠️ Bajo</div>
                 <div class="filter-chip out" data-stock="no">❌ Sin</div>
                 <div class="filter-chip" id="locationBtn" onclick="toggleLocationSearch()">📍 Ubicación</div>
+                <div class="filter-chip" id="photosBtn" onclick="togglePhotos()">📷 Fotos</div>
             </div>
 
             <div class="location-search" id="locationSearch" style="display: none; margin-bottom: 10px;">
@@ -600,6 +631,11 @@
     
     <div class="toast" id="toast"></div>
     
+    <div class="img-modal-overlay" id="imgModal" onclick="closeImgModal()">
+        <button class="img-modal-close" onclick="closeImgModal()">✕</button>
+        <img id="imgModalSrc" src="" alt="Producto">
+    </div>
+    
     <div class="clear-modal-overlay" id="clearModal">
         <div class="clear-modal">
             <div class="clear-modal-title">¿Vaciar el carrito?</div>
@@ -612,11 +648,12 @@
     </div>
     
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxKNkORm0oMVtcODYJC3UNbxwn3_O9tP7_9DS9R35f2d6JZTAn6UBWrYH--Bp0Y_LWV/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxiST8drkv_bXz5n8ZW8ZzeWNotXAb24Z8MCW7FU8KoGoqf0Th10CHBR-9vQI5MbSPb/exec';
         const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
         
         let PRODUCTS = [];
         let UNIQUE_ARTICLES = [];
+        let IMAGES_MAP = {};
         let articlePrices = {};
         let modalCallback = null;
         
@@ -624,7 +661,8 @@
             filtered: [], search: '', searchExact: false, stock: 'all',
             color: '', size: '', location: '', page: 1, pageSize: 50,
             cart: JSON.parse(localStorage.getItem('mikra_cart') || '[]'),
-            orderType: 'pedido'
+            orderType: 'pedido',
+            showImages: false
         };
         
         const $ = id => document.getElementById(id);
@@ -713,6 +751,12 @@
                 
                 if (data.success && data.products && data.products.length > 0) {
                     PRODUCTS = data.products;
+                    
+                    if (data.images) {
+                        IMAGES_MAP = data.images;
+                        localStorage.setItem('mikra_images', JSON.stringify(IMAGES_MAP));
+                    }
+                    
                     localStorage.setItem('mikra_products', JSON.stringify(PRODUCTS));
                     localStorage.setItem('mikra_lastSync', new Date().toISOString());
                     
@@ -735,6 +779,7 @@
                 const cached = localStorage.getItem('mikra_products');
                 if (cached) {
                     PRODUCTS = JSON.parse(cached);
+                    try { IMAGES_MAP = JSON.parse(localStorage.getItem('mikra_images') || '{}'); } catch(e) {}
                     updateUniqueArticles();
                     applyFilters();
                     $('loadingScreen').classList.add('hidden');
@@ -899,7 +944,13 @@
                 if (inCart) stockDisplay += '<div class="stock-remaining">' + p.stock + ' orig</div>';
                 
                 // UBICACION RESTORED IN PRODUCT LIST
+                const imgUrl = getProductImage(p.codigo);
+                const thumbHtml = imgUrl 
+                    ? '<img class="product-thumb" loading="lazy" src="' + imgUrl + '" onclick="showImgModal(\'' + p.codigo + '\')" onerror="this.outerHTML=\'<div class=product-thumb-placeholder>📦</div>\'">'
+                    : '<div class="product-thumb-placeholder">📦</div>';
+                
                 html += '<div class="product-item' + (inCart ? ' in-cart' : '') + (noStock ? ' no-stock' : '') + '">' +
+                    thumbHtml +
                     '<div class="product-info">' +
                     '<div class="product-meta">' + (p.color || '-') + ' • Talle ' + (p.talle || '-') + '</div>' +
                     '<div class="product-sku">SKU: ' + p.codigo + ' | Ubic: ' + (p.ubicacion || '-') + '</div>' +
@@ -908,6 +959,7 @@
             });
             
             $('productList').innerHTML = html;
+            if (state.showImages) $('productList').classList.add('show-images');
             
             if (totalPages > 1) {
                 let h = '<button class="page-btn" onclick="goPage(' + (state.page - 1) + ')"' + (state.page === 1 ? ' disabled' : '') + '>‹</button>';
@@ -920,6 +972,39 @@
         }
         
         function openMikra(codigo) { window.open('https://www.mikra.com.ar/search/?q=' + codigo, '_blank'); }
+        
+        function getProductImage(codigo) {
+            if (!codigo) return '';
+            const url = IMAGES_MAP[codigo] || IMAGES_MAP[String(codigo)] || '';
+            if (!url) return '';
+            // Convertir URL de mlstatic a thumbnail mini (-S → 75x75)
+            // Original: https://http2.mlstatic.com/D_xxx-O.jpg
+            // Mini:     https://http2.mlstatic.com/D_xxx-S.jpg
+            return url.replace(/-O\.jpg$/i, '-S.jpg');
+        }
+        
+        function getProductImageFull(codigo) {
+            if (!codigo) return '';
+            return IMAGES_MAP[codigo] || IMAGES_MAP[String(codigo)] || '';
+        }
+        
+        function showImgModal(codigo) {
+            const url = getProductImageFull(codigo);
+            if (!url) return;
+            $('imgModalSrc').src = url;
+            $('imgModal').classList.add('show');
+        }
+        
+        function closeImgModal() {
+            $('imgModal').classList.remove('show');
+            $('imgModalSrc').src = '';
+        }
+        
+        function togglePhotos() {
+            state.showImages = !state.showImages;
+            $('photosBtn').classList.toggle('active', state.showImages);
+            $('productList').classList.toggle('show-images', state.showImages);
+        }
         
         function goPage(p) {
             const max = Math.ceil(state.filtered.length / state.pageSize);

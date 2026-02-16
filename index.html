@@ -1053,7 +1053,7 @@
             if (idx >= 0) {
                 state.cart[idx].qty += delta;
                 if (state.cart[idx].qty <= 0) { state.cart.splice(idx, 1); }
-                saveCart(); updateBadge();
+                saveCart(); updateBadge(); render();
             }
         }
         function saveCart() { localStorage.setItem('mikra_cart', JSON.stringify(state.cart)); }
@@ -1794,7 +1794,10 @@
                     ? '<img class="product-thumb" loading="lazy" src="' + imgUrl + '" onclick="showImgModal(\'' + p.codigo + '\')" onerror="this.outerHTML=\'<div class=product-thumb-placeholder>📦</div>\'">'
                     : '<div class="product-thumb-placeholder">📦</div>';
                 
-                const skuHtml = settings.showSku ? '<div class="product-sku">SKU: ' + p.codigo + (settings.showUbic && p.ubicacion ? ' | ' + p.ubicacion : '') + '</div>' : '';
+                let skuParts = [];
+                if (settings.showSku) skuParts.push('SKU: ' + p.codigo);
+                if (settings.showUbic && p.ubicacion) skuParts.push('📍 ' + p.ubicacion);
+                const skuHtml = skuParts.length ? '<div class="product-sku">' + skuParts.join(' | ') + '</div>' : '';
                 
                 html += '<div class="product-item' + (inCart ? ' in-cart' : '') + (noStock ? ' no-stock' : '') + '">' +
                     thumbHtml +

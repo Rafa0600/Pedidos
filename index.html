@@ -945,6 +945,28 @@
             </div>
         </div>
     </div>
+    <div class="clear-modal-overlay" id="ticketTypeModal">
+        <div class="clear-modal">
+            <div class="clear-modal-title">🎫 Tipo de Ticket</div>
+            <div class="clear-modal-msg">¿Qué formato querés imprimir?</div>
+            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
+                <button class="clear-modal-btn" style="background:#8b5cf6;color:white;font-size:0.95em;" onclick="closeTicketTypeModal();downloadTicketDetalle()">📋 Detalle (precios y SKU)</button>
+                <button class="clear-modal-btn" style="background:var(--success);color:#1a2744;font-size:0.95em;font-weight:800;" onclick="closeTicketTypeModal();showPreparadosOptions()">📦 Preparados (para armar)</button>
+                <button class="clear-modal-btn no" onclick="closeTicketTypeModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <div class="clear-modal-overlay" id="preparadosOptModal">
+        <div class="clear-modal">
+            <div class="clear-modal-title">📦 Preparados</div>
+            <div class="clear-modal-msg">¿Cómo lo querés?</div>
+            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
+                <button class="clear-modal-btn" style="background:var(--success);color:#1a2744;font-size:0.95em;font-weight:800;" onclick="closePreparadosOpt();downloadTicketPreparados('print')">🖨️ Imprimir</button>
+                <button class="clear-modal-btn" style="background:var(--primary);color:white;font-size:0.95em;font-weight:800;" onclick="closePreparadosOpt();downloadTicketPreparados('pdf')">📤 Compartir / PDF</button>
+                <button class="clear-modal-btn no" onclick="closePreparadosOpt()">Cancelar</button>
+            </div>
+        </div>
+    </div>
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbycz2hrgjQxRCvVKtW0o-HAuMQYTfmiBHSgJPFZTX34PwBpAladxb8ZPpt-Vg09zplx/exec';
         const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
@@ -1938,6 +1960,12 @@
         
         function downloadTicket() {
             if (!state.cart.length || !validateForm()) return;
+            $('ticketTypeModal').classList.add('show');
+        }
+        function closeTicketTypeModal() { $('ticketTypeModal').classList.remove('show'); }
+        
+        function downloadTicketDetalle() {
+            if (!state.cart.length || !validateForm()) return;
             const date = new Date().toLocaleDateString('es-AR');
             const time = new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
             const total = state.cart.reduce((a, p) => a + p.qty, 0);
@@ -1987,6 +2015,125 @@
             const win = window.open('', '_blank'); win.document.write(html); win.document.close(); win.print();
             askClearCart();
         }
+        
+        function downloadTicketPreparados(mode) {
+            if (!state.cart.length) return;
+            const date = new Date().toLocaleDateString('es-AR');
+            const time = new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+            const SO = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
+            
+            function sizeIndex(s) {
+                const u = (s || '').toUpperCase();
+                const n = parseFloat(u);
+                if (!isNaN(n)) return 1000 + n;
+                const i = SO.indexOf(u);
+                return i > -1 ? i : 500;
+            }
+            
+            // Group by article → color → sizes
+            const articles = {};
+            state.cart.forEach(p => {
+                const artName = p.titulo || p.articulo || 'Sin nombre';
+                const color = p.color || 'Sin color';
+                if (!articles[artName]) articles[artName] = {};
+                if (!articles[artName][color]) articles[artName][color] = {};
+                const talle = p.talle || '-';
+                articles[artName][color][talle] = (articles[artName][color][talle] || 0) + p.qty;
+            });
+            
+            const sortedArticles = Object.keys(articles).sort((a, b) => a.localeCompare(b, 'es'));
+            
+            let grandTotal = 0;
+            
+            let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preparados</title>' +
+                '<style>' +
+                '@page{size:70mm auto;margin:0}' +
+                '*{margin:0;padding:0;box-sizing:border-box}' +
+                'body{font-family:"Courier New",Courier,monospace;width:62mm;margin:3mm 4mm;font-size:14px;font-weight:900;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+                '.center{text-align:center}' +
+                '.title{font-size:20px;font-weight:900;letter-spacing:2px;margin:4px 0 2px}' +
+                '.subtitle{font-size:15px;font-weight:900;margin-bottom:2px}' +
+                '.line{border-top:2px dashed #000;margin:6px 0}' +
+                '.line-thick{border-top:3px solid #000;margin:8px 0}' +
+                '.art-name{font-size:14px;font-weight:900;text-transform:uppercase;background:#000;color:#fff;text-align:center;margin:0 -4mm;padding:5px 4mm;word-wrap:break-word;line-height:1.3}' +
+                '.color-block{padding:4px 0}' +
+                '.color-name{font-size:14px;font-weight:900;margin-bottom:3px}' +
+                '.sizes-row{display:flex;gap:0}' +
+                '.size-cell{flex:1;text-align:center;border:2px solid #000;border-radius:3px;margin:0 1px;padding:1px 0}' +
+                '.size-cell .lbl{font-size:10px;font-weight:900;border-bottom:1px solid #000;padding-bottom:1px;margin-bottom:1px}' +
+                '.size-cell .qty{font-size:20px;font-weight:900;line-height:1.2}' +
+                '.size-cell.empty{border-color:#ccc}' +
+                '.size-cell.tot{max-width:30px;border:none;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}' +
+                '.sep{border-top:1px dashed #999;margin:3px 0}' +
+                '.grand{font-size:18px;font-weight:900;display:flex;justify-content:space-between;margin-top:8px;padding-top:4px}' +
+                '</style></head><body>';
+            
+            html += '<div class="center"><div class="title">MIKRA</div></div>';
+            html += '<div class="center subtitle">PREPARADOS</div>';
+            html += '<div style="text-align:center;font-size:12px;font-weight:900">' + date + ' ' + time + '</div>';
+            
+            if (state.orderType === 'pedido') {
+                const cn = $('clientName').value.trim();
+                if (cn) html += '<div style="text-align:center;font-size:13px;font-weight:900;margin-top:3px">' + cn + '</div>';
+            }
+            
+            html += '<div class="line-thick"></div>';
+            
+            sortedArticles.forEach(artName => {
+                const colors = articles[artName];
+                
+                // Collect ALL sizes for this article across all colors
+                const allSizesSet = new Set();
+                Object.values(colors).forEach(sizeMap => {
+                    Object.keys(sizeMap).forEach(s => allSizesSet.add(s));
+                });
+                const allSizes = Array.from(allSizesSet).sort((a, b) => sizeIndex(a) - sizeIndex(b));
+                
+                html += '<div class="art-name">' + artName + '</div>';
+                
+                const sortedColors = Object.keys(colors).sort((a, b) => a.localeCompare(b, 'es'));
+                
+                sortedColors.forEach((color, ci) => {
+                    const sizeMap = colors[color];
+                    
+                    let colorTotal = 0;
+                    Object.values(sizeMap).forEach(q => colorTotal += q);
+                    grandTotal += colorTotal;
+                    
+                    html += '<div class="color-block">';
+                    html += '<div class="color-name">' + color + '</div>';
+                    html += '<div class="sizes-row">';
+                    allSizes.forEach(s => {
+                        if (sizeMap[s]) {
+                            html += '<div class="size-cell"><div class="lbl">' + s + '</div><div class="qty">' + sizeMap[s] + '</div></div>';
+                        } else {
+                            html += '<div class="size-cell empty"></div>';
+                        }
+                    });
+                    html += '<div class="size-cell tot">' + colorTotal + '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                    if (ci < sortedColors.length - 1) html += '<div class="sep"></div>';
+                });
+                
+                html += '<div class="line"></div>';
+            });
+            
+            html += '<div class="line-thick"></div>';
+            html += '<div class="grand"><span>TOTAL:</span><span>' + grandTotal + ' uds</span></div>';
+            html += '</body></html>';
+            
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            if (mode === 'print') {
+                win.print();
+                askClearCart();
+            }
+        }
+        
+        function showPreparadosOptions() { $('preparadosOptModal').classList.add('show'); }
+        function closePreparadosOpt() { $('preparadosOptModal').classList.remove('show'); }
         
         function downloadPreparacion() {
             if (!state.cart.length) return;

@@ -2321,7 +2321,21 @@
     <script>
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('✅ SW registrado'))
+            .then(reg => {
+                console.log('✅ SW registrado');
+                // Chequear actualizaciones cada 5 minutos
+                setInterval(() => reg.update(), 5 * 60 * 1000);
+                // Cuando detecte un SW nuevo, recargar automáticamente
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated') {
+                            console.log('🔄 Nueva versión detectada, recargando...');
+                            window.location.reload();
+                        }
+                    });
+                });
+            })
             .catch(err => console.log('SW error:', err));
     }
     </script>

@@ -9,10 +9,10 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting(); // Activa inmediatamente
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -27,7 +27,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Google Apps Script API — network first, offline fallback
+  // Google Apps Script API — network only, offline fallback
   if (url.hostname.includes('script.google.com') || url.hostname.includes('script.googleusercontent.com')) {
     event.respondWith(
       fetch(event.request).catch(() =>
@@ -39,7 +39,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // MercadoLibre images — cache first
+  // MercadoLibre images — cache first (no cambia, está bien así)
   if (url.hostname.includes('mlstatic.com')) {
     event.respondWith(
       caches.match(event.request).then(cached => {
@@ -56,17 +56,16 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Everything else — stale-while-revalidate
+  // HTML y archivos locales — NETWORK FIRST (siempre baja la versión nueva)
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      const fetchPromise = fetch(event.request).then(response => {
+    fetch(event.request)
+      .then(response => {
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => cached);
-      return cached || fetchPromise;
-    })
+      })
+      .catch(() => caches.match(event.request)) // Sin internet → usa caché
   );
 });

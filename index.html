@@ -790,14 +790,13 @@
     
     <!-- ARTICLE EDIT BAR (cart controls) -->
     <div class="article-edit-bar" id="articleEditBar">
-        <button onclick="closeEditBar()" style="position:absolute;top:4px;right:10px;background:none;border:none;color:var(--text-secondary);font-size:1.2em;cursor:pointer;padding:4px 8px;">✕</button>
         <div class="edit-bar-top" id="articleEditLabel">—</div>
         <div class="edit-bar-controls">
             <button class="stock-btn minus" onclick="articleChangeQty(-1)">−</button>
             <div class="edit-val" id="articleEditVal">0</div>
             <button class="stock-btn plus" onclick="articleChangeQty(1)">+</button>
             <input type="number" class="stock-manual-input" id="articleManualInput" placeholder="#" min="0">
-            <button class="stock-set-btn" onclick="articleSetManual()">✓</button>
+            <button class="stock-set-btn" onclick="articleSetManualAndClose()">✓</button>
         </div>
     </div>
 
@@ -809,7 +808,10 @@
         <div class="container">
             <div class="cart-header">
                 <div class="cart-count"><span id="cartItemCount">0</span> prod. (<span id="cartUnitCount">0</span> uds)</div>
-                <button class="cart-remove" onclick="clearCart()" style="font-size:0.82em;">🗑️ Vaciar</button>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <button class="cart-remove" onclick="openManualEntry()" style="font-size:0.82em;color:var(--primary);">📋 Manual</button>
+                    <button class="cart-remove" onclick="clearCart()" style="font-size:0.82em;">🗑️ Vaciar</button>
+                </div>
             </div>
             
             <div class="order-type-selector">
@@ -895,8 +897,8 @@
             
             <div class="export-btns">
                 <button class="export-btn whatsapp" onclick="shareWhatsApp()">📱 WhatsApp</button>
-                <button class="export-btn pdf" onclick="downloadPDF()">📄 PDF</button>
-                <button class="export-btn ticket" onclick="downloadTicket()">🎫 Ticket</button>
+                <button class="export-btn pdf" onclick="showPdfOptions()">📄 PDF</button>
+                <button class="export-btn ticket" onclick="downloadTicketDirectPrint()">🎫 Ticket</button>
                 <button class="export-btn" style="background:var(--primary);color:white;" onclick="downloadPreparacion()">📦 Preparar</button>
             </div>
             
@@ -945,14 +947,26 @@
             </div>
         </div>
     </div>
-    <div class="clear-modal-overlay" id="ticketTypeModal">
-        <div class="clear-modal">
-            <div class="clear-modal-title">🎫 Tipo de Ticket</div>
-            <div class="clear-modal-msg">¿Qué formato querés imprimir?</div>
+    <div class="clear-modal-overlay" id="manualEntryModal">
+        <div class="clear-modal" style="max-width:400px;width:92%;">
+            <div class="clear-modal-title">📋 Cargar Pedido Manual</div>
+            <div class="clear-modal-msg" style="text-align:left;font-size:0.75em;color:var(--text-secondary);">Pegá los códigos con cantidades:<br><span style="color:var(--primary);">113686&nbsp;&nbsp;-1<br>113687&nbsp;&nbsp;-2</span></div>
+            <textarea id="manualSkuInput" style="width:100%;min-height:140px;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:14px;resize:vertical;margin:10px 0;" placeholder="Pegá los códigos acá...&#10;113686&#9;-1&#10;113687&#9;-2"></textarea>
+            <div id="manualEntryResult" style="font-size:0.78em;color:var(--text-secondary);min-height:20px;margin-bottom:8px;"></div>
             <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
-                <button class="clear-modal-btn" style="background:#8b5cf6;color:white;font-size:0.95em;" onclick="closeTicketTypeModal();downloadTicketDetalle()">📋 Detalle (precios y SKU)</button>
-                <button class="clear-modal-btn" style="background:var(--success);color:#1a2744;font-size:0.95em;font-weight:800;" onclick="closeTicketTypeModal();showPreparadosOptions()">📦 Preparados (para armar)</button>
-                <button class="clear-modal-btn no" onclick="closeTicketTypeModal()">Cancelar</button>
+                <button class="clear-modal-btn" style="background:var(--success);color:#1a2744;font-size:0.95em;font-weight:800;" onclick="processManualEntry()">✓ Cargar al carrito</button>
+                <button class="clear-modal-btn no" onclick="closeManualEntry()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <div class="clear-modal-overlay" id="pdfTypeModal">
+        <div class="clear-modal">
+            <div class="clear-modal-title">📄 Generar PDF</div>
+            <div class="clear-modal-msg">¿Qué tipo de PDF querés?</div>
+            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
+                <button class="clear-modal-btn" style="background:#8b5cf6;color:white;font-size:0.95em;font-weight:800;" onclick="closePdfTypeModal();sharePrepTicketPDF()">📤 Compartir Presupuesto (Ticket)</button>
+                <button class="clear-modal-btn" style="background:#dc2626;color:white;font-size:0.95em;" onclick="closePdfTypeModal();downloadPDF()">📋 Detalles PDF</button>
+                <button class="clear-modal-btn no" onclick="closePdfTypeModal()">Cancelar</button>
             </div>
         </div>
     </div>
@@ -962,7 +976,6 @@
             <div class="clear-modal-msg">¿Cómo lo querés?</div>
             <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
                 <button class="clear-modal-btn" style="background:var(--success);color:#1a2744;font-size:0.95em;font-weight:800;" onclick="closePreparadosOpt();downloadTicketPreparados('print')">🖨️ Imprimir</button>
-                <button class="clear-modal-btn" style="background:var(--primary);color:white;font-size:0.95em;font-weight:800;" onclick="closePreparadosOpt();downloadTicketPreparados('pdf')">📤 Compartir / PDF</button>
                 <button class="clear-modal-btn no" onclick="closePreparadosOpt()">Cancelar</button>
             </div>
         </div>
@@ -1768,6 +1781,14 @@
             renderArticleDetail();
         }
         
+        function articleSetManualAndClose() {
+            const manualVal = $('articleManualInput').value.trim();
+            if (manualVal !== '') {
+                articleSetManual();
+            }
+            closeEditBar();
+        }
+        
         // ===== RENDER =====
         function render() {
             if (isArticleDetailMode()) { renderArticleDetail(); updateBadge(); return; }
@@ -1920,11 +1941,32 @@
             askClearCart();
         }
         
+        function showPdfOptions() {
+            if (!state.cart.length || !validateForm()) return;
+            $('pdfTypeModal').classList.add('show');
+        }
+        function closePdfTypeModal() { $('pdfTypeModal').classList.remove('show'); }
+        
         function downloadPDF() {
             if (!state.cart.length || !validateForm()) return;
             const date = new Date().toLocaleDateString('es-AR');
             const total = state.cart.reduce((a, p) => a + p.qty, 0);
             let title = state.orderType === 'reposicion' ? 'Reposición Galería' : state.orderType === 'presupuesto' ? 'Presupuesto Mikra' : 'Pedido Mikra';
+            
+            // Sort cart items by article name (titulo) alphabetically
+            const sortedCart = [...state.cart].sort((a, b) => {
+                const na = (a.titulo || a.articulo || '').toLowerCase();
+                const nb = (b.titulo || b.articulo || '').toLowerCase();
+                if (na !== nb) return na.localeCompare(nb, 'es');
+                const ca = (a.color || '').toLowerCase();
+                const cb = (b.color || '').toLowerCase();
+                if (ca !== cb) return ca.localeCompare(cb, 'es');
+                const sa = a.talle || '', sb = b.talle || '';
+                const nna = parseFloat(sa), nnb = parseFloat(sb);
+                if (!isNaN(nna) && !isNaN(nnb)) return nna - nnb;
+                return sa.localeCompare(sb);
+            });
+            
             let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + title + '</title>' +
                 '<style>body{font-family:Arial,sans-serif;padding:20px}h1{color:#1a2744;font-size:18px;margin-bottom:5px;font-weight:bold}' +
                 '.info{background:#f5f5f5;padding:10px;border-radius:8px;margin:10px 0;font-weight:bold}' +
@@ -1943,7 +1985,7 @@
             if (state.orderType === 'presupuesto') html += '<th>Precio</th><th>Subtotal</th>';
             html += '</tr></thead><tbody>';
             let grandTotal = 0;
-            state.cart.forEach(p => {
+            sortedCart.forEach(p => {
                 const name = p.titulo || p.articulo;
                 const price = articlePrices[name] || 0;
                 const subtotal = p.qty * price; grandTotal += subtotal;
@@ -1963,6 +2005,316 @@
             $('ticketTypeModal').classList.add('show');
         }
         function closeTicketTypeModal() { $('ticketTypeModal').classList.remove('show'); }
+        
+        // Ticket button now prints Preparados directly
+        function downloadTicketDirectPrint() {
+            if (!state.cart.length || !validateForm()) return;
+            downloadTicketPreparados('print');
+        }
+        
+        // Share a real PDF file (ticket preparados format) for WhatsApp sharing
+        // Share a real PDF file (ticket preparados format) for WhatsApp sharing
+        // ===== MINIMAL PDF BUILDER (no external libs) =====
+        function MiniPDF(widthMM, heightMM) {
+            this.w = widthMM;
+            this.h = heightMM;
+            this.stream = '';
+            this.pt = function(mm) { return mm * 2.83465; }; // mm to points
+            // Y is inverted in PDF (0 = bottom)
+            this.yy = function(mm) { return this.pt(this.h - mm); }.bind(this);
+            this.font = 'F1'; // Courier-Bold
+            this.fontSize = 10;
+        }
+        MiniPDF.prototype.setFontSize = function(s) { this.fontSize = s; this.stream += '/' + this.font + ' ' + s + ' Tf\n'; };
+        MiniPDF.prototype.setColor = function(r, g, b) { this.stream += (r/255).toFixed(3) + ' ' + (g/255).toFixed(3) + ' ' + (b/255).toFixed(3) + ' rg\n'; };
+        MiniPDF.prototype.setStrokeColor = function(r, g, b) { this.stream += (r/255).toFixed(3) + ' ' + (g/255).toFixed(3) + ' ' + (b/255).toFixed(3) + ' RG\n'; };
+        MiniPDF.prototype.setLineWidth = function(mm) { this.stream += this.pt(mm).toFixed(2) + ' w\n'; };
+        MiniPDF.prototype.line = function(x1, y1, x2, y2) {
+            this.stream += this.pt(x1).toFixed(2) + ' ' + this.yy(y1).toFixed(2) + ' m ' +
+                this.pt(x2).toFixed(2) + ' ' + this.yy(y2).toFixed(2) + ' l S\n';
+        };
+        MiniPDF.prototype.dashedLine = function(x1, y1, x2, y2, dashMM, gapMM) {
+            this.stream += '[' + this.pt(dashMM).toFixed(1) + ' ' + this.pt(gapMM).toFixed(1) + '] 0 d\n';
+            this.line(x1, y1, x2, y2);
+            this.stream += '[] 0 d\n';
+        };
+        MiniPDF.prototype.rect = function(x, y, w, h) {
+            this.stream += this.pt(x).toFixed(2) + ' ' + this.yy(y + h).toFixed(2) + ' ' +
+                this.pt(w).toFixed(2) + ' ' + this.pt(h).toFixed(2) + ' re S\n';
+        };
+        MiniPDF.prototype.fillRect = function(x, y, w, h) {
+            this.stream += this.pt(x).toFixed(2) + ' ' + this.yy(y + h).toFixed(2) + ' ' +
+                this.pt(w).toFixed(2) + ' ' + this.pt(h).toFixed(2) + ' re f\n';
+        };
+        MiniPDF.prototype.escPdf = function(s) { return s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)'); };
+        MiniPDF.prototype.text = function(txt, x, y, align) {
+            var tw = txt.length * this.fontSize * 0.6; // approx width in pt (courier = monospace)
+            var px = this.pt(x);
+            if (align === 'center') px = px - tw / 2;
+            else if (align === 'right') px = px - tw;
+            this.stream += 'BT\n/' + this.font + ' ' + this.fontSize + ' Tf\n' +
+                px.toFixed(2) + ' ' + this.yy(y).toFixed(2) + ' Td\n(' +
+                this.escPdf(txt) + ') Tj\nET\n';
+        };
+        MiniPDF.prototype.textWidth = function(txt) { return txt.length * this.fontSize * 0.6 / this.pt(1); };
+        MiniPDF.prototype.output = function() {
+            var objects = [];
+            var offsets = [];
+            var out = '%PDF-1.4\n';
+            function addObj(content) {
+                var num = objects.length + 1;
+                offsets.push(out.length);
+                out += num + ' 0 obj\n' + content + '\nendobj\n';
+                objects.push(num);
+                return num;
+            }
+            // 1: Catalog
+            addObj('<< /Type /Catalog /Pages 2 0 R >>');
+            // 2: Pages
+            addObj('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+            // 4: Font (will be obj 4)
+            // 3: Page
+            var streamBytes = unescape(encodeURIComponent(this.stream));
+            addObj('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' +
+                this.pt(this.w).toFixed(2) + ' ' + this.pt(this.h).toFixed(2) + '] /Contents 5 0 R /Resources << /Font << /F1 4 0 R >> >> >>');
+            // 4: Font
+            addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>');
+            // 5: Content stream
+            addObj('<< /Length ' + streamBytes.length + ' >>\nstream\n' + this.stream + 'endstream');
+            // xref
+            var xrefOffset = out.length;
+            out += 'xref\n0 ' + (objects.length + 1) + '\n';
+            out += '0000000000 65535 f \n';
+            for (var i = 0; i < offsets.length; i++) {
+                out += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+            }
+            out += 'trailer\n<< /Size ' + (objects.length + 1) + ' /Root 1 0 R >>\n';
+            out += 'startxref\n' + xrefOffset + '\n%%EOF';
+            return out;
+        };
+        MiniPDF.prototype.toBlob = function() {
+            var str = this.output();
+            var buf = new ArrayBuffer(str.length);
+            var view = new Uint8Array(buf);
+            for (var i = 0; i < str.length; i++) view[i] = str.charCodeAt(i) & 0xFF;
+            return new Blob([buf], { type: 'application/pdf' });
+        };
+
+        // ===== SHARE TICKET AS PDF =====
+        function sharePrepTicketPDF() {
+            if (!state.cart.length || !validateForm()) return;
+            var date = new Date().toLocaleDateString('es-AR');
+            var time = new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+            var SO = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
+
+            function sizeIndex(s) {
+                var u = (s || '').toUpperCase();
+                var n = parseFloat(u);
+                if (!isNaN(n)) return 1000 + n;
+                var i = SO.indexOf(u);
+                return i > -1 ? i : 500;
+            }
+
+            var articlesMap = {};
+            state.cart.forEach(function(p) {
+                var artName = p.titulo || p.articulo || 'Sin nombre';
+                var color = p.color || 'Sin color';
+                if (!articlesMap[artName]) articlesMap[artName] = {};
+                if (!articlesMap[artName][color]) articlesMap[artName][color] = {};
+                var talle = p.talle || '-';
+                articlesMap[artName][color][talle] = (articlesMap[artName][color][talle] || 0) + p.qty;
+            });
+
+            var sortedArticles = Object.keys(articlesMap).sort(function(a, b) { return a.localeCompare(b, 'es'); });
+            var pw = 72, mx = 5, cw = pw - mx * 2;
+
+            // Calc height first
+            function calcHeight() {
+                var y = 6 + 6 + 5 + 4; // header
+                if (state.orderType === 'pedido' && $('clientName').value.trim()) y += 5;
+                y += 4; // thick line
+                sortedArticles.forEach(function(artName) {
+                    var colors = articlesMap[artName];
+                    y += 6; // article title
+                    var sortedColors = Object.keys(colors).sort(function(a, b) { return a.localeCompare(b, 'es'); });
+                    sortedColors.forEach(function(color, ci) {
+                        y += 5; // color name
+                        y += 12; // size boxes
+                        if (ci < sortedColors.length - 1) y += 2; // separator
+                    });
+                    y += 4; // dashed line
+                });
+                y += 12; // grand total
+                return y + 3;
+            }
+
+            var totalH = calcHeight();
+            var pdf = new MiniPDF(pw, totalH);
+            var y = 6;
+            var grandTotal = 0;
+
+            // HEADER
+            pdf.setColor(0, 0, 0);
+            pdf.setFontSize(18);
+            pdf.text('MIKRA', pw / 2, y, 'center');
+            y += 6;
+            pdf.setFontSize(13);
+            pdf.text('PREPARADOS', pw / 2, y, 'center');
+            y += 5;
+            pdf.setFontSize(10);
+            pdf.text(date + '  ' + time, pw / 2, y, 'center');
+            y += 4;
+
+            if (state.orderType === 'pedido') {
+                var cn = $('clientName').value.trim();
+                if (cn) {
+                    pdf.setFontSize(11);
+                    pdf.text(cn, pw / 2, y, 'center');
+                    y += 5;
+                }
+            }
+
+            // Thick line
+            pdf.setStrokeColor(0, 0, 0);
+            pdf.setLineWidth(0.8);
+            pdf.line(mx, y, pw - mx, y);
+            y += 4;
+
+            sortedArticles.forEach(function(artName) {
+                var colors = articlesMap[artName];
+                var allSizesSet = {};
+                Object.values(colors).forEach(function(sizeMap) {
+                    Object.keys(sizeMap).forEach(function(s) { allSizesSet[s] = true; });
+                });
+                var allSizes = Object.keys(allSizesSet).sort(function(a, b) { return sizeIndex(a) - sizeIndex(b); });
+
+                // Article name - black bg
+                pdf.setColor(0, 0, 0);
+                pdf.fillRect(mx, y - 3.5, cw, 7);
+                pdf.setColor(255, 255, 255);
+                pdf.setFontSize(9);
+                var artText = artName.toUpperCase();
+                if (artText.length > 28) artText = artText.substring(0, 26) + '..';
+                pdf.text(artText, pw / 2, y + 1, 'center');
+                pdf.setColor(0, 0, 0);
+                y += 6;
+
+                var sortedColors = Object.keys(colors).sort(function(a, b) { return a.localeCompare(b, 'es'); });
+
+                sortedColors.forEach(function(color, ci) {
+                    var sizeMap = colors[color];
+                    var colorTotal = 0;
+                    Object.values(sizeMap).forEach(function(q) { colorTotal += q; });
+                    grandTotal += colorTotal;
+
+                    // Color name
+                    pdf.setColor(0, 0, 0);
+                    pdf.setFontSize(10);
+                    pdf.text(color, mx, y + 1);
+                    y += 5;
+
+                    // Size boxes
+                    var numSizes = allSizes.length;
+                    var totW = 8;
+                    var availW = cw - totW - 1;
+                    var cellW = Math.min(12, availW / Math.max(numSizes, 1));
+                    var boxH = 10;
+
+                    allSizes.forEach(function(s, si) {
+                        var cx = mx + si * cellW;
+                        var hasQty = sizeMap[s];
+
+                        // Box
+                        pdf.setStrokeColor(hasQty ? 0 : 100, hasQty ? 0 : 100, hasQty ? 0 : 100);
+                        pdf.setLineWidth(hasQty ? 0.5 : 0.3);
+                        pdf.rect(cx, y, cellW - 0.5, boxH);
+
+                        // Size label
+                        pdf.setColor(30, 30, 30);
+                        pdf.setFontSize(6);
+                        pdf.text(s, cx + (cellW - 0.5) / 2, y + 3, 'center');
+
+                        // Divider
+                        pdf.setLineWidth(0.2);
+                        pdf.line(cx + 0.3, y + 3.5, cx + cellW - 0.8, y + 3.5);
+
+                        // Qty
+                        if (hasQty) {
+                            pdf.setColor(0, 0, 0);
+                            pdf.setFontSize(14);
+                            pdf.text(String(sizeMap[s]), cx + (cellW - 0.5) / 2, y + 8.5, 'center');
+                        }
+                    });
+
+                    // Total
+                    pdf.setColor(0, 0, 0);
+                    pdf.setFontSize(11);
+                    pdf.text(String(colorTotal), mx + numSizes * cellW + 1 + totW / 2, y + 6, 'center');
+
+                    y += boxH + 2;
+
+                    // Sep between colors
+                    if (ci < sortedColors.length - 1) {
+                        pdf.setStrokeColor(80, 80, 80);
+                        pdf.setLineWidth(0.3);
+                        pdf.line(mx, y, pw - mx, y);
+                        y += 2;
+                    }
+                });
+
+                // Dashed after article
+                pdf.setStrokeColor(0, 0, 0);
+                pdf.setLineWidth(0.5);
+                pdf.dashedLine(mx, y, pw - mx, y, 1.5, 1);
+                y += 4;
+            });
+
+            // Grand total
+            pdf.setStrokeColor(0, 0, 0);
+            pdf.setLineWidth(0.8);
+            pdf.line(mx, y, pw - mx, y);
+            y += 6;
+            pdf.setColor(0, 0, 0);
+            pdf.setFontSize(14);
+            pdf.text('TOTAL:', mx, y);
+            pdf.text(grandTotal + ' uds', pw - mx, y, 'right');
+
+            // Generate and share
+            var clientNameVal = (state.orderType === 'pedido' ? $('clientName').value.trim() : '') || 'Pedido';
+            var fileName = 'Ticket_' + clientNameVal.replace(/\s+/g, '_') + '_' + date.replace(/\//g, '-') + '.pdf';
+            var blob = pdf.toBlob();
+            var file = new File([blob], fileName, { type: 'application/pdf' });
+
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    files: [file],
+                    title: 'Ticket Mikra',
+                    text: 'Ticket de preparacion'
+                }).then(function() {
+                    toast('✓ Compartido', 'success');
+                    askClearCart();
+                }).catch(function() {
+                    downloadBlobFile(blob, fileName);
+                    askClearCart();
+                });
+            } else {
+                downloadBlobFile(blob, fileName);
+                toast('📥 PDF descargado', 'success');
+                askClearCart();
+            }
+        }
+
+
+        function downloadBlobFile(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
         
         function downloadTicketDetalle() {
             if (!state.cart.length || !validateForm()) return;
@@ -2244,6 +2596,92 @@
                 else { img.onload = tryPrint; img.onerror = tryPrint; }
             });
             setTimeout(doPrint, 5000);
+        }
+        
+        // ===== MANUAL ORDER ENTRY =====
+        function openManualEntry() {
+            if (state.cart.length > 0) {
+                if (!confirm('⚠️ Hay ' + state.cart.length + ' productos en el carrito.\nSe va a vaciar antes de cargar los nuevos.\n¿Continuar?')) return;
+            }
+            $('manualSkuInput').value = '';
+            $('manualEntryResult').textContent = '';
+            $('manualEntryModal').classList.add('show');
+            setTimeout(() => $('manualSkuInput').focus(), 300);
+        }
+        function closeManualEntry() { $('manualEntryModal').classList.remove('show'); }
+        
+        function processManualEntry() {
+            const raw = $('manualSkuInput').value.trim();
+            if (!raw) { toast('⚠️ Pegá los códigos primero', 'warning'); return; }
+            
+            const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const entries = [];
+            const errors = [];
+            
+            lines.forEach((line, i) => {
+                // Parse formats: "113686\t-1", "113686 -1", "113686\t-2", "113686 2"
+                // Remove extra whitespace, split by tab or spaces
+                const parts = line.split(/[\t]+|\s{2,}|\s*-\s*(?=\d)/);
+                let codigo = '', qty = 1;
+                
+                if (parts.length >= 2) {
+                    codigo = parts[0].trim();
+                    // Get the last number from the remaining parts
+                    const qtyStr = parts[parts.length - 1].trim().replace(/^-/, '');
+                    qty = parseInt(qtyStr);
+                    if (isNaN(qty) || qty <= 0) qty = 1;
+                } else {
+                    // Try to extract number from end of single string
+                    const match = line.match(/^(\d+)\s*[-]?\s*(\d+)$/);
+                    if (match) {
+                        codigo = match[1];
+                        qty = parseInt(match[2]) || 1;
+                    } else {
+                        codigo = line.replace(/\s/g, '');
+                    }
+                }
+                
+                if (codigo) entries.push({ codigo, qty, line: i + 1 });
+            });
+            
+            if (entries.length === 0) {
+                toast('⚠️ No se encontraron códigos válidos', 'warning');
+                return;
+            }
+            
+            // Clear cart
+            state.cart = [];
+            
+            let found = 0, notFound = [];
+            
+            entries.forEach(entry => {
+                const product = PRODUCTS.find(p => String(p.codigo).trim() === String(entry.codigo).trim());
+                if (product) {
+                    // Check if already in cart (same codigo might appear if duplicate lines)
+                    const existing = state.cart.find(c => c.id === product.id);
+                    if (existing) {
+                        existing.qty += entry.qty;
+                    } else {
+                        state.cart.push({ ...product, qty: entry.qty });
+                    }
+                    found++;
+                } else {
+                    notFound.push(entry.codigo);
+                }
+            });
+            
+            saveCart();
+            updateBadge();
+            closeManualEntry();
+            renderCart();
+            
+            let msg = '✓ ' + found + ' productos cargados';
+            if (notFound.length > 0) {
+                msg += '\n⚠️ No encontrados: ' + notFound.join(', ');
+                toast(msg, 'warning');
+            } else {
+                toast(msg, 'success');
+            }
         }
         
         function askClearCart() { setTimeout(() => $('clearModal').classList.add('show'), 600); }

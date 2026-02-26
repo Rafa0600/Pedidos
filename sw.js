@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mikra-stock-v10';
+const CACHE_NAME = 'mikra-stock-v11';
 
 const PRECACHE_URLS = [
   './',

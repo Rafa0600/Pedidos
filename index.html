@@ -978,6 +978,21 @@
                         <input type="text" class="form-input" id="paymentAmount" placeholder="$0">
                     </div>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Canal de venta</label>
+                    <div class="delivery-options">
+                        <label class="delivery-option selected" data-canal="local">
+                            <input type="radio" name="canal" value="local" checked>
+                            <span class="delivery-radio"></span>
+                            <span class="delivery-label">🏪 Local</span>
+                        </label>
+                        <label class="delivery-option" data-canal="tn">
+                            <input type="radio" name="canal" value="tn">
+                            <span class="delivery-radio"></span>
+                            <span class="delivery-label">🛍️ TN</span>
+                        </label>
+                    </div>
+                </div>
             </div>
             
             <div class="order-form" id="reposicionForm" style="display:none;">
@@ -987,6 +1002,10 @@
             
             <div class="budget-section" id="budgetSection">
                 <div class="budget-title">💰 Presupuesto</div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">Nombre del cliente *</label>
+                    <input type="text" class="form-input" id="clientNamePres" placeholder="Nombre...">
+                </div>
                 <div id="budgetItems"></div>
                 <div class="budget-total">
                     <span>TOTAL:</span>
@@ -1139,6 +1158,7 @@
         let articleColorFilter = ''; // '' = all colors
         let showColorStrip = false;
         let homeCatSelected = null; // null = nivel 1 tiles, string = nivel 2 artículos
+        let showZeroStock = false; // false = ocultar colores/talles sin stock
         
         const settings = {
             showSku: JSON.parse(localStorage.getItem('mikra_ord_showSku') ?? 'true'),
@@ -1300,16 +1320,32 @@
                 return;
             }
             const showSku = settings.showSku;
-            $('cartItems').innerHTML = state.cart.map((p, i) =>
-                '<div class="cart-item"><div class="cart-item-info">' +
+            $('cartItems').innerHTML = state.cart.map((p, i) => {
+                // Buscar stock actual del SKU — usar codigo (más confiable que id)
+                const prod = PRODUCTS.find(x => String(x.codigo) === String(p.codigo));
+                const stockTotal = prod ? (Number(prod.stock) || 0) : null;
+                const stockRestante = stockTotal !== null ? stockTotal - p.qty : null;
+                let stockBadge = '';
+                if (stockRestante !== null) {
+                    if (stockRestante <= 0) {
+                        stockBadge = '<div style="font-size:0.7em;color:var(--danger);margin-top:2px;font-weight:600;">⚠️ Sin stock</div>';
+                    } else if (stockRestante <= 3) {
+                        stockBadge = '<div style="font-size:0.7em;color:var(--warning);margin-top:2px;font-weight:600;">⚠️ Quedan ' + stockRestante + '</div>';
+                    } else {
+                        stockBadge = '<div style="font-size:0.7em;color:var(--text-secondary);margin-top:2px;">Quedan ' + stockRestante + '</div>';
+                    }
+                }
+                return '<div class="cart-item"><div class="cart-item-info">' +
                 '<div class="cart-item-name">' + (p.titulo || p.articulo) + '</div>' +
-                '<div class="cart-item-meta">' + (showSku ? p.codigo + ' • ' : '') + (p.color || '-') + ' • T:' + (p.talle || '-') + '</div></div>' +
+                '<div class="cart-item-meta">' + (showSku ? p.codigo + ' • ' : '') + (p.color || '-') + ' • T:' + (p.talle || '-') + '</div>' +
+                stockBadge +
+                '</div>' +
                 '<div class="cart-item-right"><div class="cart-qty">' +
                 '<button class="cart-qty-btn" onclick="cartQty(' + i + ',-1)">−</button>' +
                 '<span class="cart-qty-val">' + p.qty + '</span>' +
                 '<button class="cart-qty-btn" onclick="cartQty(' + i + ',1)">+</button></div>' +
-                '<button class="cart-remove" onclick="removeCart(' + i + ')">🗑</button></div></div>'
-            ).join('');
+                '<button class="cart-remove" onclick="removeCart(' + i + ')">🗑</button></div></div>';
+            }).join('');
             if (state.orderType === 'presupuesto') renderBudget();
         }
         function cartQty(i, d) {
@@ -1529,7 +1565,7 @@
         function searchArticle(name) {
             if (!name) return;
             $('searchInput').value = name; state.search = name; state.searchExact = true;
-            forceListView = false; articleColorFilter = ''; showColorStrip = false;
+            forceListView = false; articleColorFilter = ''; showColorStrip = false; showZeroStock = false;
             $('searchClear').classList.add('show'); $('autocomplete').classList.remove('show');
             applyFilters();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1729,16 +1765,7 @@
             allProducts.forEach(p => { totalStock += p.stock || 0; totalCartQty += getCartQty(p.id); });
             const totalAvail = totalStock - totalCartQty;
             
-            let html = '';
-            html += '<div class="article-stats-row">' +
-                '<span>📦 <strong>' + allProducts.length + '</strong> var.</span>' +
-                '<span>📊 <strong>' + totalAvail + '</strong>/' + totalStock + '</span>' +
-                (totalCartQty ? '<span style="color:var(--success)">🛒 ' + totalCartQty + '</span>' : '') +
-                '<button class="article-photo-toggle" id="articlePhotoToggle" onclick="toggleArticlePhotos()">📷</button>' +
-                '<button class="article-photo-toggle" onclick="switchToListView()">📝</button>' +
-                '</div>';
-            
-            // Build color meta
+            // Build color meta PRIMERO (se usa en el stats row)
             const colorNames = Object.keys(colorGroups).sort();
             const colorMeta = {};
             colorNames.forEach(color => {
@@ -1749,8 +1776,24 @@
                 colorMeta[color] = { stock: cStock, cart: cCart, avail: cStock - cCart, imgUrl };
             });
             
-            // Filter colors if selected
-            const visibleColors = colorNames;
+            // Contar colores enteros sin stock para el botón toggle
+            const coloresTotalesCero = colorNames.filter(c => colorMeta[c].avail <= 0);
+            const totalColorsCero = coloresTotalesCero.length;
+            
+            let html = '';
+            html += '<div class="article-stats-row">' +
+                '<span>📦 <strong>' + allProducts.length + '</strong> var.</span>' +
+                '<span>📊 <strong>' + totalAvail + '</strong>/' + totalStock + '</span>' +
+                (totalCartQty ? '<span style="color:var(--success)">🛒 ' + totalCartQty + '</span>' : '') +
+                (totalColorsCero > 0 ? '<button class="article-photo-toggle" onclick="toggleZeroStock()" style="' + (showZeroStock ? 'background:rgba(248,113,113,0.2);color:var(--danger);' : '') + '" title="' + (showZeroStock ? 'Ocultar colores sin stock' : 'Ver ' + totalColorsCero + ' color(es) sin stock') + '">🚫' + (showZeroStock ? '✓' : totalColorsCero) + '</button>' : '') +
+                '<button class="article-photo-toggle" id="articlePhotoToggle" onclick="toggleArticlePhotos()">📷</button>' +
+                '<button class="article-photo-toggle" onclick="switchToListView()">📝</button>' +
+                '</div>';
+            
+            // Ocultar colores enteros sin stock, salvo que el toggle esté activo
+            const visibleColors = showZeroStock
+                ? colorNames
+                : colorNames.filter(c => colorMeta[c].avail > 0 || colorMeta[c].cart > 0);
             
             visibleColors.forEach(color => {
                 const prods = colorGroups[color];
@@ -2056,6 +2099,11 @@
             $('homeDashboard').innerHTML = html;
         }
 
+        function toggleZeroStock() {
+            showZeroStock = !showZeroStock;
+            renderArticleDetail();
+        }
+        
         function selectHomeCat(catName) {
             homeCatSelected = catName;
             renderHomeScreen();
@@ -2169,6 +2217,16 @@
         // ===== EXPORT FUNCTIONS =====
         function validateForm() {
             if (state.orderType === 'reposicion') return true;
+            if (state.orderType === 'presupuesto') {
+                const name = $('clientNamePres').value.trim();
+                if (!name) {
+                    $('clientNamePres').classList.add('error'); $('clientNamePres').focus();
+                    setTimeout(() => $('clientNamePres').classList.remove('error'), 500);
+                    showModal('👤', 'Nombre requerido', 'Ingresa el nombre del cliente.', 'Entendido', null);
+                    return false;
+                }
+                return true;
+            }
             if (state.orderType === 'pedido') {
                 const clientName = $('clientName').value.trim();
                 if (!clientName) {
@@ -2193,6 +2251,9 @@
         
         function getOrderInfo() {
             const clientName = $('clientName').value.trim() || 'Sin nombre';
+            const canal = document.querySelector('input[name="canal"]:checked')?.value || 'local';
+            const canalPrefix = canal === 'tn' ? 'TN' : 'Local';
+            const clientDisplayName = canalPrefix + ' - ' + clientName;
             const deliveryType = document.querySelector('input[name="delivery"]:checked')?.value || 'local';
             const shippingAddress = $('shippingAddress').value.trim();
             const shippingCost = parseInt($('shippingCost').value) || 0;
@@ -2201,7 +2262,7 @@
             let deliveryText = deliveryType === 'local' ? '🏪 Local (Galería)' : deliveryType === 'deposito' ? '📦 Depósito Mikra' : '🚚 Envío';
             if (deliveryType === 'envio' && shippingCost > 0) deliveryText += ' $' + shippingCost.toLocaleString();
             let paymentText = paymentStatus === 'abonado' ? '✅ Ya abonó' : '⏳ Falta: ' + (paymentAmount || 'Sin especificar');
-            return { clientName, deliveryType, deliveryText, shippingAddress, shippingCost, paymentStatus, paymentText, paymentAmount };
+            return { clientName, clientDisplayName, canal, canalPrefix, deliveryType, deliveryText, shippingAddress, shippingCost, paymentStatus, paymentText, paymentAmount };
         }
         
         function shareWhatsApp() {
@@ -2213,7 +2274,7 @@
             else {
                 const order = getOrderInfo();
                 text = '📋 PEDIDO MIKRA\n─────────────────\n';
-                text += '👤 ' + order.clientName + '\n📍 ' + order.deliveryText + '\n';
+                text += '👤 ' + order.clientDisplayName + '\n📍 ' + order.deliveryText + '\n';
                 if (order.deliveryType === 'envio' && order.shippingAddress) text += '📬 ' + order.shippingAddress + '\n';
                 text += '💳 ' + order.paymentText + '\n─────────────────\n\n';
             }
@@ -2276,7 +2337,7 @@
                 '<h1>' + title + '</h1><div style="color:#666;font-size:12px;font-weight:bold">Fecha: ' + date + '</div>';
             if (state.orderType === 'pedido') {
                 const order = getOrderInfo();
-                html += '<div class="info"><strong>Cliente:</strong> ' + order.clientName + '<br>' +
+                html += '<div class="info"><strong>Cliente:</strong> ' + order.clientDisplayName + '<br>' +
                     '<strong>Entrega:</strong> ' + order.deliveryText + '<br>';
                 if (order.deliveryType === 'envio' && order.shippingAddress) html += '<strong>Dirección:</strong><br>' + order.shippingAddress.replace(/\n/g, '<br>') + '<br>';
                 html += '<strong>Pago:</strong> ' + order.paymentText + '</div>';
@@ -2684,7 +2745,7 @@
             html += '<div class="row"><span>Fecha:</span><span>' + date + ' ' + time + '</span></div>';
             if (state.orderType === 'pedido') {
                 const order = getOrderInfo();
-                html += '<div class="row"><span>Cliente:</span><span>' + order.clientName + '</span></div>';
+                html += '<div class="row"><span>Cliente:</span><span>' + order.clientDisplayName + '</span></div>';
                 html += '<div class="row"><span>Entrega:</span><span>' + (order.deliveryType === 'local' ? 'Local' : order.deliveryType === 'deposito' ? 'Depósito' : 'Envío') + '</span></div>';
                 html += '<div class="row"><span>Pago:</span><span>' + (order.paymentStatus === 'abonado' ? 'Abonado' : 'Pendiente') + '</span></div>';
                 if (order.paymentStatus === 'pendiente' && order.paymentAmount) html += '<div class="row"><span>Monto:</span><span>' + order.paymentAmount + '</span></div>';
@@ -3130,6 +3191,12 @@
                 document.querySelectorAll('.delivery-option[data-payment]').forEach(o => o.classList.remove('selected'));
                 opt.classList.add('selected'); opt.querySelector('input').checked = true;
                 $('paymentDetails').classList.toggle('show', opt.dataset.payment === 'pendiente');
+            });
+        });
+        document.querySelectorAll('.delivery-option[data-canal]').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('.delivery-option[data-canal]').forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected'); opt.querySelector('input').checked = true;
             });
         });
         

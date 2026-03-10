@@ -669,6 +669,99 @@
             .product-item { padding: 8px 10px; }
             .stock-num { font-size: 1.2em; }
         }
+
+        /* ===== HOME DASHBOARD ===== */
+        .home-dashboard { padding: 2px 0 8px; }
+        .home-welcome {
+            font-size: 0.78em; color: var(--text-secondary); margin-bottom: 12px;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        /* ── Nivel 1: tiles de categoría ── */
+        .home-cats-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;
+        }
+        .home-cat-tile {
+            background: var(--bg-card); border: 2px solid var(--border); border-radius: 14px;
+            overflow: hidden; cursor: pointer; text-align: center;
+            transition: border-color 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent; position: relative;
+        }
+        .home-cat-tile:active { transform: scale(0.96); border-color: var(--primary); }
+        .home-cat-img {
+            width: 100%; aspect-ratio: 3/4; object-fit: cover;
+            background: var(--bg-input); display: block;
+        }
+        .home-cat-img-placeholder {
+            width: 100%; aspect-ratio: 3/4; background: var(--bg-input);
+            display: flex; align-items: center; justify-content: center; font-size: 2.5em;
+        }
+        .home-cat-label-tile {
+            padding: 6px 4px; font-size: 0.82em; font-weight: 800; color: var(--text);
+            background: var(--bg-card); letter-spacing: 0.3px;
+        }
+        .home-cat-count {
+            font-size: 0.65em; color: var(--text-secondary); font-weight: 600;
+            display: block; margin-top: 1px;
+        }
+
+        /* ── Nivel 2: artículos de una categoría ── */
+        .home-back-btn {
+            display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+            background: none; border: 1px solid var(--border); border-radius: 20px;
+            padding: 6px 14px; color: var(--text-secondary); font-size: 0.8em;
+            font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent;
+        }
+        .home-back-btn:active { background: var(--bg-input); }
+        .home-cat-title {
+            font-size: 1em; font-weight: 800; color: var(--primary);
+            margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+        }
+        .home-articles { display: flex; flex-direction: column; gap: 6px; }
+        .home-article-btn {
+            padding: 0; background: var(--bg-card); border: 1.5px solid var(--border);
+            border-radius: 12px; font-size: 0.88em; font-weight: 600; color: var(--text);
+            cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+            display: flex; align-items: center; overflow: hidden; text-align: left;
+            gap: 0;
+        }
+        .home-article-btn:active { border-color: var(--primary); background: rgba(79,172,254,0.08); }
+        .home-art-img {
+            width: 90px; height: 90px; object-fit: cover;
+            background: var(--bg-input); flex-shrink: 0;
+        }
+        .home-art-img-placeholder {
+            width: 90px; height: 90px; background: var(--bg-input);
+            display: flex; align-items: center; justify-content: center; font-size: 2em;
+            flex-shrink: 0;
+        }
+        .home-art-info { flex: 1; min-width: 0; padding: 12px 14px; }
+        .home-art-name { font-weight: 700; font-size: 0.95em; line-height: 1.3; margin-bottom: 6px; }
+        .home-art-stock {
+            font-size: 0.78em; color: var(--success); font-weight: 700;
+            background: rgba(74,222,128,0.12); padding: 3px 10px; border-radius: 10px;
+            display: inline-block;
+        }
+        .home-article-btn:active .home-art-stock { background: rgba(79,172,254,0.2); color: var(--primary); }
+        .home-config-hint {
+            margin-top: 12px; padding: 8px 12px; background: rgba(79,172,254,0.07);
+            border: 1px dashed var(--border); border-radius: 8px;
+            font-size: 0.68em; color: var(--text-secondary); text-align: center;
+        }
+        /* Shipping cost field */
+        .shipping-cost-row {
+            display: flex; align-items: center; gap: 8px; margin-top: 8px;
+        }
+        .shipping-cost-label {
+            font-size: 0.82em; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0;
+        }
+        .shipping-cost-input {
+            flex: 1; background: var(--bg-input); border: 1px solid var(--border);
+            border-radius: 8px; padding: 8px 12px; color: var(--text);
+            font-size: 0.95em; font-weight: 600; outline: none;
+            max-width: 140px;
+        }
+        .shipping-cost-input:focus { border-color: var(--primary); }
     </style>
 </head>
 <body>
@@ -774,10 +867,11 @@
                 </div>
             </div>
             
-            <div class="results-info">
+            <div class="results-info" id="resultsInfo">
                 Mostrando <strong id="showingCount">0</strong> de <strong id="totalCount">0</strong>
             </div>
             
+            <div id="homeDashboard" style="display:none;"></div>
             <div class="product-list" id="productList"></div>
             <div class="pagination" id="pagination"></div>
             
@@ -857,6 +951,11 @@
                         <label class="form-label">Datos del envío</label>
                         <textarea class="form-textarea" id="shippingAddress" placeholder="Dirección, teléfono..."></textarea>
                     </div>
+                    <div class="shipping-cost-row">
+                        <span class="shipping-cost-label">💰 Costo envío:</span>
+                        <span style="color:var(--text-secondary);font-size:0.9em;">$</span>
+                        <input type="number" class="shipping-cost-input" id="shippingCost" placeholder="0" min="0">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Estado del pago</label>
@@ -908,11 +1007,11 @@
     
     <nav class="footer-nav" id="footerNav">
         <div class="footer-inner">
-            <button class="nav-btn active" data-page="products">
+            <button class="nav-btn active" id="navStock" onclick="goHome()">
                 <span class="nav-icon">📦</span>
                 <span class="nav-label">Stock</span>
             </button>
-            <button class="nav-btn" data-page="cart">
+            <button class="nav-btn" id="navCart" onclick="switchPage('cart')">
                 <span class="nav-icon">🛒</span>
                 <span class="nav-badge" id="cartBadge" style="display:none">0</span>
                 <span class="nav-label">Pedido</span>
@@ -984,15 +1083,62 @@
         const API_URL = 'https://script.google.com/macros/s/AKfycbycz2hrgjQxRCvVKtW0o-HAuMQYTfmiBHSgJPFZTX34PwBpAladxb8ZPpt-Vg09zplx/exec';
         const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
         
+        // ===== QUICK ACCESS DASHBOARD =====
+        // Para agregar un artículo: copiá el nombre exacto de tu BD y pegalo en la lista.
+        // Para agregar una categoría: copiá un bloque completo { icon, cat, articles:[...] }.
+        const QUICK_ACCESS = [
+            {
+                icon: '👨', cat: 'Hombre',
+                articles: [
+                    'Remera Termica Hombre',
+                    'Remera Dep. SET Hombre',
+                    'Short Dep. SET Hombre',
+                ]
+            },
+            {
+                icon: '👩', cat: 'Dama',
+                articles: [
+                    'Remera Termica Dama',
+                    'Polera Termica Dama',
+                    'Pollera Lycra Adidas Evase',
+                    'Pollera Barbie Evase',
+                    'Pollera Lycra Adidas Recta',
+                    'Pollera Barbie Tablas',
+                    'Calza Dama Oxford -Adidas-',
+                    'Blazer Paño',
+                    'Top Lycra',
+                    'Top + Short Lycra Estampado',
+                    'Pollera Bengalina Pinzas NEW',
+                    'Pollera EcoCuero Evase - Rodilla',
+                    'Campera Lycra Dama',
+                ]
+            },
+            {
+                icon: '🧒', cat: 'Niño/a',
+                articles: [
+                    'Polera Termica Niño/a',
+                    'Remera Termica Niño/a',
+                    'Calza Niña Termica Lisa',
+                    'Pantalon Termico Ketten',
+                    'Conjunto Deportivo SET Niños',
+                ]
+            },
+        ];
+        // ===========================================================================
+
+        // ── Home nav state ──
+        // (homeCatSelected se declara abajo junto al resto de variables de estado)
+        
         let PRODUCTS = [];
         let UNIQUE_ARTICLES = [];
         let IMAGES_MAP = {};
-        let articlePrices = {};
+        let articlePrices = JSON.parse(localStorage.getItem('mikra_prices') || '{}');
         let modalCallback = null;
         let articleSelectedId = null;
         let forceListView = false;
         let articleColorFilter = ''; // '' = all colors
         let showColorStrip = false;
+        let homeCatSelected = null; // null = nivel 1 tiles, string = nivel 2 artículos
         
         const settings = {
             showSku: JSON.parse(localStorage.getItem('mikra_ord_showSku') ?? 'true'),
@@ -1027,16 +1173,15 @@
         function closeSettings() { $('settingsOverlay').classList.remove('show'); }
         
         function clearAllCache() {
-            if (!confirm('¿Borrar todo el caché y recargar?\nSe perderán los datos offline.')) return;
-            localStorage.removeItem('mikra_products');
-            localStorage.removeItem('mikra_images');
-            localStorage.removeItem('mikra_lastSync');
-            PRODUCTS = [];
-            IMAGES_MAP = {};
-            SEARCH_INDEX = [];
-            toast('🗑️ Caché borrado. Recargando...');
-            closeSettings();
-            setTimeout(() => location.reload(), 500);
+            showModal('🗑️', 'Borrar caché', '¿Borrar todo el caché y recargar? Se perderán los datos offline.', 'Sí, borrar', () => {
+                localStorage.removeItem('mikra_products');
+                localStorage.removeItem('mikra_images');
+                localStorage.removeItem('mikra_lastSync');
+                PRODUCTS = []; IMAGES_MAP = {}; SEARCH_INDEX = [];
+                toast('🗑️ Caché borrado. Recargando...');
+                closeSettings();
+                setTimeout(() => location.reload(), 500);
+            });
         }
         function updateSettingsUI() {
             $('toggleSku').classList.toggle('on', settings.showSku);
@@ -1072,10 +1217,21 @@
             const item = state.cart.find(c => c.id === productId);
             return item ? item.qty : 0;
         }
-        function addToCart(id, noStock) {
-            if (noStock && !confirm('⚠️ Sin stock. ¿Agregar igual?')) return;
+        function addToCart(id, noStock, callback) {
+            if (noStock) {
+                showModal('⚠️', 'Sin stock', '¿Agregar igual al pedido?', 'Sí, agregar', () => {
+                    const p = PRODUCTS.find(x => x.id === id);
+                    if (!p) return;
+                    const existing = state.cart.find(c => c.id === id);
+                    if (existing) { existing.qty += 1; }
+                    else { state.cart.push({ ...p, qty: 1 }); }
+                    saveCart(); updateBadge(); render();
+                    if (callback) callback(p);
+                });
+                return null;
+            }
             const p = PRODUCTS.find(x => x.id === id);
-            if (!p) return;
+            if (!p) return null;
             const existing = state.cart.find(c => c.id === id);
             if (existing) { existing.qty += 1; }
             else { state.cart.push({ ...p, qty: 1 }); }
@@ -1127,7 +1283,11 @@
             ).join('');
             updateBudgetTotal();
         }
-        function updatePrice(name, price) { articlePrices[name] = parseFloat(price) || 0; renderBudget(); }
+        function updatePrice(name, price) {
+            articlePrices[name] = parseFloat(price) || 0;
+            localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
+            renderBudget();
+        }
         function updateBudgetTotal() {
             let total = 0;
             state.cart.forEach(p => { total += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
@@ -1159,8 +1319,12 @@
         }
         function removeCart(i) { state.cart.splice(i, 1); saveCart(); renderCart(); updateBadge(); render(); }
         function clearCart() {
-            if (!confirm('¿Vaciar todo?')) return;
-            state.cart = []; articlePrices = {}; saveCart(); renderCart(); updateBadge(); render();
+            showModal('🗑️', 'Vaciar carrito', '¿Vaciar todos los productos del pedido?', 'Sí, vaciar', () => {
+                state.cart = []; articlePrices = {};
+                localStorage.removeItem('mikra_prices');
+                saveCart(); renderCart(); updateBadge(); render();
+                toast('Carrito vaciado', 'success');
+            });
         }
         
         // ===== DEBOUNCE UTILITY =====
@@ -1358,6 +1522,7 @@
             state.search = ''; state.searchExact = false; state.color = ''; state.size = '';
             $('searchClear').classList.remove('show'); $('autocomplete').classList.remove('show');
             forceListView = false; articleColorFilter = ''; showColorStrip = false;
+            homeCatSelected = null;
             applyFilters();
         }
         
@@ -1645,12 +1810,19 @@
         function hideArticleDetail() {
             $('articleDetailView').classList.remove('active');
             $('articleDetailView').classList.remove('show-photos');
-            $('productList').style.display = '';
-            $('pagination').style.display = '';
             $('articleEditBar').classList.remove('show');
             articleSelectedId = null;
             articleColorFilter = '';
             showColorStrip = false;
+            // If home state, hide productList and show home
+            if (isHomeState()) {
+                $('productList').style.display = 'none';
+                $('pagination').style.display = 'none';
+            } else {
+                $('productList').style.display = '';
+                $('pagination').style.display = '';
+                hideHomeScreen();
+            }
         }
         
         function toggleArticlePhotos() {
@@ -1682,8 +1854,14 @@
             if (articleSelectedId === productId) {
                 // Already selected — add 1 more
                 if (available <= 0) {
-                    // Exceeding stock — ask confirmation
-                    if (!confirm('⚠️ Sin stock disponible (' + p.stock + ' en sistema, ' + currentQty + ' en carrito).\n¿Agregar igual?')) return;
+                    showModal('⚠️', 'Sin stock disponible', p.stock + ' en sistema, ' + currentQty + ' en carrito. ¿Agregar igual?', 'Sí, agregar', () => {
+                        const existing = state.cart.find(c => c.id === productId);
+                        if (existing) { existing.qty += 1; } else { state.cart.push({ ...p, qty: 1 }); }
+                        saveCart(); updateBadge();
+                        toast('🛒 ' + getCartQty(productId) + '  ' + (p.color || '') + ' T:' + (p.talle || ''), 'success');
+                        articleUpdateEditBar(); renderArticleDetail();
+                    });
+                    return;
                 }
                 const existing = state.cart.find(c => c.id === productId);
                 if (existing) { existing.qty += 1; }
@@ -1698,7 +1876,13 @@
                 if (!existing) {
                     // Add 1 if not in cart
                     if (p.stock === 0) {
-                        if (!confirm('⚠️ Sin stock. ¿Agregar igual?')) { articleUpdateEditBar(); renderArticleDetail(); return; }
+                        showModal('⚠️', 'Sin stock', '¿Agregar igual al pedido?', 'Sí, agregar', () => {
+                            state.cart.push({ ...p, qty: 1 });
+                            saveCart(); updateBadge();
+                            toast('✓ Agregado  ' + (p.color || '') + ' T:' + (p.talle || ''), 'success');
+                            articleUpdateEditBar(); renderArticleDetail();
+                        });
+                        return;
                     }
                     state.cart.push({ ...p, qty: 1 });
                     saveCart(); updateBadge();
@@ -1737,9 +1921,14 @@
             
             // Warn if exceeding stock
             if (delta > 0 && newQty > p.stock) {
-                if (!confirm('⚠️ Superás el stock (' + p.stock + ').\n¿Agregar igual?')) return;
+                showModal('⚠️', 'Superás el stock', 'Stock: ' + p.stock + '. ¿Agregar igual?', 'Sí, agregar', () => {
+                    _doArticleChangeQty(p, newQty, delta, currentQty);
+                });
+                return;
             }
-            
+            _doArticleChangeQty(p, newQty, delta, currentQty);
+        }
+        function _doArticleChangeQty(p, newQty, delta, currentQty) {
             if (newQty <= 0) {
                 const idx = state.cart.findIndex(c => c.id === articleSelectedId);
                 if (idx >= 0) state.cart.splice(idx, 1);
@@ -1789,10 +1978,108 @@
             closeEditBar();
         }
         
+        // ===== HOME DASHBOARD =====
+        function isHomeState() {
+            return !state.search && state.stock === 'all' && !state.color && !state.size && !state.location && PRODUCTS.length > 0;
+        }
+
+        function getArticleStock(name) {
+            if (!UNIQUE_ARTICLES.length) return null;
+            const found = UNIQUE_ARTICLES.find(a => a.name.toLowerCase() === name.toLowerCase());
+            return found ? found.totalStock : null;
+        }
+
+        // Busca la primera imagen disponible para un nombre de artículo
+        function getArticleImage(artName) {
+            const lower = artName.toLowerCase();
+            const match = PRODUCTS.find(p =>
+                ((p.titulo || p.articulo || '').toLowerCase() === lower) && getProductImageFull(p.codigo, p)
+            );
+            return match ? getProductImageFull(match.codigo, match) : '';
+        }
+
+        function renderHomeScreen() {
+            $('homeDashboard').style.display = 'block';
+            $('productList').style.display = 'none';
+            $('pagination').innerHTML = '';
+            $('resultsInfo').style.display = 'none';
+
+            let html = '<div class="home-dashboard">';
+            html += '<div class="home-welcome">⚡ ' + PRODUCTS.length.toLocaleString() + ' SKUs cargados</div>';
+
+            if (!homeCatSelected) {
+                // ── Nivel 1: tiles de categoría ──
+                html += '<div class="home-cats-grid">';
+                QUICK_ACCESS.forEach(cat => {
+                    // Buscar imagen del primer artículo que tenga
+                    let imgUrl = '';
+                    for (const artName of cat.articles) {
+                        imgUrl = getArticleImage(artName);
+                        if (imgUrl) break;
+                    }
+                    const totalStock = cat.articles.reduce((sum, a) => sum + (getArticleStock(a) || 0), 0);
+                    html += '<div class="home-cat-tile" onclick="selectHomeCat(\'' + cat.cat.replace(/'/g, "\\'") + '\')">';
+                    if (imgUrl) {
+                        html += '<img class="home-cat-img" src="' + imgUrl + '" onerror="this.outerHTML=\'<div class=home-cat-img-placeholder>' + cat.icon + '</div>\'">';
+                    } else {
+                        html += '<div class="home-cat-img-placeholder">' + cat.icon + '</div>';
+                    }
+                    html += '<div class="home-cat-label-tile">' + cat.icon + ' ' + cat.cat +
+                        '<span class="home-cat-count">' + cat.articles.length + ' artículos</span></div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            } else {
+                // ── Nivel 2: artículos de la categoría seleccionada ──
+                const cat = QUICK_ACCESS.find(c => c.cat === homeCatSelected);
+                html += '<button class="home-back-btn" onclick="goHomeLevel1()">← Categorías</button>';
+                html += '<div class="home-cat-title">' + cat.icon + ' ' + cat.cat + '</div>';
+                html += '<div class="home-articles">';
+                cat.articles.forEach(artName => {
+                    const stock = getArticleStock(artName);
+                    const imgUrl = getArticleImage(artName);
+                    const imgHtml = imgUrl
+                        ? '<img class="home-art-img" src="' + imgUrl + '" loading="lazy" onerror="this.outerHTML=\'<div class=home-art-img-placeholder>📦</div>\'">'
+                        : '<div class="home-art-img-placeholder">📦</div>';
+                    const stockHtml = stock !== null
+                        ? '<span class="home-art-stock">' + stock + ' uds</span>'
+                        : '<span class="home-art-stock" style="color:var(--text-secondary)">—</span>';
+                    html += '<button class="home-article-btn" onclick="searchArticle(\'' + artName.replace(/'/g, "\\'") + '\')">' +
+                        imgHtml +
+                        '<span class="home-art-info"><span class="home-art-name">' + artName + '</span><br>' + stockHtml + '</span>' +
+                        '</button>';
+                });
+                html += '</div>';
+            }
+
+            html += '</div>';
+            $('homeDashboard').innerHTML = html;
+        }
+
+        function selectHomeCat(catName) {
+            homeCatSelected = catName;
+            renderHomeScreen();
+        }
+
+        function goHomeLevel1() {
+            homeCatSelected = null;
+            renderHomeScreen();
+            window.scrollTo({ top: 0 });
+        }
+
+        function hideHomeScreen() {
+            $('homeDashboard').style.display = 'none';
+            $('productList').style.display = '';
+            $('resultsInfo').style.display = '';
+        }
+        
         // ===== RENDER =====
         function render() {
-            if (isArticleDetailMode()) { renderArticleDetail(); updateBadge(); return; }
+            if (isArticleDetailMode()) { hideHomeScreen(); renderArticleDetail(); updateBadge(); return; }
             hideArticleDetail();
+            
+            if (isHomeState()) { renderHomeScreen(); return; }
+            hideHomeScreen();
             
             const start = (state.page - 1) * state.pageSize;
             const items = state.filtered.slice(start, start + state.pageSize);
@@ -1867,7 +2154,9 @@
         
         function listAddToCart(id, noStock, e) {
             e.stopPropagation();
-            const p = addToCart(id, noStock);
+            const p = addToCart(id, noStock, (p) => {
+                toast('✓ Agregado  ' + (p.color || '') + ' T:' + (p.talle || ''), 'success');
+            });
             if (p) { toast('✓ Agregado  ' + (p.color || '') + ' T:' + (p.talle || ''), 'success'); render(); }
         }
         
@@ -1906,11 +2195,13 @@
             const clientName = $('clientName').value.trim() || 'Sin nombre';
             const deliveryType = document.querySelector('input[name="delivery"]:checked')?.value || 'local';
             const shippingAddress = $('shippingAddress').value.trim();
+            const shippingCost = parseInt($('shippingCost').value) || 0;
             const paymentStatus = document.querySelector('input[name="payment"]:checked')?.value || 'abonado';
             const paymentAmount = $('paymentAmount').value.trim();
             let deliveryText = deliveryType === 'local' ? '🏪 Local (Galería)' : deliveryType === 'deposito' ? '📦 Depósito Mikra' : '🚚 Envío';
+            if (deliveryType === 'envio' && shippingCost > 0) deliveryText += ' $' + shippingCost.toLocaleString();
             let paymentText = paymentStatus === 'abonado' ? '✅ Ya abonó' : '⏳ Falta: ' + (paymentAmount || 'Sin especificar');
-            return { clientName, deliveryType, deliveryText, shippingAddress, paymentStatus, paymentText, paymentAmount };
+            return { clientName, deliveryType, deliveryText, shippingAddress, shippingCost, paymentStatus, paymentText, paymentAmount };
         }
         
         function shareWhatsApp() {
@@ -1927,7 +2218,15 @@
                 text += '💳 ' + order.paymentText + '\n─────────────────\n\n';
             }
             state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
-            text += '\n─────────────────\nTOTAL: ' + state.cart.reduce((a, p) => a + p.qty, 0) + ' uds\n';
+            const totalUnits = state.cart.reduce((a, p) => a + p.qty, 0);
+            text += '\n─────────────────\nTOTAL: ' + totalUnits + ' uds\n';
+            // Costo de envío — solo en el texto, NO en los códigos
+            if (state.orderType === 'pedido') {
+                const order = getOrderInfo();
+                if (order.deliveryType === 'envio' && order.shippingCost > 0) {
+                    text += '🚚 Envío: $' + order.shippingCost.toLocaleString() + '\n';
+                }
+            }
             if (state.orderType === 'presupuesto') {
                 let total = 0;
                 const grouped = {};
@@ -1935,6 +2234,7 @@
                 Object.entries(grouped).forEach(([n, d]) => { if (d.price > 0) { text += n + ' x' + d.qty + ' = $' + (d.qty * d.price).toLocaleString() + '\n'; total += d.qty * d.price; } });
                 text += '\n💰 TOTAL: $' + total.toLocaleString() + '\n';
             }
+            // Códigos para Excel — SIN el envío
             text += '\nCÓDIGOS:\n';
             state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
@@ -1994,6 +2294,12 @@
                 html += '</tr>';
             });
             html += '</tbody></table><div class="total">Total: ' + total + ' unidades';
+            if (state.orderType === 'pedido') {
+                const order = getOrderInfo();
+                if (order.deliveryType === 'envio' && order.shippingCost > 0) {
+                    html += '<br><strong>🚚 Envío: $' + order.shippingCost.toLocaleString() + '</strong>';
+                }
+            }
             if (state.orderType === 'presupuesto') html += '<br>💰 TOTAL: $' + grandTotal.toLocaleString();
             html += '</div></body></html>';
             const win = window.open('', '_blank'); win.document.write(html); win.document.close(); win.print();
@@ -2129,13 +2435,20 @@
             var pw = 72, mx = 5, cw = pw - mx * 2;
 
             // Calc height first
+            function artTitleHeight(artName) {
+                var artText = artName.toUpperCase();
+                var maxW = cw - 2;
+                function estW(fs) { return artText.length * fs * 0.6 / 2.83465; }
+                if (estW(9) <= maxW || estW(6.5) <= maxW) return 6; // fits in one line
+                return 10; // needs 2 lines
+            }
             function calcHeight() {
                 var y = 6 + 6 + 5 + 4; // header
                 if (state.orderType === 'pedido' && $('clientName').value.trim()) y += 5;
                 y += 4; // thick line
                 sortedArticles.forEach(function(artName) {
                     var colors = articlesMap[artName];
-                    y += 6; // article title
+                    y += artTitleHeight(artName); // article title (variable)
                     var sortedColors = Object.keys(colors).sort(function(a, b) { return a.localeCompare(b, 'es'); });
                     sortedColors.forEach(function(color, ci) {
                         y += 5; // color name
@@ -2188,16 +2501,44 @@
                 });
                 var allSizes = Object.keys(allSizesSet).sort(function(a, b) { return sizeIndex(a) - sizeIndex(b); });
 
-                // Article name - black bg
+                // Article name - black bg, auto font size + word wrap
                 pdf.setColor(0, 0, 0);
-                pdf.fillRect(mx, y - 3.5, cw, 7);
-                pdf.setColor(255, 255, 255);
-                pdf.setFontSize(9);
                 var artText = artName.toUpperCase();
-                if (artText.length > 28) artText = artText.substring(0, 26) + '..';
-                pdf.text(artText, pw / 2, y + 1, 'center');
-                pdf.setColor(0, 0, 0);
-                y += 6;
+                var maxW = cw - 2;
+                function estW(fs) { return artText.length * fs * 0.6 / 2.83465; }
+                
+                if (estW(9) <= maxW) {
+                    // Normal: fits at size 9
+                    pdf.fillRect(mx, y - 3.5, cw, 7);
+                    pdf.setColor(255, 255, 255);
+                    pdf.setFontSize(9);
+                    pdf.text(artText, pw / 2, y + 1, 'center');
+                    pdf.setColor(0, 0, 0);
+                    y += 6;
+                } else if (estW(6.5) <= maxW) {
+                    // Smaller font - still one line
+                    pdf.fillRect(mx, y - 3.5, cw, 7);
+                    pdf.setColor(255, 255, 255);
+                    pdf.setFontSize(6.5);
+                    pdf.text(artText, pw / 2, y + 1, 'center');
+                    pdf.setColor(0, 0, 0);
+                    y += 6;
+                } else {
+                    // Wrap to 2 lines - split at last space near middle
+                    var mid = Math.floor(artText.length / 2);
+                    var splitAt = artText.lastIndexOf(' ', mid);
+                    if (splitAt < 0) splitAt = artText.indexOf(' ', mid);
+                    if (splitAt < 0) splitAt = mid;
+                    var line1 = artText.substring(0, splitAt).trim();
+                    var line2 = artText.substring(splitAt).trim();
+                    pdf.fillRect(mx, y - 3.5, cw, 11);
+                    pdf.setColor(255, 255, 255);
+                    pdf.setFontSize(8);
+                    pdf.text(line1, pw / 2, y, 'center');
+                    pdf.text(line2, pw / 2, y + 4.5, 'center');
+                    pdf.setColor(0, 0, 0);
+                    y += 10;
+                }
 
                 var sortedColors = Object.keys(colors).sort(function(a, b) { return a.localeCompare(b, 'es'); });
 
@@ -2441,7 +2782,10 @@
                 });
                 const allSizes = Array.from(allSizesSet).sort((a, b) => sizeIndex(a) - sizeIndex(b));
                 
-                html += '<div class="art-name">' + artName + '</div>';
+                // Dynamic font size for long names
+                const nameLen = artName.length;
+                const nameFontSize = nameLen <= 18 ? '14px' : nameLen <= 24 ? '12px' : nameLen <= 32 ? '10px' : '9px';
+                html += '<div class="art-name" style="font-size:' + nameFontSize + '">' + artName + '</div>';
                 
                 const sortedColors = Object.keys(colors).sort((a, b) => a.localeCompare(b, 'es'));
                 
@@ -2601,7 +2945,13 @@
         // ===== MANUAL ORDER ENTRY =====
         function openManualEntry() {
             if (state.cart.length > 0) {
-                if (!confirm('⚠️ Hay ' + state.cart.length + ' productos en el carrito.\nSe va a vaciar antes de cargar los nuevos.\n¿Continuar?')) return;
+                showModal('⚠️', 'Carrito con productos', 'Hay ' + state.cart.length + ' productos. Se va a vaciar antes de cargar los nuevos. ¿Continuar?', 'Sí, continuar', () => {
+                    $('manualSkuInput').value = '';
+                    $('manualEntryResult').textContent = '';
+                    $('manualEntryModal').classList.add('show');
+                    setTimeout(() => $('manualSkuInput').focus(), 300);
+                });
+                return;
             }
             $('manualSkuInput').value = '';
             $('manualEntryResult').textContent = '';
@@ -2696,11 +3046,43 @@
         
         function switchPage(page) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            $('navStock').classList.remove('active');
+            $('navCart').classList.remove('active');
             $('page-' + page).classList.add('active');
-            document.querySelector('[data-page="' + page + '"]').classList.add('active');
-            // Hide edit bar when switching to cart
-            if (page === 'cart') { $('articleEditBar').classList.remove('show'); renderCart(); }
+            if (page === 'cart') {
+                $('navCart').classList.add('active');
+                $('articleEditBar').classList.remove('show');
+                renderCart();
+            } else {
+                $('navStock').classList.add('active');
+            }
+            window.scrollTo({ top: 0 });
+        }
+
+        function goHome() {
+            // Volver a página products si estamos en cart
+            if (!$('page-products').classList.contains('active')) {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                $('page-products').classList.add('active');
+            }
+            // Nav
+            $('navStock').classList.add('active');
+            $('navCart').classList.remove('active');
+            // Reset estado de búsqueda
+            $('searchInput').value = '';
+            $('searchClear').classList.remove('show');
+            $('autocomplete').classList.remove('show');
+            state.search = ''; state.searchExact = false;
+            state.color = ''; state.size = ''; state.location = '';
+            forceListView = false; articleColorFilter = ''; showColorStrip = false;
+            homeCatSelected = null;
+            // Ocultar listado, mostrar home con datos en memoria
+            $('articleEditBar').classList.remove('show');
+            $('articleDetailView').classList.remove('active');
+            $('productList').style.display = 'none';
+            $('pagination').innerHTML = '';
+            $('resultsInfo').style.display = 'none';
+            renderHomeScreen();
             window.scrollTo({ top: 0 });
         }
         
@@ -2735,7 +3117,7 @@
         });
         $('colorOptions').addEventListener('click', e => { const opt = e.target.closest('[data-color]'); if (opt) { state.color = opt.dataset.color; applyFilters(); } });
         $('sizeOptions').addEventListener('click', e => { const opt = e.target.closest('[data-size]'); if (opt) { state.size = opt.dataset.size; applyFilters(); } });
-        document.querySelectorAll('.nav-btn').forEach(btn => { btn.addEventListener('click', () => switchPage(btn.dataset.page)); });
+        // Nav buttons usan onclick directamente (goHome / switchPage)
         document.querySelectorAll('.delivery-option[data-delivery]').forEach(opt => {
             opt.addEventListener('click', () => {
                 document.querySelectorAll('.delivery-option[data-delivery]').forEach(o => o.classList.remove('selected'));

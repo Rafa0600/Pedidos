@@ -340,13 +340,15 @@
         
         .article-sizes-grid {
             display: flex; flex-wrap: nowrap; gap: 3px; padding: 6px 4px;
-            justify-content: center; overflow-x: auto;
+            overflow-x: auto; overflow-y: visible;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            justify-content: flex-start;
         }
         .article-sizes-grid::-webkit-scrollbar { display: none; }
         
         .article-size-cell {
-            min-width: 48px; flex: 1; max-width: 68px;
+            width: 52px; min-width: 52px; flex: 0 0 52px;
             text-align: center; padding: 8px 2px; border-radius: 10px;
             border: 2px solid var(--border); cursor: pointer; transition: all 0.15s;
             background: var(--bg-card); user-select: none; position: relative;
@@ -362,6 +364,11 @@
         }
         .article-size-cell.zero { opacity: 0.5; }
         .article-size-cell.zero .asc-stock { text-decoration: line-through; color: var(--danger); }
+        .article-size-cell.curva-btn-cell {
+            border-color: #a78bfa; background: rgba(167,139,250,0.12);
+            width: 48px; min-width: 48px; flex: 0 0 48px;
+        }
+        .article-size-cell.curva-btn-cell:active { background: rgba(167,139,250,0.3); }
         
         .asc-size { font-size: 0.72em; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; }
         .asc-stock { font-size: 1.3em; font-weight: 800; margin-top: 2px; line-height: 1; }
@@ -951,11 +958,6 @@
                         <label class="form-label">Datos del envío</label>
                         <textarea class="form-textarea" id="shippingAddress" placeholder="Dirección, teléfono..."></textarea>
                     </div>
-                    <div class="shipping-cost-row">
-                        <span class="shipping-cost-label">💰 Costo envío:</span>
-                        <span style="color:var(--text-secondary);font-size:0.9em;">$</span>
-                        <input type="number" class="shipping-cost-input" id="shippingCost" placeholder="0" min="0">
-                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Estado del pago</label>
@@ -1005,6 +1007,27 @@
                 <div class="form-group" style="margin-bottom:10px;">
                     <label class="form-label">Nombre del cliente *</label>
                     <input type="text" class="form-input" id="clientNamePres" placeholder="Nombre...">
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <div class="delivery-options">
+                        <label class="delivery-option selected" data-budgetenvio="no" id="budgetEnvioNo">
+                            <input type="radio" name="budgetEnvio" value="no" checked>
+                            <span class="delivery-radio"></span>
+                            <span class="delivery-label">🏪 Sin envío</span>
+                        </label>
+                        <label class="delivery-option" data-budgetenvio="si" id="budgetEnvioSi">
+                            <input type="radio" name="budgetEnvio" value="si">
+                            <span class="delivery-radio"></span>
+                            <span class="delivery-label">🚚 Con envío</span>
+                        </label>
+                    </div>
+                    <div id="budgetEnvioCostoRow" style="display:none;margin-top:8px;">
+                        <div class="shipping-cost-row">
+                            <span class="shipping-cost-label">💰 Costo envío:</span>
+                            <span style="color:var(--text-secondary);font-size:0.9em;">$</span>
+                            <input type="number" class="shipping-cost-input" id="budgetShippingCost" placeholder="0" min="0" oninput="renderBudget()">
+                        </div>
+                    </div>
                 </div>
                 <div id="budgetItems"></div>
                 <div class="budget-total">
@@ -1308,10 +1331,19 @@
             localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
             renderBudget();
         }
+        function getBudgetShipping() {
+            const conEnvio = document.querySelector('input[name="budgetEnvio"]:checked')?.value === 'si';
+            return conEnvio ? (parseInt($('budgetShippingCost')?.value) || 0) : 0;
+        }
         function updateBudgetTotal() {
             let total = 0;
             state.cart.forEach(p => { total += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
-            $('budgetTotal').textContent = '$' + total.toLocaleString();
+            const shipping = getBudgetShipping();
+            if (shipping > 0) {
+                $('budgetTotal').textContent = '$' + (total + shipping).toLocaleString() + ' (prod. $' + total.toLocaleString() + ' + env. $' + shipping.toLocaleString() + ')';
+            } else {
+                $('budgetTotal').textContent = '$' + total.toLocaleString();
+            }
         }
         
         function renderCart() {
@@ -1760,6 +1792,18 @@
                 if (!colorGroups[c]) colorGroups[c] = [];
                 colorGroups[c].push(p);
             });
+
+            // Calcular todos los talles únicos del artículo, ordenados
+            const allSizesSet = new Set();
+            allProducts.forEach(p => { if (p.talle) allSizesSet.add(p.talle); });
+            const allSizes = [...allSizesSet].sort((a, b) => {
+                const na = parseFloat(a), nb = parseFloat(b);
+                if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                const ia = SIZE_ORDER.indexOf(a.toUpperCase()), ib = SIZE_ORDER.indexOf(b.toUpperCase());
+                if (ia > -1 && ib > -1) return ia - ib;
+                if (ia > -1) return -1; if (ib > -1) return 1;
+                return a.localeCompare(b);
+            });
             
             let totalStock = 0, totalCartQty = 0;
             allProducts.forEach(p => { totalStock += p.stock || 0; totalCartQty += getCartQty(p.id); });
@@ -1797,14 +1841,6 @@
             
             visibleColors.forEach(color => {
                 const prods = colorGroups[color];
-                prods.sort((a, b) => {
-                    const sa = a.talle || '', sb = b.talle || '';
-                    const na = parseFloat(sa), nb = parseFloat(sb);
-                    if (!isNaN(na) && !isNaN(nb)) return na - nb;
-                    const ia = SIZE_ORDER.indexOf(sa.toUpperCase()), ib = SIZE_ORDER.indexOf(sb.toUpperCase());
-                    if (ia > -1 && ib > -1) return ia - ib;
-                    return sa.localeCompare(sb);
-                });
                 
                 const cm = colorMeta[color];
                 const colorAvail = cm.avail;
@@ -1824,30 +1860,54 @@
                 }
                 
                 html += '<div class="article-sizes-grid">';
-                prods.forEach(p => {
+                // Construir mapa talle → producto para este color
+                const talleMap = {};
+                prods.forEach(p => { if (p.talle) talleMap[p.talle] = p; });
+                allSizes.forEach(talle => {
+                    const p = talleMap[talle];
+                    if (!p) {
+                        // Placeholder vacío para alineación
+                        html += '<div class="article-size-cell" style="opacity:0;pointer-events:none;">' +
+                            '<div class="asc-size">' + talle + '</div>' +
+                            '<div class="asc-stock">-</div>' +
+                            '</div>';
+                        return;
+                    }
                     const cartQty = getCartQty(p.id);
                     const inCart = cartQty > 0;
                     const available = p.stock - cartQty;
                     const stockClass = available > 5 ? 'high' : available > 0 ? 'med' : 'low';
                     const isZero = available <= 0 && cartQty === 0;
                     const isSelected = articleSelectedId === p.id;
-                    
                     html += '<div class="article-size-cell' + 
                         (isZero ? ' zero' : '') + 
                         (inCart ? ' in-cart' : '') +
                         (isSelected ? ' selected' : '') + 
                         '" data-pid="' + p.id + '" onclick="articleTapSize(' + p.id + ')">' +
                         (inCart ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
-                        '<div class="asc-size">' + (p.talle || '-') + '</div>' +
+                        '<div class="asc-size">' + talle + '</div>' +
                         '<div class="asc-stock ' + stockClass + '">' + available + '</div>' +
                         '</div>';
                 });
+                // Botón Curva inline al final de los talles
+                const colorKey = color.replace(/'/g, "\\'");
+                html += '<div class="article-size-cell curva-btn-cell" onclick="addCurvaColor(\'' + colorKey + '\')" title="Agregar 1 de cada talle">' +
+                    '<div class="asc-size" style="font-size:0.6em;line-height:1.2;">+<br>Curva</div>' +
+                    '</div>';
                 html += '</div></div>';
             });
             
             $('showingCount').textContent = allProducts.length;
             $('totalCount').textContent = allProducts.length;
             $('articleDetailContent').innerHTML = html;
+            
+            // Sincronizar scroll horizontal entre todos los grids de talles
+            const grids = $('articleDetailContent').querySelectorAll('.article-sizes-grid');
+            grids.forEach(grid => {
+                grid.addEventListener('scroll', function() {
+                    grids.forEach(g => { if (g !== this) g.scrollLeft = this.scrollLeft; });
+                }, { passive: true });
+            });
         }
         
         function hideArticleDetail() {
@@ -2103,6 +2163,37 @@
             showZeroStock = !showZeroStock;
             renderArticleDetail();
         }
+
+        function addCurvaColor(color) {
+            const products = state.filtered;
+            const prods = products.filter(p => (p.color || 'Sin color') === color);
+            if (!prods.length) return;
+            _doCurva(prods);
+        }
+
+        function _doCurva(prods) {
+            const sinStock = [];
+            const agregados = [];
+            prods.forEach(p => {
+                const available = p.stock - getCartQty(p.id);
+                if (available <= 0) {
+                    sinStock.push(p.talle || '-');
+                } else {
+                    const existing = state.cart.find(c => c.id === p.id);
+                    if (existing) existing.qty += 1;
+                    else state.cart.push({ ...p, qty: 1 });
+                    agregados.push(p.talle || '-');
+                }
+            });
+            saveCart(); updateBadge(); renderArticleDetail();
+            if (sinStock.length > 0 && agregados.length > 0) {
+                toast('Curva agregada. Sin stock: T ' + sinStock.join(', '), 'warning');
+            } else if (sinStock.length > 0 && agregados.length === 0) {
+                showModal('Sin stock', 'Curva completa', 'No hay stock disponible en ningun talle de este color.', 'Entendido', null);
+            } else {
+                toast('Curva completa agregada (' + agregados.length + ' talles)', 'success');
+            }
+        }
         
         function selectHomeCat(catName) {
             homeCatSelected = catName;
@@ -2256,48 +2347,53 @@
             const clientDisplayName = canalPrefix + ' - ' + clientName;
             const deliveryType = document.querySelector('input[name="delivery"]:checked')?.value || 'local';
             const shippingAddress = $('shippingAddress').value.trim();
-            const shippingCost = parseInt($('shippingCost').value) || 0;
             const paymentStatus = document.querySelector('input[name="payment"]:checked')?.value || 'abonado';
             const paymentAmount = $('paymentAmount').value.trim();
-            let deliveryText = deliveryType === 'local' ? '🏪 Local (Galería)' : deliveryType === 'deposito' ? '📦 Depósito Mikra' : '🚚 Envío';
-            if (deliveryType === 'envio' && shippingCost > 0) deliveryText += ' $' + shippingCost.toLocaleString();
-            let paymentText = paymentStatus === 'abonado' ? '✅ Ya abonó' : '⏳ Falta: ' + (paymentAmount || 'Sin especificar');
-            return { clientName, clientDisplayName, canal, canalPrefix, deliveryType, deliveryText, shippingAddress, shippingCost, paymentStatus, paymentText, paymentAmount };
+            let deliveryText = deliveryType === 'local' ? 'Local (Galeria)' : deliveryType === 'deposito' ? 'Deposito Mikra' : 'Envio';
+            let paymentText = paymentStatus === 'abonado' ? 'Ya abono' : 'Falta abonar: ' + (paymentAmount || 'Sin especificar');
+            return { clientName, clientDisplayName, canal, canalPrefix, deliveryType, deliveryText, shippingAddress, paymentStatus, paymentText, paymentAmount };
         }
         
         function shareWhatsApp() {
             if (!state.cart.length) return;
             if (!validateForm()) return;
             let text = '';
-            if (state.orderType === 'reposicion') { text = '🔄 REPOSICIÓN GALERÍA\n─────────────────\n\n'; }
-            else if (state.orderType === 'presupuesto') { text = '💰 PRESUPUESTO MIKRA\n─────────────────\n\n'; }
-            else {
-                const order = getOrderInfo();
-                text = '📋 PEDIDO MIKRA\n─────────────────\n';
-                text += '👤 ' + order.clientDisplayName + '\n📍 ' + order.deliveryText + '\n';
-                if (order.deliveryType === 'envio' && order.shippingAddress) text += '📬 ' + order.shippingAddress + '\n';
-                text += '💳 ' + order.paymentText + '\n─────────────────\n\n';
-            }
-            state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
-            const totalUnits = state.cart.reduce((a, p) => a + p.qty, 0);
-            text += '\n─────────────────\nTOTAL: ' + totalUnits + ' uds\n';
-            // Costo de envío — solo en el texto, NO en los códigos
-            if (state.orderType === 'pedido') {
-                const order = getOrderInfo();
-                if (order.deliveryType === 'envio' && order.shippingCost > 0) {
-                    text += '🚚 Envío: $' + order.shippingCost.toLocaleString() + '\n';
-                }
-            }
-            if (state.orderType === 'presupuesto') {
+            if (state.orderType === 'reposicion') {
+                text = 'REPOSICION GALERIA\n─────────────────\n\n';
+                state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
+                const total = state.cart.reduce((a, p) => a + p.qty, 0);
+                text += '\n─────────────────\nTOTAL: ' + total + ' uds\n';
+                text += '\nCODIGOS:\n';
+                state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+            } else if (state.orderType === 'presupuesto') {
                 let total = 0;
                 const grouped = {};
                 state.cart.forEach(p => { const n = p.titulo || p.articulo; if (!grouped[n]) grouped[n] = { qty: 0, price: articlePrices[n] || 0 }; grouped[n].qty += p.qty; });
+                const clientPres = $('clientNamePres').value.trim() || 'Sin nombre';
+                text = 'PRESUPUESTO MIKRA\n─────────────────\n';
+                text += clientPres + '\n─────────────────\n\n';
                 Object.entries(grouped).forEach(([n, d]) => { if (d.price > 0) { text += n + ' x' + d.qty + ' = $' + (d.qty * d.price).toLocaleString() + '\n'; total += d.qty * d.price; } });
-                text += '\n💰 TOTAL: $' + total.toLocaleString() + '\n';
+                const shipping = getBudgetShipping();
+                if (shipping > 0) {
+                    text += 'Envio: $' + shipping.toLocaleString() + '\n';
+                    text += '\nTOTAL: $' + (total + shipping).toLocaleString() + '\n';
+                } else {
+                    text += '\nTOTAL: $' + total.toLocaleString() + '\n';
+                }
+                text += '\nCODIGOS:\n';
+                state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+            } else {
+                const order = getOrderInfo();
+                text = 'PEDIDO MIKRA\n─────────────────\n';
+                text += order.clientDisplayName + '\n' + order.deliveryText + '\n';
+                if (order.deliveryType === 'envio' && order.shippingAddress) text += order.shippingAddress + '\n';
+                text += order.paymentText + '\n─────────────────\n\n';
+                state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
+                const totalUnits = state.cart.reduce((a, p) => a + p.qty, 0);
+                text += '\n─────────────────\nTOTAL: ' + totalUnits + ' uds\n';
+                text += '\nCODIGOS:\n';
+                state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             }
-            // Códigos para Excel — SIN el envío
-            text += '\nCÓDIGOS:\n';
-            state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
             askClearCart();
         }
@@ -3197,6 +3293,16 @@
             opt.addEventListener('click', () => {
                 document.querySelectorAll('.delivery-option[data-canal]').forEach(o => o.classList.remove('selected'));
                 opt.classList.add('selected'); opt.querySelector('input').checked = true;
+            });
+        });
+        document.querySelectorAll('[data-budgetenvio]').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('[data-budgetenvio]').forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected'); opt.querySelector('input').checked = true;
+                const conEnvio = opt.dataset.budgetenvio === 'si';
+                $('budgetEnvioCostoRow').style.display = conEnvio ? 'block' : 'none';
+                if (!conEnvio && $('budgetShippingCost')) $('budgetShippingCost').value = '';
+                updateBudgetTotal();
             });
         });
         

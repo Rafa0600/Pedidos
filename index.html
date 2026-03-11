@@ -1049,7 +1049,11 @@
     
     <nav class="footer-nav" id="footerNav">
         <div class="footer-inner">
-            <button class="nav-btn active" id="navStock" onclick="goHome()">
+            <button class="nav-btn" id="navHome" onclick="goHome()">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Inicio</span>
+            </button>
+            <button class="nav-btn active" id="navStock" onclick="switchPage('products')">
                 <span class="nav-icon">📦</span>
                 <span class="nav-label">Stock</span>
             </button>
@@ -1339,11 +1343,7 @@
             let total = 0;
             state.cart.forEach(p => { total += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
             const shipping = getBudgetShipping();
-            if (shipping > 0) {
-                $('budgetTotal').textContent = '$' + (total + shipping).toLocaleString() + ' (prod. $' + total.toLocaleString() + ' + env. $' + shipping.toLocaleString() + ')';
-            } else {
-                $('budgetTotal').textContent = '$' + total.toLocaleString();
-            }
+            $('budgetTotal').textContent = '$' + (total + shipping).toLocaleString();
         }
         
         function renderCart() {
@@ -1596,6 +1596,7 @@
         
         function searchArticle(name) {
             if (!name) return;
+            _savedStockState = null;
             $('searchInput').value = name; state.search = name; state.searchExact = true;
             forceListView = false; articleColorFilter = ''; showColorStrip = false; showZeroStock = false;
             $('searchClear').classList.add('show'); $('autocomplete').classList.remove('show');
@@ -2457,7 +2458,15 @@
                     html += '<br><strong>🚚 Envío: $' + order.shippingCost.toLocaleString() + '</strong>';
                 }
             }
-            if (state.orderType === 'presupuesto') html += '<br>💰 TOTAL: $' + grandTotal.toLocaleString();
+            if (state.orderType === 'presupuesto') {
+                const shipping = getBudgetShipping();
+                if (shipping > 0) {
+                    html += '<br>Envio: $' + shipping.toLocaleString();
+                    html += '<br><strong>TOTAL: $' + (grandTotal + shipping).toLocaleString() + '</strong>';
+                } else {
+                    html += '<br><strong>TOTAL: $' + grandTotal.toLocaleString() + '</strong>';
+                }
+            }
             html += '</div></body></html>';
             const win = window.open('', '_blank'); win.document.write(html); win.document.close(); win.print();
             askClearCart();
@@ -3201,8 +3210,11 @@
             setTimeout(() => t.className = 'toast', 2000);
         }
         
+        let _savedStockState = null;
+
         function switchPage(page) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            $('navHome').classList.remove('active');
             $('navStock').classList.remove('active');
             $('navCart').classList.remove('active');
             $('page-' + page).classList.add('active');
@@ -3212,28 +3224,54 @@
                 renderCart();
             } else {
                 $('navStock').classList.add('active');
+                // Restaurar búsqueda guardada si existe
+                if (_savedStockState && _savedStockState.search) {
+                    const s = _savedStockState;
+                    state.search = s.search;
+                    state.searchExact = s.searchExact;
+                    state.filtered = s.filtered;
+                    $('searchInput').value = s.search;
+                    $('searchClear').classList.add('show');
+                    _savedStockState = null;
+                    hideHomeScreen();
+                    if (s.searchExact) renderArticleDetail();
+                    else { applyFilters(); }
+                }
+                // Si no hay nada guardado, queda como está
             }
             window.scrollTo({ top: 0 });
         }
 
         function goHome() {
-            // Volver a página products si estamos en cart
+            if (isHomeState() && !homeCatSelected && $('page-products').classList.contains('active')) return;
+
+            // Guardar estado actual de búsqueda antes de limpiar
+            if (state.search) {
+                _savedStockState = {
+                    search: state.search,
+                    searchExact: state.searchExact,
+                    filtered: [...state.filtered]
+                };
+            }
+
+            homeCatSelected = null;
+
             if (!$('page-products').classList.contains('active')) {
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
                 $('page-products').classList.add('active');
             }
-            // Nav
-            $('navStock').classList.add('active');
+
+            $('navHome').classList.add('active');
+            $('navStock').classList.remove('active');
             $('navCart').classList.remove('active');
-            // Reset estado de búsqueda
+
             $('searchInput').value = '';
             $('searchClear').classList.remove('show');
             $('autocomplete').classList.remove('show');
             state.search = ''; state.searchExact = false;
             state.color = ''; state.size = ''; state.location = '';
             forceListView = false; articleColorFilter = ''; showColorStrip = false;
-            homeCatSelected = null;
-            // Ocultar listado, mostrar home con datos en memoria
+
             $('articleEditBar').classList.remove('show');
             $('articleDetailView').classList.remove('active');
             $('productList').style.display = 'none';

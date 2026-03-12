@@ -1030,6 +1030,9 @@
                     </div>
                 </div>
                 <div id="budgetItems"></div>
+                <div style="margin:8px 0 4px;">
+                    <button onclick="fillMayoristaPrecios()" style="width:100%;padding:10px;background:linear-gradient(135deg,#4ade80,#22c55e);color:#1a2744;border:none;border-radius:8px;font-weight:700;font-size:0.85em;cursor:pointer;">💲 Completar precios mayoristas</button>
+                </div>
                 <div class="budget-total">
                     <span>TOTAL:</span>
                     <span class="budget-total-value" id="budgetTotal">$0</span>
@@ -1127,6 +1130,63 @@
     </div>
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbycz2hrgjQxRCvVKtW0o-HAuMQYTfmiBHSgJPFZTX34PwBpAladxb8ZPpt-Vg09zplx/exec';
+        // URL del GAS de mayorista (desplegar aparte — ver instrucciones)
+        const MAYORISTA_URL = 'https://script.google.com/macros/s/AKfycbydonVH8dxTe3PHUDADDeX33P0jM6SBegSa5bdronlNPj2ls28miPIyNXIRgqRhZb6y0A/exec';
+        let mayoristaCacheData = null;
+
+        async function fetchMayoristaPrecios() {
+            if (mayoristaCacheData) return mayoristaCacheData;
+            const r = await fetch(MAYORISTA_URL);
+            const d = await r.json();
+            if (!d.success || !d.data) throw new Error('Sin datos mayorista');
+            // Construir mapa: título normalizado → precio
+            const map = {};
+            d.data.forEach(row => {
+                if (row.articulo) map[row.articulo.trim().toLowerCase()] = parseFloat(String(row.precio).replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+            });
+            mayoristaCacheData = map;
+            return map;
+        }
+
+        async function fillMayoristaPrecios() {
+            if (!MAYORISTA_URL || MAYORISTA_URL.includes('REEMPLAZAR')) {
+                toast('⚠️ Configurar URL del GAS mayorista', 'error'); return;
+            }
+            toast('Buscando precios mayoristas...', '');
+            try {
+                const map = await fetchMayoristaPrecios();
+                const grouped = {};
+                state.cart.forEach(p => { const n = p.titulo || p.articulo; if (!grouped[n]) grouped[n] = n; });
+                const nombres = Object.keys(grouped);
+                let encontrados = 0, noEncontrados = [];
+                nombres.forEach(nombre => {
+                    const key = nombre.trim().toLowerCase();
+                    // Buscar coincidencia exacta primero, luego parcial
+                    let precio = map[key];
+                    if (precio === undefined) {
+                        // Buscar si alguna clave del mapa es substring del nombre o viceversa
+                        const match = Object.entries(map).find(([k]) => key.startsWith(k) || k.startsWith(key));
+                        if (match) precio = match[1];
+                    }
+                    if (precio !== undefined && precio > 0) {
+                        articlePrices[nombre] = precio;
+                        encontrados++;
+                    } else {
+                        noEncontrados.push(nombre);
+                    }
+                });
+                localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
+                renderBudget();
+                if (noEncontrados.length === 0) {
+                    toast('✅ ' + encontrados + ' precio' + (encontrados !== 1 ? 's' : '') + ' completado' + (encontrados !== 1 ? 's' : ''), 'success');
+                } else {
+                    toast('✅ ' + encontrados + ' ok · ⚠️ sin precio: ' + noEncontrados.join(', '), 'warning');
+                }
+            } catch(e) {
+                toast('❌ Error al buscar precios mayoristas', 'error');
+                console.error(e);
+            }
+        }
         const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
         
         // ===== QUICK ACCESS DASHBOARD =====
@@ -1324,7 +1384,7 @@
             $('budgetItems').innerHTML = items.map(item =>
                 '<div class="budget-item"><span class="budget-item-name">' + item.name + '</span>' +
                 '<span class="budget-item-qty">x' + item.qty + '</span>' +
-                '<input type="number" class="budget-item-price" value="' + item.price + '" ' +
+                '<input type="number" class="budget-item-price" value="' + (item.price > 0 ? item.price : '') + '" ' +
                 'onchange="updatePrice(\'' + item.name.replace(/'/g, "\\'") + '\', this.value)" placeholder="$">' +
                 '<span class="budget-item-subtotal">$' + (item.qty * item.price).toLocaleString() + '</span></div>'
             ).join('');
@@ -1390,7 +1450,30 @@
             showModal('🗑️', 'Vaciar carrito', '¿Vaciar todos los productos del pedido?', 'Sí, vaciar', () => {
                 state.cart = []; articlePrices = {};
                 localStorage.removeItem('mikra_prices');
+                // Reset formulario Pedido
+                $('clientName').value = '';
+                $('shippingAddress').value = '';
+                $('paymentAmount').value = '';
+                document.querySelectorAll('.delivery-option[data-delivery]').forEach(o => o.classList.remove('selected'));
+                const localOpt = document.querySelector('[data-delivery="local"]');
+                if (localOpt) { localOpt.classList.add('selected'); localOpt.querySelector('input').checked = true; }
+                $('shippingDetails').classList.remove('show');
+                document.querySelectorAll('.delivery-option[data-payment]').forEach(o => o.classList.remove('selected'));
+                const abonadoOpt = document.querySelector('[data-payment="abonado"]');
+                if (abonadoOpt) { abonadoOpt.classList.add('selected'); abonadoOpt.querySelector('input').checked = true; }
+                $('paymentDetails').classList.remove('show');
+                document.querySelectorAll('.delivery-option[data-canal]').forEach(o => o.classList.remove('selected'));
+                const canalLocalOpt = document.querySelector('[data-canal="local"]');
+                if (canalLocalOpt) { canalLocalOpt.classList.add('selected'); canalLocalOpt.querySelector('input').checked = true; }
+                // Reset formulario Presupuesto
+                $('clientNamePres').value = '';
+                if ($('budgetShippingCost')) $('budgetShippingCost').value = '';
+                $('budgetEnvioCostoRow').style.display = 'none';
+                document.querySelectorAll('.delivery-option[data-budgetenvio]').forEach(o => o.classList.remove('selected'));
+                const noEnvioOpt = document.querySelector('[data-budgetenvio="no"]');
+                if (noEnvioOpt) { noEnvioOpt.classList.add('selected'); noEnvioOpt.querySelector('input').checked = true; }
                 saveCart(); renderCart(); updateBadge(); render();
+                if (state.orderType === 'presupuesto') renderBudget();
                 toast('Carrito vaciado', 'success');
             });
         }

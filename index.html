@@ -521,25 +521,84 @@
         .export-btn.pdf { background: #dc2626; color: white; }
         .export-btn.ticket { background: #8b5cf6; color: white; }
         
-        .cart-items { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-        .cart-item {
-            padding: 10px 12px; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
+        .cart-items { display: flex; flex-direction: column; gap: 6px; }
+
+        /* ── Cart card agrupada por artículo ── */
+        .ci-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; overflow: hidden;
         }
-        .cart-item:last-child { border-bottom: none; }
-        .cart-item-info { flex: 1; }
-        .cart-item-name { font-weight: 600; font-size: 0.85em; }
-        .cart-item-meta { font-size: 0.72em; color: var(--text-secondary); }
-        .cart-item-right { display: flex; align-items: center; gap: 8px; }
-        .cart-qty { display: flex; align-items: center; gap: 4px; }
-        .cart-qty-btn {
-            width: 28px; height: 28px; background: var(--bg-input);
-            border: 1px solid var(--border); border-radius: 6px;
-            color: var(--text); font-weight: 700; cursor: pointer;
+        .ci-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 10px 7px; border-bottom: 1px solid var(--border);
         }
-        .cart-qty-btn:hover { background: var(--primary); border-color: var(--primary); }
-        .cart-qty-val { width: 28px; text-align: center; font-weight: 700; font-size: 0.9em; }
-        .cart-remove { background: none; border: none; color: var(--danger); font-size: 1em; cursor: pointer; }
+        .ci-thumb {
+            width: 44px; height: 44px; border-radius: 7px; object-fit: cover;
+            background: var(--bg-input); flex-shrink: 0; border: 1px solid var(--border);
+        }
+        .ci-thumb-ph {
+            width: 44px; height: 44px; border-radius: 7px; background: var(--bg-input);
+            display: flex; align-items: center; justify-content: center; font-size: 1.2em;
+            flex-shrink: 0; border: 1px solid var(--border);
+        }
+        .ci-name {
+            flex: 1; font-weight: 700; font-size: 0.88em; line-height: 1.25;
+        }
+        .ci-uds {
+            font-size: 0.72em; color: var(--text-secondary); font-weight: 600;
+            background: var(--bg-input); padding: 2px 7px; border-radius: 10px;
+        }
+        .ci-del {
+            background: none; border: none; color: var(--danger); font-size: 1em;
+            cursor: pointer; padding: 4px 2px; -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ── Filas por color ── */
+        .ci-body { padding: 6px 10px 8px; display: flex; flex-direction: column; gap: 6px; }
+        .ci-color-row { display: flex; flex-direction: column; gap: 4px; }
+        .ci-color-label {
+            font-size: 0.7em; font-weight: 700; color: var(--primary); text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .ci-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+        /* ── Chip de talle ── */
+        .ci-chip {
+            display: flex; flex-direction: column; align-items: center;
+            background: var(--bg-input); border: 1.5px solid var(--border);
+            border-radius: 8px; padding: 5px 7px; cursor: pointer; min-width: 42px;
+            -webkit-tap-highlight-color: transparent; transition: border-color 0.12s;
+            position: relative; user-select: none;
+        }
+        .ci-chip:hover { border-color: var(--primary); }
+        .ci-chip.active { border-color: var(--primary); background: rgba(79,172,254,0.12); }
+        .ci-chip.warn { border-color: var(--warning); }
+        .ci-chip.no-stock { border-color: var(--danger); opacity: 0.6; }
+        .ci-chip-t { font-size: 0.65em; color: var(--text-secondary); font-weight: 600; line-height: 1; }
+        .ci-chip-q { font-size: 1em; font-weight: 800; color: var(--text); line-height: 1.3; }
+        .ci-chip-q.warn { color: var(--warning); }
+        .ci-chip-q.no-stock { color: var(--danger); }
+
+        /* ── Inline editor del chip ── */
+        .ci-chip-editor {
+            position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+            background: var(--bg-card); border: 1.5px solid var(--primary);
+            border-radius: 10px; padding: 5px 6px; display: flex; flex-direction: column;
+            align-items: stretch; gap: 0;
+            z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.4); white-space: nowrap;
+            min-width: 120px;
+        }
+        .ci-chip-editor button {
+            width: 28px; height: 28px; border: none; border-radius: 6px;
+            background: var(--primary); color: white; font-size: 1.1em; font-weight: 800;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+        }
+        .ci-chip-editor button.del-btn { background: var(--danger); font-size: 0.8em; }
+        .ci-chip-editor > div > span {
+            min-width: 22px; text-align: center; font-weight: 800; font-size: 0.95em;
+        }
+
         
         /* FOOTER NAV */
         .footer-nav {
@@ -755,6 +814,46 @@
             border: 1px dashed var(--border); border-radius: 8px;
             font-size: 0.68em; color: var(--text-secondary); text-align: center;
         }
+        /* ===== SLOT TABS ===== */
+        .slot-tabs {
+            display: flex; gap: 5px; overflow-x: auto; padding: 6px 0 6px;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-bottom: 4px;
+        }
+        .slot-tabs::-webkit-scrollbar { display: none; }
+        .slot-tab {
+            display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+            padding: 6px 10px; border-radius: 20px;
+            background: var(--bg-card); border: 1.5px solid var(--border);
+            font-size: 0.78em; font-weight: 700; cursor: pointer; color: var(--text-secondary);
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.12s, border-color 0.12s, color 0.12s;
+            max-width: 160px;
+        }
+        .slot-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .slot-tab:not(.active):hover { border-color: var(--primary); color: var(--primary); }
+        .slot-tab-name {
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px;
+        }
+        .slot-tab-x {
+            font-size: 0.9em; opacity: 0.55; padding: 0; margin-left: 1px; flex-shrink: 0;
+            background: none; border: none; color: inherit; cursor: pointer; line-height: 1;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .slot-tab-x:hover { opacity: 1; }
+        .slot-count-badge {
+            background: rgba(255,255,255,0.25); border-radius: 10px;
+            padding: 0 5px; font-size: 0.82em; font-weight: 800; flex-shrink: 0;
+        }
+        .slot-tab:not(.active) .slot-count-badge { background: rgba(79,172,254,0.18); color: var(--primary); }
+        .slot-add-btn {
+            flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; align-self: center;
+            background: var(--bg-input); border: 1.5px dashed var(--border);
+            font-size: 1.1em; font-weight: 800; cursor: pointer; color: var(--text-secondary);
+            display: flex; align-items: center; justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .slot-add-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(79,172,254,0.08); }
+
         /* Shipping cost field */
         .shipping-cost-row {
             display: flex; align-items: center; gap: 8px; margin-top: 8px;
@@ -907,6 +1006,7 @@
             <div class="header-left"><span class="header-title">🛒 Mi Pedido</span></div>
         </div>
         <div class="container">
+            <div class="slot-tabs" id="slotTabs"></div>
             <div class="cart-header">
                 <div class="cart-count"><span id="cartItemCount">0</span> prod. (<span id="cartUnitCount">0</span> uds)</div>
                 <div style="display:flex;gap:6px;align-items:center;">
@@ -1045,7 +1145,6 @@
                 <button class="export-btn ticket" onclick="downloadTicketDirectPrint()">🎫 Ticket</button>
                 <button class="export-btn" style="background:var(--primary);color:white;" onclick="downloadPreparacion()">📦 Preparar</button>
             </div>
-            
             <div class="cart-items" id="cartItems"></div>
         </div>
     </div>
@@ -1130,10 +1229,10 @@
     </div>
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbycz2hrgjQxRCvVKtW0o-HAuMQYTfmiBHSgJPFZTX34PwBpAladxb8ZPpt-Vg09zplx/exec';
-        // URL del GAS de mayorista (desplegar aparte — ver instrucciones)
-        const MAYORISTA_URL = 'https://script.google.com/macros/s/AKfycbydonVH8dxTe3PHUDADDeX33P0jM6SBegSa5bdronlNPj2ls28miPIyNXIRgqRhZb6y0A/exec';
         let mayoristaCacheData = null;
 
+        // URL del GAS de mayorista (desplegar aparte — ver instrucciones)
+        const MAYORISTA_URL = 'https://script.google.com/macros/s/AKfycbydonVH8dxTe3PHUDADDeX33P0jM6SBegSa5bdronlNPj2ls28miPIyNXIRgqRhZb6y0A/exec';
         async function fetchMayoristaPrecios() {
             if (mayoristaCacheData) return mayoristaCacheData;
             const r = await fetch(MAYORISTA_URL);
@@ -1255,7 +1354,7 @@
         const state = {
             filtered: [], search: '', searchExact: false, stock: 'all',
             color: '', size: '', location: '', page: 1, pageSize: 50,
-            cart: JSON.parse(localStorage.getItem('mikra_cart') || '[]'),
+            cart: [],
             orderType: 'pedido', showImages: false
         };
         
@@ -1354,7 +1453,219 @@
                 saveCart(); updateBadge(); render();
             }
         }
-        function saveCart() { localStorage.setItem('mikra_cart', JSON.stringify(state.cart)); }
+        // ===== SLOT SYSTEM =====
+        // ===== SLOT SYSTEM =====
+        let _slots = [];
+        let _activeSlotId = null;
+        let _saveTimer = null;
+
+        function _slotId() {
+            return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        }
+
+        function makeSlot(nombre, cart, orderType, formData, prices) {
+            return {
+                id: _slotId(),
+                nombre: nombre || 'Nuevo pedido',
+                cart: cart || [],
+                orderType: orderType || 'pedido',
+                formData: formData || null,
+                prices: prices || {}
+            };
+        }
+
+        // Snapshot del slot activo antes de cambiar
+        function _snapshotActive() {
+            const slot = _slots.find(s => s.id === _activeSlotId);
+            if (!slot) return;
+            slot.cart = state.cart;
+            slot.orderType = state.orderType;
+            slot.formData = getFormData();
+            slot.prices = Object.assign({}, articlePrices);
+            const n = getSlotNameFromForm();
+            if (n) slot.nombre = n;
+        }
+
+        function initSlots() {
+            try { _slots = JSON.parse(localStorage.getItem('mikra_slots') || '[]'); } catch(e) { _slots = []; }
+
+            // Migrar carrito viejo si existe
+            if (!_slots.length) {
+                const oldCart = (() => { try { return JSON.parse(localStorage.getItem('mikra_cart') || '[]'); } catch(e) { return []; } })();
+                const oldPrices = (() => { try { return JSON.parse(localStorage.getItem('mikra_prices') || '{}'); } catch(e) { return {}; } })();
+                _slots = [makeSlot('Pedido 1', oldCart, 'pedido', null, oldPrices)];
+                localStorage.removeItem('mikra_cart');
+            }
+
+            // Asegurar que todos los slots tengan el campo prices
+            _slots.forEach(s => { if (!s.prices) s.prices = {}; });
+
+            // Restaurar slot activo
+            const savedId = localStorage.getItem('mikra_activeSlot');
+            _activeSlotId = (_slots.find(s => s.id === savedId) ? savedId : _slots[0].id);
+
+            _applySlot(_activeSlotId);
+        }
+
+        // Aplica un slot al estado (sin snapshot del anterior — ya fue hecho)
+        function _applySlot(id) {
+            const slot = _slots.find(s => s.id === id);
+            if (!slot) return;
+            _activeSlotId = id;
+            state.cart = slot.cart ? [...slot.cart] : [];
+            articlePrices = Object.assign({}, slot.prices || {});
+            setOrderType(slot.orderType || 'pedido');
+            restoreFormData(slot.formData);
+        }
+
+        function saveSlots() {
+            localStorage.setItem('mikra_slots', JSON.stringify(_slots));
+            localStorage.setItem('mikra_activeSlot', _activeSlotId);
+        }
+
+        // Guarda el slot activo y persiste (con debounce)
+        function saveCart() {
+            _snapshotActive();
+            clearTimeout(_saveTimer);
+            _saveTimer = setTimeout(saveSlots, 100);
+        }
+
+        function getSlotNameFromForm() {
+            return ($('clientName')?.value?.trim()) || ($('clientNamePres')?.value?.trim()) || '';
+        }
+
+        function switchSlot(id) {
+            if (id === _activeSlotId) return;
+            _snapshotActive();
+            _applySlot(id);
+            saveSlots();
+            updateBadge();
+            renderSlotTabs();
+            renderCart();
+            render();
+        }
+
+        function createNewSlot() {
+            if (_slots.length >= 8) { toast('Máximo 8 pedidos simultáneos', 'warning'); return; }
+            _snapshotActive();
+            const slot = makeSlot('Nuevo pedido');
+            _slots.push(slot);
+            _applySlot(slot.id);
+            saveSlots();
+            updateBadge();
+            renderSlotTabs();
+            renderCart();
+            render();
+            // Focus en nombre del cliente
+            setTimeout(() => { const el = $('clientName'); if (el) { el.focus(); el.select(); } }, 80);
+            toast('✚ Nuevo pedido', 'success');
+        }
+
+        function deleteSlot(id, e) {
+            if (e) { e.stopPropagation(); e.preventDefault(); }
+            if (_slots.length <= 1) { toast('No podés cerrar el único pedido', 'warning'); return; }
+            const idx = _slots.findIndex(s => s.id === id);
+            if (idx < 0) return;
+            const slotName = _slots[idx].nombre;
+            _slots.splice(idx, 1);
+            if (_activeSlotId === id) {
+                const next = _slots[Math.min(idx, _slots.length - 1)];
+                _applySlot(next.id);
+            }
+            saveSlots();
+            updateBadge();
+            renderSlotTabs();
+            renderCart();
+            render();
+            toast('✕ ' + slotName + ' cerrado', '');
+        }
+
+        function renderSlotTabs() {
+            const el = $('slotTabs');
+            if (!el) return;
+            let html = '';
+            _slots.forEach(slot => {
+                const isActive = slot.id === _activeSlotId;
+                const units = (slot.cart || []).reduce((a, p) => a + p.qty, 0);
+                html += '<div class="slot-tab' + (isActive ? ' active' : '') + '" id="stab_' + slot.id + '" onclick="switchSlot(\'' + slot.id + '\')">';
+                html += '<span class="slot-tab-name">' + _escHtml(slot.nombre) + '</span>';
+                if (units > 0) html += '<span class="slot-count-badge">' + units + '</span>';
+                if (_slots.length > 1) html += '<button class="slot-tab-x" onclick="deleteSlot(\'' + slot.id + '\',event)" title="Cerrar">✕</button>';
+                html += '</div>';
+            });
+            html += '<button class="slot-add-btn" onclick="createNewSlot()" title="Nuevo pedido">＋</button>';
+            el.innerHTML = html;
+            // Scroll horizontal solo dentro del contenedor de tabs (no mueve la página)
+            const activeTab = document.getElementById('stab_' + _activeSlotId);
+            if (activeTab && el.scrollWidth > el.clientWidth) {
+                const tabLeft = activeTab.offsetLeft;
+                const tabRight = tabLeft + activeTab.offsetWidth;
+                if (tabRight > el.scrollLeft + el.clientWidth) el.scrollLeft = tabRight - el.clientWidth + 8;
+                else if (tabLeft < el.scrollLeft) el.scrollLeft = tabLeft - 8;
+            }
+        }
+
+        function _escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function getFormData() {
+            return {
+                clientName:        $('clientName')?.value || '',
+                canal:             document.querySelector('input[name="canal"]:checked')?.value || 'local',
+                delivery:          document.querySelector('input[name="delivery"]:checked')?.value || 'local',
+                shippingAddress:   $('shippingAddress')?.value || '',
+                payment:           document.querySelector('input[name="payment"]:checked')?.value || 'abonado',
+                paymentAmount:     $('paymentAmount')?.value || '',
+                clientNamePres:    $('clientNamePres')?.value || '',
+                budgetEnvio:       document.querySelector('input[name="budgetEnvio"]:checked')?.value || 'no',
+                budgetShippingCost: $('budgetShippingCost')?.value || '',
+            };
+        }
+
+        function restoreFormData(fd) {
+            $('clientName').value        = fd?.clientName || '';
+            $('shippingAddress').value   = fd?.shippingAddress || '';
+            $('paymentAmount').value     = fd?.paymentAmount || '';
+            $('clientNamePres').value    = fd?.clientNamePres || '';
+            if ($('budgetShippingCost')) $('budgetShippingCost').value = fd?.budgetShippingCost || '';
+
+            // Delivery
+            const delVal = fd?.delivery || 'local';
+            document.querySelectorAll('.delivery-option[data-delivery]').forEach(o => {
+                const match = o.dataset.delivery === delVal;
+                o.classList.toggle('selected', match);
+                if (match) o.querySelector('input').checked = true;
+            });
+            $('shippingDetails')?.classList.toggle('show', delVal === 'envio');
+
+            // Payment
+            const payVal = fd?.payment || 'abonado';
+            document.querySelectorAll('.delivery-option[data-payment]').forEach(o => {
+                const match = o.dataset.payment === payVal;
+                o.classList.toggle('selected', match);
+                if (match) o.querySelector('input').checked = true;
+            });
+            $('paymentDetails')?.classList.toggle('show', payVal === 'pendiente');
+
+            // Canal
+            const canalVal = fd?.canal || 'local';
+            document.querySelectorAll('.delivery-option[data-canal]').forEach(o => {
+                const match = o.dataset.canal === canalVal;
+                o.classList.toggle('selected', match);
+                if (match) o.querySelector('input').checked = true;
+            });
+
+            // Envío presupuesto
+            const benvVal = fd?.budgetEnvio || 'no';
+            document.querySelectorAll('[data-budgetenvio]').forEach(o => {
+                const match = o.dataset.budgetenvio === benvVal;
+                o.classList.toggle('selected', match);
+                if (match) o.querySelector('input').checked = true;
+            });
+            if ($('budgetEnvioCostoRow')) $('budgetEnvioCostoRow').style.display = benvVal === 'si' ? 'block' : 'none';
+        }
+
         function updateBadge() {
             const units = state.cart.reduce((a, p) => a + p.qty, 0);
             $('cartBadge').textContent = units;
@@ -1406,75 +1717,237 @@
             $('budgetTotal').textContent = '$' + (total + shipping).toLocaleString();
         }
         
+        // ===== CART GROUPED VIEW =====
+        let _ciActiveChip = null; // { codigo, el }
+
         function renderCart() {
+            const el = $('cartItems');
             if (!state.cart.length) {
-                $('cartItems').innerHTML = '<div class="empty"><div class="empty-icon">🛒</div><div>Carrito vacío</div></div>';
+                el.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div><div>Pedido vacío</div></div>';
+                if (state.orderType === 'presupuesto') renderBudget();
                 return;
             }
-            const showSku = settings.showSku;
-            $('cartItems').innerHTML = state.cart.map((p, i) => {
-                // Buscar stock actual del SKU — usar codigo (más confiable que id)
-                const prod = PRODUCTS.find(x => String(x.codigo) === String(p.codigo));
-                const stockTotal = prod ? (Number(prod.stock) || 0) : null;
-                const stockRestante = stockTotal !== null ? stockTotal - p.qty : null;
-                let stockBadge = '';
-                if (stockRestante !== null) {
-                    if (stockRestante <= 0) {
-                        stockBadge = '<div style="font-size:0.7em;color:var(--danger);margin-top:2px;font-weight:600;">⚠️ Sin stock</div>';
-                    } else if (stockRestante <= 3) {
-                        stockBadge = '<div style="font-size:0.7em;color:var(--warning);margin-top:2px;font-weight:600;">⚠️ Quedan ' + stockRestante + '</div>';
-                    } else {
-                        stockBadge = '<div style="font-size:0.7em;color:var(--text-secondary);margin-top:2px;">Quedan ' + stockRestante + '</div>';
-                    }
-                }
-                return '<div class="cart-item"><div class="cart-item-info">' +
-                '<div class="cart-item-name">' + (p.titulo || p.articulo) + '</div>' +
-                '<div class="cart-item-meta">' + (showSku ? p.codigo + ' • ' : '') + (p.color || '-') + ' • T:' + (p.talle || '-') + '</div>' +
-                stockBadge +
-                '</div>' +
-                '<div class="cart-item-right"><div class="cart-qty">' +
-                '<button class="cart-qty-btn" onclick="cartQty(' + i + ',-1)">−</button>' +
-                '<span class="cart-qty-val">' + p.qty + '</span>' +
-                '<button class="cart-qty-btn" onclick="cartQty(' + i + ',1)">+</button></div>' +
-                '<button class="cart-remove" onclick="removeCart(' + i + ')">🗑</button></div></div>';
-            }).join('');
+
+            // Agrupar: artículo → color → talle
+            const artMap = {};  // artName → { img, colors: { colorName → { talle → cartIdx } } }
+            state.cart.forEach((p, i) => {
+                const art = p.titulo || p.articulo || '?';
+                const col = p.color || 'Sin color';
+                const tal = p.talle || '-';
+                if (!artMap[art]) artMap[art] = { img: '', colors: {} };
+                if (!artMap[art].img) artMap[art].img = getProductImage(p.codigo);
+                if (!artMap[art].colors[col]) artMap[art].colors[col] = {};
+                artMap[art].colors[col][tal] = i; // índice en state.cart
+            });
+
+            let html = '';
+            Object.entries(artMap).forEach(([artName, artData]) => {
+                // Total uds del artículo
+                let artUds = 0;
+                Object.values(artData.colors).forEach(talMap =>
+                    Object.values(talMap).forEach(ci => { artUds += state.cart[ci].qty; })
+                );
+
+                const imgHtml = artData.img
+                    ? '<img class="ci-thumb" src="' + artData.img + '" loading="lazy" onerror="this.outerHTML=\'<div class=ci-thumb-ph>📦</div>\'">'
+                    : '<div class="ci-thumb-ph">📦</div>';
+
+                html += '<div class="ci-card">';
+                html += '<div class="ci-header">' + imgHtml +
+                    '<div class="ci-name">' + _escHtml(artName) + '</div>' +
+                    '<span class="ci-uds">' + artUds + ' uds</span>' +
+                    '<button class="ci-del" onclick="ciRemoveArticle(\'' + _escAttr(artName) + '\')" title="Eliminar artículo">🗑</button>' +
+                    '</div>';
+
+                html += '<div class="ci-body">';
+                Object.entries(artData.colors).forEach(([colorName, talMap]) => {
+                    html += '<div class="ci-color-row">';
+                    html += '<div class="ci-color-label">🎨 ' + _escHtml(colorName) + '</div>';
+                    html += '<div class="ci-chips">';
+
+                    // Ordenar talles
+                    const tallesSorted = Object.keys(talMap).sort((a, b) => {
+                        const na = parseFloat(a), nb = parseFloat(b);
+                        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                        const ia = SIZE_ORDER.indexOf(a.toUpperCase()), ib = SIZE_ORDER.indexOf(b.toUpperCase());
+                        if (ia > -1 && ib > -1) return ia - ib;
+                        return a.localeCompare(b);
+                    });
+
+                    tallesSorted.forEach(tal => {
+                        const ci = talMap[tal];
+                        const p = state.cart[ci];
+                        const prod = PRODUCTS.find(x => String(x.codigo) === String(p.codigo));
+                        const restante = prod ? prod.stock - p.qty : null;
+                        let chipClass = '';
+                        let qClass = '';
+                        if (restante !== null && restante <= 0) { chipClass = ' no-stock'; qClass = ' no-stock'; }
+                        else if (restante !== null && restante <= 3) { chipClass = ' warn'; qClass = ' warn'; }
+
+                        html += '<div class="ci-chip' + chipClass + '" id="cichip_' + ci + '" onclick="ciChipTap(' + ci + ',event)">' +
+                            '<div class="ci-chip-t">T: ' + _escHtml(tal) + '</div>' +
+                            '<div class="ci-chip-q' + qClass + '">' + p.qty + '</div>' +
+                            '</div>';
+                    });
+
+                    html += '</div></div>'; // ci-chips, ci-color-row
+                });
+
+                html += '</div></div>'; // ci-body, ci-card
+            });
+
+            el.innerHTML = html;
             if (state.orderType === 'presupuesto') renderBudget();
         }
+
+        function _escAttr(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+        function ciChipTap(ci, e) {
+            e.stopPropagation();
+            const chipEl = document.getElementById('cichip_' + ci);
+            if (!chipEl) return;
+
+            // Si ya tiene editor abierto, cerrarlo
+            if (_ciActiveChip && _ciActiveChip.ci === ci) {
+                _ciCloseEditor(); return;
+            }
+            _ciCloseEditor();
+
+            chipEl.classList.add('active');
+            const p = state.cart[ci];
+            const prod = PRODUCTS.find(x => String(x.codigo) === String(p.codigo));
+            const stockTotal = prod ? (prod.stock || 0) : null;
+
+            // Info de stock para mostrar
+            let stockInfo = '';
+            if (stockTotal !== null) {
+                const restante = stockTotal - p.qty;
+                if (restante <= 0) stockInfo = '<span style="color:var(--danger);font-size:0.72em;font-weight:700;">Sin stock</span>';
+                else if (restante <= 3) stockInfo = '<span style="color:var(--warning);font-size:0.72em;font-weight:700;">⚠ ' + restante + ' restantes</span>';
+                else stockInfo = '<span style="color:var(--text-secondary);font-size:0.72em;">📦 ' + restante + ' restantes</span>';
+            }
+
+            const edEl = document.createElement('div');
+            edEl.className = 'ci-chip-editor';
+            edEl.innerHTML =
+                (stockInfo ? '<div style="text-align:center;padding:0 2px 4px;border-bottom:1px solid var(--border);margin-bottom:2px;display:flex;justify-content:center;">' + stockInfo + '</div>' : '') +
+                '<div style="display:flex;align-items:center;gap:3px;">' +
+                '<button class="del-btn" onclick="ciChipDel(' + ci + ',event)" title="Quitar">🗑</button>' +
+                '<button onclick="ciChipDelta(' + ci + ',-1,event)">−</button>' +
+                '<span id="cied_qty_' + ci + '">' + p.qty + '</span>' +
+                '<button onclick="ciChipDelta(' + ci + ',1,event)">+</button>' +
+                '</div>';
+            chipEl.appendChild(edEl);
+            _ciActiveChip = { ci, el: chipEl };
+        }
+
+        function ciChipDelta(ci, d, e) {
+            e.stopPropagation();
+            const p = state.cart[ci];
+            if (!p) return;
+            p.qty = Math.max(0, p.qty + d);
+            if (p.qty === 0) { ciChipDel(ci, e); return; }
+
+            // Actualizar qty en editor (sin cerrar)
+            const qEl = document.getElementById('cied_qty_' + ci);
+            if (qEl) qEl.textContent = p.qty;
+
+            // Actualizar chip qty display
+            const chipEl = document.getElementById('cichip_' + ci);
+            if (chipEl) {
+                const qDisp = chipEl.querySelector('.ci-chip-q');
+                if (qDisp) qDisp.textContent = p.qty;
+
+                // Actualizar stock info en el editor
+                const prod = PRODUCTS.find(x => String(x.codigo) === String(p.codigo));
+                if (prod) {
+                    const restante = prod.stock - p.qty;
+                    const infoEl = chipEl.querySelector('.ci-chip-editor span[style*="color"]');
+                    if (infoEl) {
+                        if (restante <= 0) { infoEl.style.color = 'var(--danger)'; infoEl.textContent = 'Sin stock'; }
+                        else if (restante <= 3) { infoEl.style.color = 'var(--warning)'; infoEl.textContent = '⚠ ' + restante + ' restantes'; }
+                        else { infoEl.style.color = 'var(--text-secondary)'; infoEl.textContent = '📦 ' + restante + ' restantes'; }
+                    }
+                    // Actualizar clase del chip
+                    chipEl.classList.toggle('warn', restante > 0 && restante <= 3);
+                    chipEl.classList.toggle('no-stock', restante <= 0);
+                }
+            }
+
+            // Actualizar header uds sin re-render
+            _ciUpdateHeaderUds();
+            saveCart(); updateBadge(); renderSlotTabs();
+        }
+
+        function ciChipDel(ci, e) {
+            e.stopPropagation();
+            _ciCloseEditor();
+            state.cart.splice(ci, 1);
+            saveCart(); renderCart(); renderSlotTabs(); updateBadge(); render();
+        }
+
+        function ciRemoveArticle(artName) {
+            const before = state.cart.length;
+            state.cart = state.cart.filter(p => (p.titulo || p.articulo) !== artName);
+            if (state.cart.length < before) {
+                saveCart(); renderCart(); renderSlotTabs(); updateBadge(); render();
+                toast('✕ ' + artName + ' quitado', '');
+            }
+        }
+
+        function _ciUpdateHeaderUds() {
+            // Recalcular uds por card sin re-renderizar todo
+            const artMap = {};
+            state.cart.forEach(p => {
+                const art = p.titulo || p.articulo || '?';
+                artMap[art] = (artMap[art] || 0) + p.qty;
+            });
+            document.querySelectorAll('.ci-card').forEach(card => {
+                const nameEl = card.querySelector('.ci-name');
+                if (!nameEl) return;
+                const name = nameEl.textContent;
+                const udsEl = card.querySelector('.ci-uds');
+                if (udsEl && artMap[name] !== undefined) udsEl.textContent = artMap[name] + ' uds';
+            });
+        }
+
+        function _ciCloseEditor() {
+            if (!_ciActiveChip) return;
+            _ciActiveChip.el.classList.remove('active');
+            const ed = _ciActiveChip.el.querySelector('.ci-chip-editor');
+            if (ed) ed.remove();
+            _ciActiveChip = null;
+        }
+
+        // Cerrar editor solo al tocar FUERA del chip y su editor
+        document.addEventListener('click', (e) => {
+            if (!_ciActiveChip) return;
+            if (_ciActiveChip.el.contains(e.target)) return; // click dentro → no cerrar
+            _ciCloseEditor();
+        });
+
+        // Compatibilidad con cartQty/removeCart por si se llaman desde otro lado
         function cartQty(i, d) {
+            if (!state.cart[i]) return;
             state.cart[i].qty += d;
             if (state.cart[i].qty <= 0) state.cart.splice(i, 1);
-            saveCart(); renderCart(); updateBadge(); render();
+            saveCart(); renderCart(); renderSlotTabs(); updateBadge(); render();
         }
-        function removeCart(i) { state.cart.splice(i, 1); saveCart(); renderCart(); updateBadge(); render(); }
+        function removeCart(i) { state.cart.splice(i, 1); saveCart(); renderCart(); renderSlotTabs(); updateBadge(); render(); }
+
         function clearCart() {
-            showModal('🗑️', 'Vaciar carrito', '¿Vaciar todos los productos del pedido?', 'Sí, vaciar', () => {
-                state.cart = []; articlePrices = {};
+            showModal('🗑️', 'Vaciar pedido', '¿Vaciar todos los productos de este pedido?', 'Sí, vaciar', () => {
+                state.cart = [];
+                articlePrices = {};
                 localStorage.removeItem('mikra_prices');
-                // Reset formulario Pedido
-                $('clientName').value = '';
-                $('shippingAddress').value = '';
-                $('paymentAmount').value = '';
-                document.querySelectorAll('.delivery-option[data-delivery]').forEach(o => o.classList.remove('selected'));
-                const localOpt = document.querySelector('[data-delivery="local"]');
-                if (localOpt) { localOpt.classList.add('selected'); localOpt.querySelector('input').checked = true; }
-                $('shippingDetails').classList.remove('show');
-                document.querySelectorAll('.delivery-option[data-payment]').forEach(o => o.classList.remove('selected'));
-                const abonadoOpt = document.querySelector('[data-payment="abonado"]');
-                if (abonadoOpt) { abonadoOpt.classList.add('selected'); abonadoOpt.querySelector('input').checked = true; }
-                $('paymentDetails').classList.remove('show');
-                document.querySelectorAll('.delivery-option[data-canal]').forEach(o => o.classList.remove('selected'));
-                const canalLocalOpt = document.querySelector('[data-canal="local"]');
-                if (canalLocalOpt) { canalLocalOpt.classList.add('selected'); canalLocalOpt.querySelector('input').checked = true; }
-                // Reset formulario Presupuesto
-                $('clientNamePres').value = '';
-                if ($('budgetShippingCost')) $('budgetShippingCost').value = '';
-                $('budgetEnvioCostoRow').style.display = 'none';
-                document.querySelectorAll('.delivery-option[data-budgetenvio]').forEach(o => o.classList.remove('selected'));
-                const noEnvioOpt = document.querySelector('[data-budgetenvio="no"]');
-                if (noEnvioOpt) { noEnvioOpt.classList.add('selected'); noEnvioOpt.querySelector('input').checked = true; }
-                saveCart(); renderCart(); updateBadge(); render();
+                restoreFormData(null);
+                // Limpiar también prices del slot activo
+                const slot = _slots.find(s => s.id === _activeSlotId);
+                if (slot) { slot.cart = []; slot.prices = {}; slot.formData = null; }
+                saveSlots();
+                renderCart(); renderSlotTabs(); updateBadge(); render();
                 if (state.orderType === 'presupuesto') renderBudget();
-                toast('Carrito vaciado', 'success');
+                toast('Pedido vaciado', 'success');
             });
         }
         
@@ -2269,7 +2742,7 @@
                     agregados.push(p.talle || '-');
                 }
             });
-            saveCart(); updateBadge(); renderArticleDetail();
+            saveCart(); updateBadge(); renderArticleDetail(); renderSlotTabs();
             if (sinStock.length > 0 && agregados.length > 0) {
                 toast('Curva agregada. Sin stock: T ' + sinStock.join(', '), 'warning');
             } else if (sinStock.length > 0 && agregados.length === 0) {
@@ -3273,6 +3746,7 @@
             updateBadge();
             closeManualEntry();
             renderCart();
+            renderSlotTabs();
             
             let msg = '✓ ' + found + ' productos cargados';
             if (notFound.length > 0) {
@@ -3285,7 +3759,7 @@
         
         function askClearCart() { setTimeout(() => $('clearModal').classList.add('show'), 600); }
         function closeClearModal() { $('clearModal').classList.remove('show'); }
-        function confirmClearCart() { $('clearModal').classList.remove('show'); clearCart(); toast('Carrito vaciado', 'success'); }
+        function confirmClearCart() { $('clearModal').classList.remove('show'); clearCart(); }
         
         function toast(msg, type = '') {
             const t = $('toast'); t.textContent = msg; t.className = 'toast show';
@@ -3304,6 +3778,7 @@
             if (page === 'cart') {
                 $('navCart').classList.add('active');
                 $('articleEditBar').classList.remove('show');
+                renderSlotTabs();
                 renderCart();
             } else {
                 $('navStock').classList.add('active');
@@ -3427,7 +3902,24 @@
             });
         });
         
+        // Auto-rename slot al tipear el nombre del cliente
+        function onClientNameInput() {
+            const n = getSlotNameFromForm();
+            const slot = _slots.find(s => s.id === _activeSlotId);
+            if (slot && n && slot.nombre !== n) {
+                slot.nombre = n;
+                renderSlotTabs();
+                clearTimeout(_saveTimer);
+                _saveTimer = setTimeout(saveSlots, 300);
+            }
+        }
+        ['clientName', 'clientNamePres'].forEach(id => {
+            const el = $(id);
+            if (el) el.addEventListener('input', onClientNameInput);
+        });
+
         // INIT — Cache-first: shows cached data instantly, syncs in background
+        initSlots();
         applySettingsToUI();
         updateBadge();
         loadData();

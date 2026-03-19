@@ -4121,12 +4121,12 @@
             let errores = 0, procesados = 0, itemsH = [];
             const resMap = {};
 
-            // Dividir en lotes y procesar secuencialmente
+            // Dividir en lotes y lanzar TODOS en paralelo (cada uno es una invocación separada del Worker)
             const lotes = [];
             for (let i = 0; i < snap.length; i += LOTE) lotes.push(snap.slice(i, i + LOTE));
 
             let completados = 0;
-            for (const lote of lotes) {
+            await Promise.all(lotes.map(async (lote) => {
                 try {
                     const data = await fetch(`${WORKER_BASE}/bulk-update-stock`, {
                         method: 'POST',
@@ -4140,7 +4140,7 @@
                 completados += lote.length;
                 $('ventaProgressBar').style.width = Math.round(completados / snap.length * 100) + '%';
                 $('ventaProgressText').textContent = `${completados} / ${snap.length}`;
-            }
+            }));
 
             // Renderizar todos los resultados en orden
             snap.forEach((p, i) => {

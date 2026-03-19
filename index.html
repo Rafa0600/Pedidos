@@ -1144,6 +1144,9 @@
                 <button class="export-btn pdf" onclick="showPdfOptions()">📄 PDF</button>
                 <button class="export-btn ticket" onclick="downloadTicketDirectPrint()">🎫 Ticket</button>
                 <button class="export-btn" style="background:var(--primary);color:white;" onclick="downloadPreparacion()">📦 Preparar</button>
+                <button class="export-btn" style="background:#0ea5e9;color:white;" onclick="verificarStock()">🔍 Verificar Stock</button>
+                <button class="export-btn" style="background:#16a34a;color:white;" onclick="pedirPinVenta()">📤 Registrar Venta</button>
+                <button class="export-btn" style="background:#7c3aed;color:white;" onclick="abrirHistorial()">📋 Historial</button>
             </div>
             <div class="cart-items" id="cartItems"></div>
         </div>
@@ -1183,6 +1186,70 @@
         <img id="imgModalSrc" src="" alt="Producto">
     </div>
     
+    <!-- MODAL VERIFICAR STOCK -->
+    <div class="clear-modal-overlay" id="stockCheckModal">
+        <div class="clear-modal" style="max-width:440px;width:95%;">
+            <div class="clear-modal-title">🔍 Verificación de Stock</div>
+            <div id="stockCheckContent" style="max-height:58vh;overflow-y:auto;margin:10px 0;"></div>
+            <div id="stockCheckSummary" style="font-weight:800;font-size:1em;margin-top:8px;text-align:center;padding:8px;border-radius:8px;"></div>
+            <div class="clear-modal-btns" style="margin-top:12px;">
+                <button class="clear-modal-btn no" onclick="$('stockCheckModal').classList.remove('show')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PIN -->
+    <div class="clear-modal-overlay" id="pinModal">
+        <div class="clear-modal" style="max-width:300px;width:88%;text-align:center;">
+            <div class="clear-modal-title">🔒 Registrar Venta</div>
+            <div style="font-size:0.85em;opacity:0.6;margin-bottom:14px;">Ingresá el PIN para continuar</div>
+            <input id="pinInput" type="password" inputmode="numeric" maxlength="6"
+                style="width:100%;padding:14px;font-size:1.6em;text-align:center;letter-spacing:10px;background:var(--bg-input);border:2px solid var(--border);border-radius:10px;color:var(--text);outline:none;"
+                placeholder="••••" onkeydown="if(event.key==='Enter') confirmarPin()">
+            <div id="pinError" style="color:var(--danger);font-size:0.82em;margin-top:6px;min-height:18px;"></div>
+            <div class="clear-modal-btns" style="margin-top:14px;gap:8px;">
+                <button class="clear-modal-btn no" onclick="cerrarPin()">Cancelar</button>
+                <button class="clear-modal-btn" style="background:var(--success);color:#1a2744;" onclick="confirmarPin()">✓ Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRAR VENTA -->
+    <div class="clear-modal-overlay" id="ventaModal">
+        <div class="clear-modal" style="max-width:440px;width:95%;">
+            <div class="clear-modal-title">📤 Registrando Venta</div>
+            <div id="ventaProgress" style="margin:8px 0;display:none;">
+                <div style="display:flex;justify-content:space-between;font-size:0.8em;opacity:0.6;margin-bottom:4px;">
+                    <span>Procesando...</span><span id="ventaProgressText">0 / 0</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.1);border-radius:4px;height:6px;overflow:hidden;">
+                    <div id="ventaProgressBar" style="height:100%;width:0%;background:var(--success);border-radius:4px;transition:width 0.3s;"></div>
+                </div>
+            </div>
+            <div id="ventaContent" style="max-height:55vh;overflow-y:auto;margin:10px 0;"></div>
+            <div id="ventaSummary" style="font-weight:800;font-size:1em;margin-top:8px;text-align:center;padding:8px;border-radius:8px;"></div>
+            <div class="clear-modal-btns" style="margin-top:12px;">
+                <button class="clear-modal-btn no" onclick="$('ventaModal').classList.remove('show')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HISTORIAL -->
+    <div class="clear-modal-overlay" id="historialModal">
+        <div class="clear-modal" style="max-width:480px;width:95%;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <div class="clear-modal-title" style="margin:0;">📋 Historial de Ventas</div>
+                <button onclick="limpiarHistorial()" style="font-size:0.72em;background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 10px;cursor:pointer;">🗑 Limpiar todo</button>
+            </div>
+            <div id="historialRevertBtn" style="display:none;margin-bottom:8px;">
+                <button onclick="revertirSeleccionados()" style="width:100%;padding:8px;background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.35);border-radius:8px;font-weight:700;cursor:pointer;font-size:0.88em;">↩ Revertir seleccionados (<span id="historialSelCount">0</span>)</button>
+            </div>
+            <div id="historialContent" style="max-height:58vh;overflow-y:auto;margin:4px 0;"></div>
+            <div class="clear-modal-btns" style="margin-top:12px;">
+                <button class="clear-modal-btn no" onclick="$('historialModal').classList.remove('show')">Cerrar</button>
+            </div>
+        </div>
+    </div>
     <div class="clear-modal-overlay" id="clearModal">
         <div class="clear-modal">
             <div class="clear-modal-title">Pedido compartido</div>
@@ -3925,6 +3992,288 @@
         loadData();
     </script>
     <script>
+        const WORKER_BASE = 'https://ecomm-token-proxy.rafaelassir.workers.dev';
+        const PIN_CORRECTO = '9148';
+
+        // Orden de talles para sorting
+        const TALLE_ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','1','2','3','4','5','6','7','8','9','10','11','12','13','14','16','18','20','22','24','26','28','30','32','34','36','38','40','42','44'];
+        function talleRank(t) { const i = TALLE_ORDER.indexOf(String(t||'').toUpperCase().trim()); return i >= 0 ? i : 999; }
+        function sortCart(cart) {
+            return [...cart].sort((a, b) => {
+                const tA = (a.titulo || a.articulo || '').toLowerCase();
+                const tB = (b.titulo || b.articulo || '').toLowerCase();
+                if (tA < tB) return -1; if (tA > tB) return 1;
+                const cA = (a.color||'').toLowerCase(), cB = (b.color||'').toLowerCase();
+                if (cA < cB) return -1; if (cA > cB) return 1;
+                return talleRank(a.talle) - talleRank(b.talle);
+            });
+        }
+
+        // ─── VERIFICAR STOCK ──────────────────────────────────────────────────
+        async function verificarStock() {
+            if (!state.cart.length) { toast('El carrito está vacío', 'warning'); return; }
+            const cartOrdenado = sortCart(state.cart.filter(p => p.codigo));
+            if (!cartOrdenado.length) { toast('No hay SKUs en el carrito', 'warning'); return; }
+            const skus = [...new Set(cartOrdenado.map(p => p.codigo))];
+
+            $('stockCheckContent').innerHTML = `<div style="text-align:center;padding:24px 0;"><div style="font-size:2em;margin-bottom:8px;">⏳</div><div style="opacity:0.6;font-size:0.9em;">Consultando ${skus.length} SKUs...</div></div>`;
+            $('stockCheckSummary').innerHTML = '';
+            $('stockCheckModal').classList.add('show');
+
+            const results = await Promise.all(skus.map(async sku => {
+                try {
+                    const d = await fetch(`${WORKER_BASE}/get-stock?sku=${sku}`).then(r => r.json());
+                    return { sku, stock: d.error ? null : d.stock, ok: !d.error };
+                } catch(e) { return { sku, stock: null, ok: false }; }
+            }));
+            const stockMap = {};
+            results.forEach(r => { stockMap[String(r.sku)] = r; });
+
+            let html = '', allOk = true, totalItems = 0;
+            // Agrupar por artículo
+            const grupos = {};
+            cartOrdenado.forEach(p => {
+                const key = p.titulo || p.articulo || 'Sin nombre';
+                if (!grupos[key]) grupos[key] = [];
+                grupos[key].push(p);
+            });
+
+            Object.entries(grupos).forEach(([art, items]) => {
+                html += `<div style="margin-bottom:10px;">
+                    <div style="font-size:0.78em;font-weight:700;opacity:0.5;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">${art}</div>`;
+                items.forEach(p => {
+                    const r = stockMap[String(p.codigo)];
+                    if (!r) return;
+                    totalItems++;
+                    const real = r.stock, pedido = p.qty;
+                    const ok = real !== null && real >= pedido;
+                    if (!ok) allOk = false;
+                    const pct = real !== null ? Math.min(100, Math.round(real / Math.max(real, pedido, 1) * 100)) : 0;
+                    const col = real === null ? '#6b7280' : ok ? '#22c55e' : '#ef4444';
+                    const bg = ok ? 'rgba(34,197,94,0.06)' : real === null ? 'rgba(107,114,128,0.08)' : 'rgba(239,68,68,0.1)';
+                    const icon = real === null ? '❓' : ok ? '✅' : '⚠️';
+                    const sub = (p.color ? p.color : '') + (p.talle ? (p.color ? ' T.'+p.talle : 'T.'+p.talle) : '');
+                    html += `<div style="background:${bg};border-radius:8px;padding:8px 10px;margin-bottom:4px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div style="font-size:0.85em;">${icon} <b>${sub || p.codigo}</b></div>
+                            <div style="text-align:right;">
+                                <span style="font-size:0.78em;opacity:0.5;">Ped: ${pedido} · </span>
+                                <span style="font-size:0.88em;color:${col};font-weight:800;">${real !== null ? real+' stock' : 'sin datos'}</span>
+                            </div>
+                        </div>
+                        ${real !== null ? `<div style="margin-top:5px;background:rgba(255,255,255,0.08);border-radius:3px;height:4px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${col};border-radius:3px;"></div></div>` : ''}
+                    </div>`;
+                });
+                html += `</div>`;
+            });
+
+            $('stockCheckContent').innerHTML = html || '<div style="opacity:0.5;text-align:center;">Sin items</div>';
+            $('stockCheckSummary').style.background = allOk ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
+            $('stockCheckSummary').innerHTML = allOk
+                ? `<span style="color:var(--success);">✅ Todo OK — Stock suficiente para los ${totalItems} items</span>`
+                : `<span style="color:var(--danger);">⚠️ Revisá los items marcados en rojo</span>`;
+        }
+
+        // ─── PIN ──────────────────────────────────────────────────────────────
+        function pedirPinVenta() {
+            if (!state.cart.length) { toast('El carrito está vacío', 'warning'); return; }
+            $('pinInput').value = ''; $('pinError').textContent = '';
+            $('pinModal').classList.add('show');
+            setTimeout(() => $('pinInput').focus(), 150);
+        }
+        function cerrarPin() { $('pinModal').classList.remove('show'); $('pinInput').value = ''; $('pinError').textContent = ''; }
+        function confirmarPin() {
+            if ($('pinInput').value.trim() !== PIN_CORRECTO) {
+                $('pinError').textContent = '❌ PIN incorrecto';
+                $('pinInput').value = ''; $('pinInput').focus(); return;
+            }
+            cerrarPin(); registrarVenta();
+        }
+
+        // ─── REGISTRAR VENTA (paralelo + ordenado + progreso) ─────────────────
+        async function registrarVenta() {
+            const snap = sortCart(state.cart.filter(p => p.codigo));
+            if (!snap.length) return;
+
+            const LOTE = 20; // máx items por llamada (2 subrequests cada uno = 40, dentro del límite de 50)
+
+            // Mostrar placeholders en orden
+            $('ventaContent').innerHTML = snap.map((p, i) => {
+                const titulo = (p.titulo || p.articulo || '');
+                const sub = (p.color ? ` · ${p.color}` : '') + (p.talle ? ` T.${p.talle}` : '');
+                return `<div id="venta_item_${i}" style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-size:0.88em;font-weight:700;">⏳ ${titulo}${sub}</div>
+                            <div style="font-size:0.75em;opacity:0.5;margin-top:2px;">SKU ${p.codigo} · ${p.qty} uds</div>
+                        </div>
+                        <div style="opacity:0.3;font-size:0.8em;">...</div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            $('ventaProgress').style.display = 'block';
+            $('ventaProgressBar').style.width = '2%';
+            $('ventaProgressText').textContent = `0 / ${snap.length}`;
+            $('ventaSummary').innerHTML = '';
+            $('ventaModal').classList.add('show');
+
+            let errores = 0, procesados = 0, itemsH = [];
+            const resMap = {};
+
+            // Dividir en lotes y procesar secuencialmente
+            const lotes = [];
+            for (let i = 0; i < snap.length; i += LOTE) lotes.push(snap.slice(i, i + LOTE));
+
+            let completados = 0;
+            for (const lote of lotes) {
+                try {
+                    const data = await fetch(`${WORKER_BASE}/bulk-update-stock`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(lote.map(p => ({ sku: p.codigo, qty: p.qty })))
+                    }).then(r => r.json());
+                    (data.results || []).forEach(r => { resMap[String(r.sku)] = r; });
+                } catch(e) {
+                    lote.forEach(p => { resMap[String(p.codigo)] = { sku: p.codigo, error: 'Error de conexión' }; });
+                }
+                completados += lote.length;
+                $('ventaProgressBar').style.width = Math.round(completados / snap.length * 100) + '%';
+                $('ventaProgressText').textContent = `${completados} / ${snap.length}`;
+            }
+
+            // Renderizar todos los resultados en orden
+            snap.forEach((p, i) => {
+                const titulo = (p.titulo || p.articulo || '');
+                const sub = (p.color ? ` · ${p.color}` : '') + (p.talle ? ` T.${p.talle}` : '');
+                const res = resMap[String(p.codigo)];
+                const el = document.getElementById(`venta_item_${i}`);
+                if (!res || res.error) {
+                    errores++;
+                    el.style.background = 'rgba(239,68,68,0.1)';
+                    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-size:0.88em;font-weight:700;">❌ ${titulo}${sub}</div>
+                            <div style="font-size:0.75em;color:var(--danger);margin-top:2px;">SKU ${p.codigo} — ${res?.error || 'Sin respuesta'}</div>
+                        </div>
+                    </div>`;
+                } else {
+                    procesados++; if (!res.ok) errores++;
+                    const col = res.ok ? 'var(--success)' : 'var(--danger)';
+                    el.style.background = res.ok ? 'rgba(34,197,94,0.07)' : 'rgba(239,68,68,0.07)';
+                    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-size:0.88em;font-weight:700;">${res.ok?'✅':'⚠️'} ${titulo}${sub}</div>
+                            <div style="font-size:0.75em;opacity:0.5;margin-top:2px;">SKU ${p.codigo} · Vendido: ${p.qty} uds</div>
+                        </div>
+                        <div style="text-align:right;white-space:nowrap;padding-left:8px;">
+                            <span style="font-size:0.82em;opacity:0.45;">${res.stock_anterior} →</span>
+                            <span style="font-size:1em;color:${col};font-weight:800;"> ${res.stock_nuevo}</span>
+                        </div>
+                    </div>`;
+                    itemsH.push({ sku: p.codigo, descripcion: titulo + sub, qty: p.qty, stock_anterior: res.stock_anterior, stock_nuevo: res.stock_nuevo });
+                }
+            });
+
+            $('ventaProgress').style.display = 'none';
+            $('ventaSummary').style.background = errores===0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
+            $('ventaSummary').innerHTML = errores===0
+                ? `<span style="color:var(--success);">✅ ${procesados} items descontados correctamente</span>`
+                : `<span style="color:var(--danger);">⚠️ ${errores} error(es) — Revisá los marcados</span>`;
+            if (itemsH.length) guardarHistorial(itemsH);
+        }
+
+        // ─── HISTORIAL con multi-select ───────────────────────────────────────
+        function guardarHistorial(items) {
+            const h = JSON.parse(localStorage.getItem('mikra_ventas_historial') || '[]');
+            h.unshift({ id: Date.now(), fecha: new Date().toLocaleString('es-AR'), items });
+            if (h.length > 50) h.length = 50;
+            localStorage.setItem('mikra_ventas_historial', JSON.stringify(h));
+        }
+
+        function actualizarBtnRevertir() {
+            const sel = document.querySelectorAll('.hist-check:checked');
+            const n = sel.length;
+            const btn = $('historialRevertBtn');
+            btn.style.display = n > 0 ? 'block' : 'none';
+            $('historialSelCount').textContent = n;
+        }
+
+        function abrirHistorial() {
+            const h = JSON.parse(localStorage.getItem('mikra_ventas_historial') || '[]');
+            $('historialRevertBtn').style.display = 'none';
+            if (!h.length) {
+                $('historialContent').innerHTML = '<div style="text-align:center;opacity:0.5;padding:20px;">Sin registros aún</div>';
+                $('historialModal').classList.add('show'); return;
+            }
+            let html = '';
+            h.forEach((v, vi) => {
+                const noRevertidos = v.items.filter(it => !it.revertido);
+                html += `<div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <div style="font-size:0.78em;opacity:0.45;">📅 ${v.fecha}</div>
+                        ${noRevertidos.length ? `<label style="display:flex;align-items:center;gap:5px;font-size:0.78em;opacity:0.7;cursor:pointer;">
+                            <input type="checkbox" class="hist-check" data-vi="${vi}" data-all="1" onchange="toggleRegistro(this)" style="cursor:pointer;">
+                            <span>Todo este registro</span>
+                        </label>` : '<span style="font-size:0.72em;opacity:0.35;font-style:italic;">Revertido</span>'}
+                    </div>`;
+                v.items.forEach((item, ii) => {
+                    const rev = item.revertido;
+                    html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);${rev?'opacity:0.35;':''}" >
+                        ${!rev ? `<input type="checkbox" class="hist-check" data-vi="${vi}" data-ii="${ii}" onchange="actualizarBtnRevertir()" style="cursor:pointer;flex-shrink:0;">` : '<span style="width:16px;text-align:center;font-size:0.7em;">✓</span>'}
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:0.83em;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.descripcion}</div>
+                            <div style="font-size:0.72em;opacity:0.5;">SKU ${item.sku} · −${item.qty} uds · ${item.stock_anterior}→${item.stock_nuevo}${rev?' · Revertido':''}</div>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+            });
+            $('historialContent').innerHTML = html;
+            $('historialModal').classList.add('show');
+        }
+
+        function toggleRegistro(cb) {
+            const vi = cb.dataset.vi;
+            const h = JSON.parse(localStorage.getItem('mikra_ventas_historial') || '[]');
+            const checked = cb.checked;
+            // marcar/desmarcar todos los checkboxes del mismo registro
+            document.querySelectorAll(`.hist-check[data-vi="${vi}"]:not([data-all])`).forEach(c => { c.checked = checked; });
+            actualizarBtnRevertir();
+        }
+
+        async function revertirSeleccionados() {
+            const checks = [...document.querySelectorAll('.hist-check:checked:not([data-all])')];
+            if (!checks.length) return;
+            if (!confirm(`¿Revertir ${checks.length} item(s) seleccionados? Se sumará el stock de vuelta.`)) return;
+
+            const h = JSON.parse(localStorage.getItem('mikra_ventas_historial') || '[]');
+            let ok = 0, err = 0;
+
+            await Promise.all(checks.map(async cb => {
+                const vi = parseInt(cb.dataset.vi), ii = parseInt(cb.dataset.ii);
+                const item = h[vi]?.items[ii];
+                if (!item || item.revertido) return;
+                try {
+                    // qty negativo = sumar stock
+                    const res = await fetch(`${WORKER_BASE}/update-stock?sku=${item.sku}&qty=${-Math.abs(item.qty)}`).then(r => r.json());
+                    if (!res.error) { h[vi].items[ii].revertido = true; ok++; }
+                    else err++;
+                } catch(e) { err++; }
+            }));
+
+            localStorage.setItem('mikra_ventas_historial', JSON.stringify(h));
+            toast(`✅ ${ok} revertido(s)${err ? ` · ⚠️ ${err} error(es)` : ''}`, ok > 0 ? 'success' : 'error');
+            abrirHistorial();
+        }
+
+        function limpiarHistorial() {
+            if (!confirm('¿Limpiar todo el historial?')) return;
+            localStorage.removeItem('mikra_ventas_historial');
+            $('historialModal').classList.remove('show');
+            toast('Historial limpiado', 'info');
+        }
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
             .then(reg => {

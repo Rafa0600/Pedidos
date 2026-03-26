@@ -1130,8 +1130,9 @@
                     </div>
                 </div>
                 <div id="budgetItems"></div>
-                <div style="margin:8px 0 4px;">
-                    <button onclick="fillMayoristaPrecios()" style="width:100%;padding:10px;background:linear-gradient(135deg,#4ade80,#22c55e);color:#1a2744;border:none;border-radius:8px;font-weight:700;font-size:0.85em;cursor:pointer;">💲 Completar precios mayoristas</button>
+                <div style="margin:8px 0 4px;display:flex;gap:6px;">
+                    <button onclick="fillMayoristaPrecios()" style="flex:1;padding:10px;background:linear-gradient(135deg,#4ade80,#22c55e);color:#1a2744;border:none;border-radius:8px;font-weight:700;font-size:0.85em;cursor:pointer;">💲 Mayorista</button>
+                    <button onclick="fillMinoristaPrecios()" style="flex:1;padding:10px;background:linear-gradient(135deg,#4facfe,#1d8ef9);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.85em;cursor:pointer;">🏷️ Minorista</button>
                 </div>
                 <div class="budget-total">
                     <span>TOTAL:</span>
@@ -1297,9 +1298,10 @@
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbycz2hrgjQxRCvVKtW0o-HAuMQYTfmiBHSgJPFZTX34PwBpAladxb8ZPpt-Vg09zplx/exec';
         let mayoristaCacheData = null;
+        let minoristaCache = null;
 
         // URL del GAS de mayorista (desplegar aparte — ver instrucciones)
-        const MAYORISTA_URL = 'https://script.google.com/macros/s/AKfycbydonVH8dxTe3PHUDADDeX33P0jM6SBegSa5bdronlNPj2ls28miPIyNXIRgqRhZb6y0A/exec';
+        const MAYORISTA_URL = 'https://script.google.com/macros/s/AKfycbxz25g5BrFsriaetrgWli8j_wAAhU32z65Stn78zSIg5E4tI5sr82mky8h0wP9zAwScoQ/exec';
         async function fetchMayoristaPrecios() {
             if (mayoristaCacheData) return mayoristaCacheData;
             const r = await fetch(MAYORISTA_URL);
@@ -1350,6 +1352,64 @@
                 }
             } catch(e) {
                 toast('❌ Error al buscar precios mayoristas', 'error');
+                console.error(e);
+            }
+        }
+
+        // ─── PRECIOS MINORISTAS (col C de la hoja Mayorista) ─────────────────
+        // El GAS debe devolver precioMinorista por fila (col C "Precio Minorista")
+        async function fetchMinoristaPrecios() {
+            if (minoristaCache) return minoristaCache;
+            const r = await fetch(MAYORISTA_URL);
+            const d = await r.json();
+            if (!d.success || !d.data) throw new Error('Sin datos minorista');
+            const map = {};
+            d.data.forEach(row => {
+                // Intentar distintos nombres de campo según cómo el GAS mapee la col C
+                const precio = row.precioMinorista ?? row['Precio Minorista'] ?? row.precio_minorista ?? null;
+                if (row.articulo && precio != null) {
+                    map[row.articulo.trim().toLowerCase()] = parseFloat(String(precio).replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+                }
+            });
+            minoristaCache = map;
+            return map;
+        }
+
+        async function fillMinoristaPrecios() {
+            toast('Buscando precios minoristas...', '');
+            try {
+                const map = await fetchMinoristaPrecios();
+                if (Object.keys(map).length === 0) {
+                    toast('⚠️ El GAS no devuelve precio minorista (col C). Actualizá el script.', 'error');
+                    return;
+                }
+                const grouped = {};
+                state.cart.forEach(p => { const n = p.titulo || p.articulo; if (!grouped[n]) grouped[n] = n; });
+                const nombres = Object.keys(grouped);
+                let encontrados = 0, noEncontrados = [];
+                nombres.forEach(nombre => {
+                    const key = nombre.trim().toLowerCase();
+                    let precio = map[key];
+                    if (precio === undefined) {
+                        const match = Object.entries(map).find(([k]) => key.startsWith(k) || k.startsWith(key));
+                        if (match) precio = match[1];
+                    }
+                    if (precio !== undefined && precio > 0) {
+                        articlePrices[nombre] = precio;
+                        encontrados++;
+                    } else {
+                        noEncontrados.push(nombre);
+                    }
+                });
+                localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
+                renderBudget();
+                if (noEncontrados.length === 0) {
+                    toast('✅ ' + encontrados + ' precio' + (encontrados !== 1 ? 's' : '') + ' minorista completado' + (encontrados !== 1 ? 's' : ''), 'success');
+                } else {
+                    toast('✅ ' + encontrados + ' ok · ⚠️ sin precio: ' + noEncontrados.join(', '), 'warning');
+                }
+            } catch(e) {
+                toast('❌ Error al buscar precios minoristas', 'error');
                 console.error(e);
             }
         }

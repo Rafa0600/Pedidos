@@ -375,6 +375,10 @@
         .asc-stock.high { color: var(--success); }
         .asc-stock.med { color: var(--warning); }
         .asc-stock.low { color: var(--danger); }
+        .asc-ecom {
+            font-size: 0.58em; font-weight: 800; margin-top: 3px; line-height: 1;
+            padding: 1px 4px; border-radius: 4px; background: rgba(255,255,255,0.07);
+        }
         
         .asc-cart-badge {
             position: absolute; top: -6px; right: -6px; background: var(--primary);
@@ -578,25 +582,44 @@
         .ci-chip-q { font-size: 1em; font-weight: 800; color: var(--text); line-height: 1.3; }
         .ci-chip-q.warn { color: var(--warning); }
         .ci-chip-q.no-stock { color: var(--danger); }
+        /* ── Ecom stock badge dentro del chip ── */
+        .ci-chip-ecom {
+            font-size: 0.62em; font-weight: 800; line-height: 1;
+            margin-top: 2px; letter-spacing: -0.3px;
+        }
+        /* ── Barra de refresh ecom ── */
+        .ecom-stock-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 5px 10px 3px; font-size: 0.72em; color: var(--text-secondary);
+        }
+        .ecom-refresh-btn {
+            width: 26px; height: 26px; border-radius: 50%; background: var(--bg-input);
+            border: 1.5px solid var(--border); color: var(--text-secondary); font-size: 0.95em;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            -webkit-tap-highlight-color: transparent; transition: border-color 0.15s, color 0.15s;
+            flex-shrink: 0;
+        }
+        .ecom-refresh-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .ecom-refresh-btn.loading { border-color: var(--warning); color: var(--warning); animation: spin 0.7s linear infinite; }
 
-        /* ── Inline editor del chip ── */
+        /* ── Inline editor del chip — posición fija para no salirse de pantalla ── */
         .ci-chip-editor {
-            position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+            position: fixed;
             background: var(--bg-card); border: 1.5px solid var(--primary);
-            border-radius: 10px; padding: 5px 6px; display: flex; flex-direction: column;
+            border-radius: 12px; padding: 6px 8px; display: flex; flex-direction: column;
             align-items: stretch; gap: 0;
-            z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.4); white-space: nowrap;
-            min-width: 120px;
+            z-index: 500; box-shadow: 0 6px 20px rgba(0,0,0,0.5); white-space: nowrap;
+            min-width: 130px;
         }
         .ci-chip-editor button {
-            width: 28px; height: 28px; border: none; border-radius: 6px;
+            width: 32px; height: 32px; border: none; border-radius: 6px;
             background: var(--primary); color: white; font-size: 1.1em; font-weight: 800;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
             -webkit-tap-highlight-color: transparent; flex-shrink: 0;
         }
-        .ci-chip-editor button.del-btn { background: var(--danger); font-size: 0.8em; }
+        .ci-chip-editor button.del-btn { background: var(--danger); font-size: 0.85em; }
         .ci-chip-editor > div > span {
-            min-width: 22px; text-align: center; font-weight: 800; font-size: 0.95em;
+            min-width: 24px; text-align: center; font-weight: 800; font-size: 0.95em;
         }
 
         
@@ -874,6 +897,15 @@
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
         <div class="loading-text" id="loadingText">Cargando inventario...</div>
+        <div id="loadingProgressWrap" style="width:220px;margin-top:10px;display:none;">
+            <div style="background:rgba(255,255,255,0.1);border-radius:4px;height:5px;overflow:hidden;margin-bottom:8px;">
+                <div id="loadingProgressBar" style="height:100%;background:var(--primary);border-radius:4px;width:0%;transition:width 0.5s;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span id="loadingElapsed" style="font-size:0.75em;color:var(--text-secondary);">0s</span>
+                <button id="loadingCancelBtn" onclick="cancelSync()" style="background:rgba(248,113,113,0.2);border:1px solid var(--danger);color:var(--danger);padding:4px 12px;border-radius:8px;font-size:0.75em;font-weight:700;cursor:pointer;">✕ Cancelar</button>
+            </div>
+        </div>
         <div class="loading-error" id="loadingError" style="display:none;">
             <button onclick="loadData(true)">🔄 Reintentar</button>
         </div>
@@ -922,6 +954,7 @@
                     <div class="sync-dot" id="syncDot"></div>
                     <span id="syncStatus">Cargando...</span>
                     <span id="syncTime"></span>
+                    <button id="syncCancelBtn" onclick="cancelSync()" style="display:none;background:none;border:none;color:var(--danger);font-size:0.9em;cursor:pointer;padding:0 2px;line-height:1;" title="Cancelar sincronización">✕</button>
                 </div>
             </div>
             <div class="header-right">
@@ -1148,6 +1181,12 @@
                 <button class="export-btn" style="background:#0ea5e9;color:white;" onclick="verificarStock()">🔍 Verificar Stock</button>
                 <button class="export-btn" style="background:#16a34a;color:white;" onclick="pedirPinVenta()">📤 Registrar Venta</button>
                 <button class="export-btn" style="background:#7c3aed;color:white;" onclick="abrirHistorial()">📋 Historial</button>
+            </div>
+            <div class="ecom-stock-bar">
+                <span id="ecomStockStatus" style="display:flex;align-items:center;gap:5px;">
+                    <span style="opacity:0.5;">Stock ecom: —</span>
+                </span>
+                <button class="ecom-refresh-btn" id="ecomRefreshBtn" onclick="fetchEcomStockForCart()" title="Actualizar stock real de ecom">🔄</button>
             </div>
             <div class="cart-items" id="cartItems"></div>
         </div>
@@ -1485,6 +1524,11 @@
             orderType: 'pedido', showImages: false
         };
         
+        // Stock real de ecom (se llena al presionar 🔄 en el carrito)
+        let ecomStockMap = {};  // { sku: stock_real }
+        // Stock ecom del artículo abierto en detalle
+        let artEcomMap = {};    // { sku: stock_real }
+        
         const $ = id => document.getElementById(id);
         
         // ===== SETTINGS =====
@@ -1546,37 +1590,13 @@
         }
         
         // ===== CART =====
-        function getCartQty(productId) {
-            const item = state.cart.find(c => c.id === productId);
-            return item ? item.qty : 0;
-        }
-        function addToCart(id, noStock, callback) {
-            if (noStock) {
-                showModal('⚠️', 'Sin stock', '¿Agregar igual al pedido?', 'Sí, agregar', () => {
-                    const p = PRODUCTS.find(x => x.id === id);
-                    if (!p) return;
-                    const existing = state.cart.find(c => c.id === id);
-                    if (existing) { existing.qty += 1; }
-                    else { state.cart.push({ ...p, qty: 1 }); }
-                    saveCart(); updateBadge(); render();
-                    if (callback) callback(p);
-                });
-                return null;
-            }
-            const p = PRODUCTS.find(x => x.id === id);
-            if (!p) return null;
-            const existing = state.cart.find(c => c.id === id);
-            if (existing) { existing.qty += 1; }
-            else { state.cart.push({ ...p, qty: 1 }); }
-            saveCart(); updateBadge();
-            return p;
-        }
         function changeQty(id, delta, e) {
             if (e) e.stopPropagation();
             const idx = state.cart.findIndex(c => c.id === id);
             if (idx >= 0) {
                 state.cart[idx].qty += delta;
                 if (state.cart[idx].qty <= 0) { state.cart.splice(idx, 1); }
+                _rebuildCartCache();
                 saveCart(); updateBadge(); render();
             }
         }
@@ -1640,6 +1660,7 @@
             if (!slot) return;
             _activeSlotId = id;
             state.cart = slot.cart ? [...slot.cart] : [];
+            _rebuildCartCache();
             articlePrices = Object.assign({}, slot.prices || {});
             setOrderType(slot.orderType || 'pedido');
             restoreFormData(slot.formData);
@@ -1652,6 +1673,7 @@
 
         // Guarda el slot activo y persiste (con debounce)
         function saveCart() {
+            _rebuildCartCache();  // cache siempre sincronizado
             _snapshotActive();
             clearTimeout(_saveTimer);
             _saveTimer = setTimeout(saveSlots, 100);
@@ -1666,6 +1688,9 @@
             _snapshotActive();
             _applySlot(id);
             saveSlots();
+            ecomStockMap = {};
+            const st = $('ecomStockStatus');
+            if (st) st.innerHTML = '<span style="opacity:0.5;">Stock ecom: —</span>';
             updateBadge();
             renderSlotTabs();
             renderCart();
@@ -1911,9 +1936,23 @@
                         if (restante !== null && restante <= 0) { chipClass = ' no-stock'; qClass = ' no-stock'; }
                         else if (restante !== null && restante <= 3) { chipClass = ' warn'; qClass = ' warn'; }
 
+                        // Ecom stock badge
+                        const ecomStock = ecomStockMap[String(p.codigo)] !== undefined ? ecomStockMap[String(p.codigo)] : null;
+                        let ecomBadgeHtml = '';
+                        if (ecomStock !== null) {
+                            const ecomColor = ecomStock <= 0 ? 'var(--danger)' : ecomStock <= 3 ? 'var(--warning)' : 'var(--success)';
+                            // Si el chip no tiene clase forzada por local, aplicar borde según ecom
+                            if (chipClass === '') {
+                                if (ecomStock <= 0) chipClass = ' no-stock';
+                                else if (ecomStock <= p.qty) chipClass = ' warn';
+                            }
+                            ecomBadgeHtml = '<div class="ci-chip-ecom" style="color:' + ecomColor + '">▸' + ecomStock + '</div>';
+                        }
+
                         html += '<div class="ci-chip' + chipClass + '" id="cichip_' + ci + '" onclick="ciChipTap(' + ci + ',event)">' +
                             '<div class="ci-chip-t">T: ' + _escHtml(tal) + '</div>' +
                             '<div class="ci-chip-q' + qClass + '">' + p.qty + '</div>' +
+                            ecomBadgeHtml +
                             '</div>';
                     });
 
@@ -1949,14 +1988,27 @@
             let stockInfo = '';
             if (stockTotal !== null) {
                 const restante = stockTotal - p.qty;
-                if (restante <= 0) stockInfo = '<span style="color:var(--danger);font-size:0.72em;font-weight:700;">Sin stock</span>';
-                else if (restante <= 3) stockInfo = '<span style="color:var(--warning);font-size:0.72em;font-weight:700;">⚠ ' + restante + ' restantes</span>';
-                else stockInfo = '<span style="color:var(--text-secondary);font-size:0.72em;">📦 ' + restante + ' restantes</span>';
+                if (restante <= 0) stockInfo = '<span style="color:var(--danger);font-size:0.72em;font-weight:700;">Sin stock local</span>';
+                else if (restante <= 3) stockInfo = '<span style="color:var(--warning);font-size:0.72em;font-weight:700;">⚠ ' + restante + ' restantes (local)</span>';
+                else stockInfo = '<span style="color:var(--text-secondary);font-size:0.72em;">📦 ' + restante + ' rest. (local)</span>';
+            }
+
+            // Info de stock ecom real
+            const ecomStockVal = ecomStockMap[String(p.codigo)] !== undefined ? ecomStockMap[String(p.codigo)] : null;
+            let ecomInfo = '';
+            if (ecomStockVal !== null) {
+                const ec = ecomStockVal;
+                const ecColor = ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)';
+                const ecIcon = ec <= 0 ? '🔴' : ec <= 3 ? '🟡' : '🟢';
+                ecomInfo = '<div style="text-align:center;padding:2px 2px 4px;border-bottom:1px solid var(--border);margin-bottom:2px;">' +
+                    '<span style="color:' + ecColor + ';font-size:0.8em;font-weight:800;">' + ecIcon + ' Ecom: ' + ec + ' uds</span>' +
+                    '</div>';
             }
 
             const edEl = document.createElement('div');
             edEl.className = 'ci-chip-editor';
             edEl.innerHTML =
+                ecomInfo +
                 (stockInfo ? '<div style="text-align:center;padding:0 2px 4px;border-bottom:1px solid var(--border);margin-bottom:2px;display:flex;justify-content:center;">' + stockInfo + '</div>' : '') +
                 '<div style="display:flex;align-items:center;gap:3px;">' +
                 '<button class="del-btn" onclick="ciChipDel(' + ci + ',event)" title="Quitar">🗑</button>' +
@@ -1966,14 +2018,42 @@
                 '</div>';
             chipEl.appendChild(edEl);
             _ciActiveChip = { ci, el: chipEl };
+
+            // Posicionar el editor respecto al viewport (position:fixed)
+            requestAnimationFrame(() => {
+                const rect = chipEl.getBoundingClientRect();
+                const edW = edEl.offsetWidth || 140;
+                const edH = edEl.offsetHeight || 90;
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+                // Centrar horizontalmente sobre el chip, clampeado a los bordes
+                let left = rect.left + rect.width / 2 - edW / 2;
+                left = Math.max(8, Math.min(left, vw - edW - 8));
+                // Arriba del chip si hay espacio, abajo si no
+                let top = rect.top - edH - 8;
+                if (top < 8) top = rect.bottom + 6;
+                edEl.style.left = left + 'px';
+                edEl.style.top = top + 'px';
+            });
         }
 
         function ciChipDelta(ci, d, e) {
             e.stopPropagation();
             const p = state.cart[ci];
             if (!p) return;
-            p.qty = Math.max(0, p.qty + d);
-            if (p.qty === 0) { ciChipDel(ci, e); return; }
+            const newQty = Math.max(0, p.qty + d);
+            if (newQty === 0) { ciChipDel(ci, e); return; }
+
+            // Validación ecom al subir
+            if (d > 0) {
+                const ec = getEcomStock(p.codigo);
+                if (ec !== null && newQty > ec) {
+                    // Mostrar advertencia pero permitir igual — solo toast rojo
+                    toast('⚠️ Superás ecom (' + ec + ' uds)', 'error');
+                }
+            }
+
+            p.qty = newQty;
 
             // Actualizar qty en editor (sin cerrar)
             const qEl = document.getElementById('cied_qty_' + ci);
@@ -2065,6 +2145,7 @@
         function clearCart() {
             showModal('🗑️', 'Vaciar pedido', '¿Vaciar todos los productos de este pedido?', 'Sí, vaciar', () => {
                 state.cart = [];
+                ecomStockMap = {};
                 articlePrices = {};
                 localStorage.removeItem('mikra_prices');
                 restoreFormData(null);
@@ -2074,6 +2155,9 @@
                 saveSlots();
                 renderCart(); renderSlotTabs(); updateBadge(); render();
                 if (state.orderType === 'presupuesto') renderBudget();
+                // Resetear barra ecom
+                const st = $('ecomStockStatus');
+                if (st) st.innerHTML = '<span style="opacity:0.5;">Stock ecom: —</span>';
                 toast('Pedido vaciado', 'success');
             });
         }
@@ -2081,29 +2165,53 @@
         // ===== DEBOUNCE UTILITY =====
         function debounce(fn, ms) {
             let timer;
-            return function(...args) {
+            function debounced(...args) {
                 clearTimeout(timer);
                 timer = setTimeout(() => fn.apply(this, args), ms);
-            };
+            }
+            debounced.cancel = () => clearTimeout(timer);
+            return debounced;
         }
         
-        // ===== SEARCH INDEX =====
+        // ===== SEARCH INDEX — Maps livianos, sin copiar objetos de producto =====
+        // En lugar de duplicar cada producto con spread (...p), guardamos solo
+        // las strings de búsqueda en Maps indexados por id. applyFilters filtra
+        // PRODUCTS directamente, evitando copiar ~163K objetos cada sync.
+        let _searchStr = new Map();   // id → string concatenada lowercase para búsqueda libre
+        let _tituloStr = new Map();   // id → titulo.toLowerCase()
+        let _articuloStr = new Map(); // id → articulo.toLowerCase()
+        // Mantener SEARCH_INDEX como array vacío para compatibilidad (no se usa más)
         let SEARCH_INDEX = [];
         
         function buildSearchIndex() {
-            SEARCH_INDEX = PRODUCTS.map(p => ({
-                ...p,
-                _search: [p.codigo, p.titulo, p.articulo, p.color, p.ubicacion]
-                    .filter(Boolean).join(' ').toLowerCase(),
-                _titulo: (p.titulo || '').toLowerCase(),
-                _articulo: (p.articulo || '').toLowerCase(),
-                _color: (p.color || '').toLowerCase(),
-                _ubicacion: (p.ubicacion || '').toLowerCase()
-            }));
+            // Pre-ordenar PRODUCTS una sola vez → applyFilters sin filtros no re-ordena nada
+            sortProducts(PRODUCTS);
+            _searchStr.clear(); _tituloStr.clear(); _articuloStr.clear();
+            const n = PRODUCTS.length;
+            for (let i = 0; i < n; i++) {
+                const p = PRODUCTS[i];
+                _searchStr.set(p.id, [p.codigo, p.titulo, p.articulo, p.color, p.ubicacion].filter(Boolean).join(' ').toLowerCase());
+                _tituloStr.set(p.id, (p.titulo || '').toLowerCase());
+                _articuloStr.set(p.id, (p.articulo || '').toLowerCase());
+            }
         }
         
         // ===== DATA — CACHE-FIRST LOADING =====
-        const CACHE_MAX_AGE_MS = 5 * 60 * 1000; // 5 min
+        const CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 min — inventario mayorista no cambia cada minuto
+
+        // Escribe el JSON pesado de productos de forma diferida (no bloquea el hilo principal)
+        let _productsSaveTimer = null;
+        function _scheduleProductsSave() {
+            clearTimeout(_productsSaveTimer);
+            _productsSaveTimer = setTimeout(() => {
+                try { localStorage.setItem('mikra_products', JSON.stringify(PRODUCTS)); } catch(e) {}
+            }, 200);
+        }
+        function _scheduleImagesSave() {
+            setTimeout(() => {
+                try { localStorage.setItem('mikra_images', JSON.stringify(IMAGES_MAP)); } catch(e) {}
+            }, 400);
+        }
         
         function loadFromCache() {
             try {
@@ -2134,15 +2242,95 @@
             } catch(e) { return false; }
         }
         
+        let _syncController = null;
+        let _syncElapsedTimer = null;
+        let _syncProgressTimer = null;
+
+        function cancelSync() {
+            if (_syncController) { _syncController.abort(); _syncController = null; }
+            clearInterval(_syncElapsedTimer);
+            clearInterval(_syncProgressTimer);
+            _syncElapsedTimer = null;
+            $('loadingProgressWrap').style.display = 'none';
+            $('syncCancelBtn').style.display = 'none';
+            $('syncDot').classList.remove('loading');
+            $('syncStatus').textContent = 'Cancelado';
+            // Si hay caché, usar eso
+            if (PRODUCTS.length) {
+                $('loadingScreen').classList.add('hidden');
+                toast('Sincronización cancelada', 'warning');
+            } else {
+                const cached = localStorage.getItem('mikra_products');
+                if (cached) {
+                    PRODUCTS = JSON.parse(cached);
+                    try { IMAGES_MAP = JSON.parse(localStorage.getItem('mikra_images') || '{}'); } catch(e) {}
+                    buildSearchIndex(); updateUniqueArticles(); applyFilters();
+                    $('loadingScreen').classList.add('hidden');
+                    toast('⚠️ Usando caché guardada', 'warning');
+                } else {
+                    $('loadingError').style.display = 'block';
+                    $('loadingText').textContent = 'Sincronización cancelada';
+                }
+            }
+        }
+
+        function _startSyncProgress(isBackground) {
+            const startTime = Date.now();
+            // Mostrar barra solo en foreground (pantalla de carga) o en el header
+            if (!isBackground) {
+                $('loadingProgressWrap').style.display = 'block';
+                $('loadingProgressBar').style.width = '0%';
+            }
+            $('syncCancelBtn').style.display = '';
+
+            // Animación de la barra: avanza rápido al inicio, se frena al llegar al 85%
+            let pct = 0;
+            clearInterval(_syncProgressTimer);
+            _syncProgressTimer = setInterval(() => {
+                // Curva que satura cerca del 90%
+                if (pct < 40) pct += 4;
+                else if (pct < 70) pct += 2;
+                else if (pct < 85) pct += 0.5;
+                // No llega a 100 sola — se completa al recibir datos
+                if (!isBackground) $('loadingProgressBar').style.width = pct + '%';
+                $('syncDot').style.opacity = pct % 20 < 10 ? '1' : '0.5'; // parpadeo suave
+            }, 300);
+
+            // Contador de segundos
+            clearInterval(_syncElapsedTimer);
+            _syncElapsedTimer = setInterval(() => {
+                const secs = Math.round((Date.now() - startTime) / 1000);
+                const el = $('loadingElapsed');
+                if (el) el.textContent = secs + 's';
+                if (!isBackground) $('loadingText').textContent = 'Conectando con Google Sheets... ' + secs + 's';
+            }, 1000);
+        }
+
+        function _stopSyncProgress(success) {
+            clearInterval(_syncElapsedTimer);
+            clearInterval(_syncProgressTimer);
+            _syncElapsedTimer = null;
+            _syncProgressTimer = null;
+            $('syncDot').style.opacity = '';
+            $('syncCancelBtn').style.display = 'none';
+            if (success) {
+                $('loadingProgressBar').style.width = '100%';
+                setTimeout(() => { $('loadingProgressWrap').style.display = 'none'; }, 400);
+            } else {
+                $('loadingProgressWrap').style.display = 'none';
+            }
+        }
+
         async function syncFromAPI(isBackground) {
+            if (_syncController) { _syncController.abort(); }
+            _syncController = new AbortController();
             $('syncDot').classList.add('loading');
             $('syncDot').classList.remove('error');
             $('syncStatus').textContent = 'Sincronizando...';
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15000);
+            _startSyncProgress(isBackground);
+
             try {
-                const response = await fetch(API_URL, { signal: controller.signal });
-                clearTimeout(timeout);
+                const response = await fetch(API_URL, { signal: _syncController.signal });
                 const data = await response.json();
                 if (data.success && data.products && data.products.length > 0) {
                     PRODUCTS = data.products;
@@ -2150,7 +2338,7 @@
                     // Images handling
                     if (data.images && typeof data.images === 'object') {
                         IMAGES_MAP = data.images;
-                        localStorage.setItem('mikra_images', JSON.stringify(IMAGES_MAP));
+                        _scheduleImagesSave();
                     } else {
                         try { 
                             const cached = JSON.parse(localStorage.getItem('mikra_images') || '{}');
@@ -2158,7 +2346,6 @@
                         } catch(e) {}
                     }
                     
-                    // Also check if products have image URLs embedded
                     if (Object.keys(IMAGES_MAP).length === 0) {
                         PRODUCTS.forEach(p => {
                             if (p.imagen && p.codigo) IMAGES_MAP[p.codigo] = p.imagen;
@@ -2166,26 +2353,29 @@
                             if (p.img && p.codigo) IMAGES_MAP[p.codigo] = p.img;
                             if (p.thumbnail && p.codigo) IMAGES_MAP[p.codigo] = p.thumbnail;
                         });
-                        if (Object.keys(IMAGES_MAP).length > 0) {
-                            localStorage.setItem('mikra_images', JSON.stringify(IMAGES_MAP));
-                        }
+                        if (Object.keys(IMAGES_MAP).length > 0) _scheduleImagesSave();
                     }
                     
-                    localStorage.setItem('mikra_products', JSON.stringify(PRODUCTS));
-                    localStorage.setItem('mikra_lastSync', new Date().toISOString());
+                    // Actualizar UI inmediatamente, guardar en background
                     buildSearchIndex();
                     updateUniqueArticles();
                     applyFilters();
+                    _stopSyncProgress(true);
                     $('syncDot').classList.remove('loading', 'error');
                     $('syncStatus').textContent = 'Sincronizado';
                     $('syncTime').textContent = '• ' + new Date().toLocaleTimeString();
                     $('loadingScreen').classList.add('hidden');
+                    $('loadingText').textContent = 'Cargando inventario...';
                     const imgCount = Object.keys(IMAGES_MAP).length;
                     if (isBackground) toast('✓ Actualizado', 'success');
                     else toast('✓ ' + data.count + ' prod. · ' + imgCount + ' img', 'success');
+                    // Escribir localStorage después de actualizar la UI
+                    _scheduleProductsSave();
+                    localStorage.setItem('mikra_lastSync', new Date().toISOString());
                 } else throw new Error('No products');
             } catch (error) {
-                clearTimeout(timeout);
+                if (error.name === 'AbortError') return; // cancelado por el usuario — ya manejado en cancelSync
+                _stopSyncProgress(false);
                 $('syncDot').classList.remove('loading');
                 $('syncDot').classList.add('error');
                 $('syncStatus').textContent = 'Error';
@@ -2229,29 +2419,39 @@
         }
         
         function updateUniqueArticles() {
-            const articles = {};
-            PRODUCTS.forEach(p => {
+            const map = new Map();
+            const n = PRODUCTS.length;
+            for (let i = 0; i < n; i++) {
+                const p = PRODUCTS[i];
                 const name = p.titulo || p.articulo || '';
-                if (name) {
-                    if (!articles[name]) articles[name] = { name, totalStock: 0 };
-                    articles[name].totalStock += p.stock || 0;
-                }
-            });
-            UNIQUE_ARTICLES = Object.values(articles).sort((a, b) => b.totalStock - a.totalStock);
+                if (!name) continue;
+                const entry = map.get(name);
+                if (entry) entry.totalStock += p.stock || 0;
+                else map.set(name, { name, totalStock: p.stock || 0 });
+            }
+            UNIQUE_ARTICLES = [...map.values()].sort((a, b) => b.totalStock - a.totalStock);
         }
         
         function sortProducts(products) {
-            return products.sort((a, b) => {
-                const ca = a._color || (a.color || '').toLowerCase(), cb = b._color || (b.color || '').toLowerCase();
-                if (ca !== cb) return ca.localeCompare(cb);
-                const sa = a.talle || '', sb = b.talle || '';
-                const na = parseInt(sa), nb = parseInt(sb);
-                if (!isNaN(na) && !isNaN(nb)) return na - nb;
-                const ia = SIZE_ORDER.indexOf(sa.toUpperCase()), ib = SIZE_ORDER.indexOf(sb.toUpperCase());
-                if (ia !== -1 && ib !== -1) return ia - ib;
-                if (ia !== -1) return -1; if (ib !== -1) return 1;
-                return sa.localeCompare(sb);
+            // Schwartzian transform: calcular la sort key UNA sola vez por elemento
+            // en vez de recalcularla en cada comparación (O(n log n) → O(n) + sort)
+            const SIZE_ORDER_MAP = new Map(SIZE_ORDER.map((s, i) => [s, i]));
+            const keyed = products.map(p => {
+                const color = (p.color || '').toLowerCase();
+                const t = p.talle || '';
+                const nt = parseInt(t);
+                const tKey = !isNaN(nt) ? nt
+                    : (SIZE_ORDER_MAP.has(t.toUpperCase()) ? SIZE_ORDER_MAP.get(t.toUpperCase()) + 1000 : 9999);
+                return { p, color, tKey, tStr: t };
             });
+            keyed.sort((a, b) => {
+                if (a.color < b.color) return -1;
+                if (a.color > b.color) return 1;
+                return a.tKey !== b.tKey ? a.tKey - b.tKey : a.tStr.localeCompare(b.tStr);
+            });
+            // Mutate in place (mismo comportamiento que antes)
+            for (let i = 0; i < keyed.length; i++) products[i] = keyed[i].p;
+            return products;
         }
         
         // ===== SEARCH & FILTERS =====
@@ -2274,7 +2474,10 @@
             $('searchClear').classList.remove('show'); $('autocomplete').classList.remove('show');
             forceListView = false; articleColorFilter = ''; showColorStrip = false;
             homeCatSelected = null;
+            artEcomMap = {};
+            _inputFocused = true; // evitar que salte al home screen
             applyFilters();
+            $('searchInput').focus();
         }
         
         function searchArticle(name) {
@@ -2301,24 +2504,62 @@
             applyFilters();
         }
         
+        // ===== CART QTY CACHE — rebuilt on every cart change =====
+        // getCartQty() se llama miles de veces al renderizar detalles de artículo.
+        // Un Map es O(1) vs Array.find() O(n).
+        let _cartQtyCache = new Map(); // productId → qty
+        function _rebuildCartCache() {
+            _cartQtyCache.clear();
+            for (const item of state.cart) _cartQtyCache.set(item.id, item.qty);
+        }
+        function getCartQty(productId) {
+            return _cartQtyCache.get(productId) || 0;
+        }
+        function addToCart(id, noStock, callback) {
+            if (noStock) {
+                showModal('⚠️', 'Sin stock', '¿Agregar igual al pedido?', 'Sí, agregar', () => {
+                    const p = PRODUCTS.find(x => x.id === id);
+                    if (!p) return;
+                    const existing = state.cart.find(c => c.id === id);
+                    if (existing) { existing.qty += 1; } else { state.cart.push({ ...p, qty: 1 }); }
+                    _rebuildCartCache();
+                    saveCart(); updateBadge(); render();
+                    if (callback) callback(p);
+                });
+                return null;
+            }
+            const p = PRODUCTS.find(x => x.id === id);
+            if (!p) return null;
+            const existing = state.cart.find(c => c.id === id);
+            if (existing) { existing.qty += 1; } else { state.cart.push({ ...p, qty: 1 }); }
+            _rebuildCartCache();
+            return p;
+        }
+
         function applyFilters() {
-            let r = SEARCH_INDEX.length ? [...SEARCH_INDEX] : [...PRODUCTS];
+            let r = PRODUCTS;
+            // Filtro stock
             if (state.stock === 'yes') r = r.filter(p => p.stock > 0);
             else if (state.stock === 'low') r = r.filter(p => p.stock > 0 && p.stock <= 5);
             else if (state.stock === 'no') r = r.filter(p => p.stock === 0);
+            // Filtro búsqueda
             if (state.search) {
                 const q = state.search.toLowerCase();
                 if (state.searchExact) {
-                    r = r.filter(p => (p._titulo || (p.titulo||'').toLowerCase()) === q || (p._articulo || (p.articulo||'').toLowerCase()) === q);
+                    r = r.filter(p => _tituloStr.get(p.id) === q || _articuloStr.get(p.id) === q);
                 } else {
-                    r = r.filter(p => (p._search || '').includes(q));
+                    r = r.filter(p => (_searchStr.get(p.id) || '').includes(q));
                 }
             }
-            if (state.location) { const loc = state.location.toLowerCase(); r = r.filter(p => (p._ubicacion || (p.ubicacion||'').toLowerCase()).includes(loc)); }
+            if (state.location) {
+                const loc = state.location.toLowerCase();
+                r = r.filter(p => (p.ubicacion || '').toLowerCase().includes(loc));
+            }
             updateDynamicFilters(r);
             if (state.color) r = r.filter(p => p.color === state.color);
-            if (state.size) r = r.filter(p => p.talle === state.size);
-            r = sortProducts(r);
+            if (state.size)  r = r.filter(p => p.talle === state.size);
+            // Sólo ordenar si r es un subconjunto filtrado — PRODUCTS ya está pre-ordenado
+            if (r !== PRODUCTS) r = sortProducts(r);
             state.filtered = r; state.page = 1;
             render(); updateActiveFilterTags();
         }
@@ -2337,49 +2578,55 @@
         let colorStockMap = {}; // { colorName: { stock, avail, imgUrl } }
         
         function updateDynamicFilters(results) {
-            const colors = [...new Set(results.map(p => p.color).filter(Boolean))].sort();
-            const sizes = [...new Set(results.map(p => p.talle).filter(Boolean))];
-            sizes.sort((a, b) => {
+            // Single pass O(n): acumular color/talle stats sin múltiples .filter()
+            const colorMap = new Map();  // color → { stock, cart, hasImg }
+            const sizeMap  = new Map();  // talle → available total
+            const n = results.length;
+            for (let i = 0; i < n; i++) {
+                const p = results[i];
+                const avail = (p.stock || 0) - _cartQtyCache.get(p.id) || 0;
+                // Color
+                if (p.color) {
+                    let cm = colorMap.get(p.color);
+                    if (!cm) { cm = { stock: 0, cart: 0, imgUrl: '' }; colorMap.set(p.color, cm); }
+                    if (!state.size || p.talle === state.size) {
+                        cm.stock += p.stock || 0;
+                        cm.cart  += _cartQtyCache.get(p.id) || 0;
+                    }
+                    if (!cm.imgUrl) cm.imgUrl = getProductImageFull(p.codigo, p) || '';
+                }
+                // Talle
+                if (p.talle) {
+                    if (!state.color || p.color === state.color) {
+                        sizeMap.set(p.talle, (sizeMap.get(p.talle) || 0) + avail);
+                    }
+                }
+            }
+
+            // Rebuild colorStockMap (usado en openColorPhotoOverlay)
+            colorStockMap = {};
+            colorMap.forEach((v, k) => { colorStockMap[k] = { stock: v.stock, avail: v.stock - v.cart, cart: v.cart, imgUrl: v.imgUrl }; });
+
+            const colors = [...colorMap.keys()].sort();
+            const sizes  = [...sizeMap.keys()].sort((a, b) => {
                 const na = parseInt(a), nb = parseInt(b);
                 if (!isNaN(na) && !isNaN(nb)) return na - nb;
                 const ia = SIZE_ORDER.indexOf(a.toUpperCase()), ib = SIZE_ORDER.indexOf(b.toUpperCase());
                 if (ia !== -1 && ib !== -1) return ia - ib;
                 return a.localeCompare(b);
             });
-            
-            // Calculate stock per color (available = stock - cart), considering selected size
-            colorStockMap = {};
-            colors.forEach(c => {
-                let prods = results.filter(p => p.color === c);
-                if (state.size) prods = prods.filter(p => p.talle === state.size);
-                let stock = 0, cart = 0, imgUrl = '';
-                prods.forEach(p => { stock += p.stock || 0; cart += getCartQty(p.id); });
-                // Image: always from all prods of this color (not filtered by size)
-                const allColorProds = results.filter(p => p.color === c);
-                for (const p of allColorProds) { imgUrl = getProductImageFull(p.codigo, p); if (imgUrl) break; }
-                colorStockMap[c] = { stock, avail: stock - cart, cart, imgUrl };
-            });
-            
+
             $('colorOptions').innerHTML = '<div class="filter-opt' + (!state.color ? ' active' : '') + '" data-color="">Todos</div>' +
                 colors.map(c => {
-                    const zs = colorStockMap[c] && colorStockMap[c].avail <= 0 ? ' zero-stock' : '';
+                    const cm = colorMap.get(c);
+                    const zs = cm && (cm.stock - cm.cart) <= 0 ? ' zero-stock' : '';
                     return '<div class="filter-opt' + (state.color === c ? ' active' : '') + zs + '" data-color="' + c + '">' + c + '</div>';
                 }).join('');
-            
-            // Calculate stock per size (considering selected color)
-            const sizeStockMap = {};
-            sizes.forEach(s => {
-                let prods = results.filter(p => p.talle === s);
-                if (state.color) prods = prods.filter(p => p.color === state.color);
-                let stock = 0;
-                prods.forEach(p => { stock += (p.stock || 0) - getCartQty(p.id); });
-                sizeStockMap[s] = stock;
-            });
-            
+
             $('sizeOptions').innerHTML = '<div class="filter-opt' + (!state.size ? ' active' : '') + '" data-size="">Todos</div>' +
                 sizes.map(s => {
-                    const zs = sizeStockMap[s] <= 0 ? ' zero-stock' : '';
-                    return '<div class="filter-opt' + (state.size === s ? ' active' : '') + zs + '" data-size="' + s + '">' + s + '</div>';
+                    const avail = sizeMap.get(s) || 0;
+                    return '<div class="filter-opt' + (state.size === s ? ' active' : '') + (avail <= 0 ? ' zero-stock' : '') + '" data-size="' + s + '">' + s + '</div>';
                 }).join('');
         }
         
@@ -2516,6 +2763,7 @@
                 (totalColorsCero > 0 ? '<button class="article-photo-toggle" onclick="toggleZeroStock()" style="' + (showZeroStock ? 'background:rgba(248,113,113,0.2);color:var(--danger);' : '') + '" title="' + (showZeroStock ? 'Ocultar colores sin stock' : 'Ver ' + totalColorsCero + ' color(es) sin stock') + '">🚫' + (showZeroStock ? '✓' : totalColorsCero) + '</button>' : '') +
                 '<button class="article-photo-toggle" id="articlePhotoToggle" onclick="toggleArticlePhotos()">📷</button>' +
                 '<button class="article-photo-toggle" onclick="switchToListView()">📝</button>' +
+                '<button class="article-photo-toggle" id="artEcomRefreshBtn" onclick="fetchEcomStockForArticle()" title="Actualizar stock ecom de este artículo" style="' + (Object.keys(artEcomMap).length ? 'color:var(--success);border-color:var(--success);' : '') + '">🔄</button>' +
                 '</div>';
             
             // Ocultar colores enteros sin stock, salvo que el toggle esté activo
@@ -2563,6 +2811,13 @@
                     const stockClass = available > 5 ? 'high' : available > 0 ? 'med' : 'low';
                     const isZero = available <= 0 && cartQty === 0;
                     const isSelected = articleSelectedId === p.id;
+
+                    // Badge ecom
+                    const ec = artEcomMap[String(p.codigo)] !== undefined ? artEcomMap[String(p.codigo)] : null;
+                    const ecHtml = ec !== null
+                        ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>'
+                        : '';
+
                     html += '<div class="article-size-cell' + 
                         (isZero ? ' zero' : '') + 
                         (inCart ? ' in-cart' : '') +
@@ -2571,6 +2826,7 @@
                         (inCart ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
                         '<div class="asc-size">' + talle + '</div>' +
                         '<div class="asc-stock ' + stockClass + '">' + available + '</div>' +
+                        ecHtml +
                         '</div>';
                 });
                 // Botón Curva inline al final de los talles
@@ -2601,6 +2857,7 @@
             articleSelectedId = null;
             articleColorFilter = '';
             showColorStrip = false;
+            artEcomMap = {}; // limpiar mapa ecom al salir del artículo
             // If home state, hide productList and show home
             if (isHomeState()) {
                 $('productList').style.display = 'none';
@@ -2650,6 +2907,19 @@
                     });
                     return;
                 }
+                const newQty = currentQty + 1;
+                // Validación ecom
+                const ec = getEcomStock(p.codigo);
+                if (ec !== null && newQty > ec) {
+                    showModal('⚠️', 'Superás el stock ecom', 'Ecom tiene ' + ec + ' uds. Vas a pedir ' + newQty + '. ¿Continuar igual?', 'Sí, agregar', () => {
+                        const existing = state.cart.find(c => c.id === productId);
+                        if (existing) { existing.qty += 1; } else { state.cart.push({ ...p, qty: 1 }); }
+                        saveCart(); updateBadge();
+                        toast('🛒 ' + getCartQty(productId) + ' (⚠️ supera ecom)', 'warning');
+                        articleUpdateEditBar(); renderArticleDetail();
+                    });
+                    return;
+                }
                 const existing = state.cart.find(c => c.id === productId);
                 if (existing) { existing.qty += 1; }
                 else { state.cart.push({ ...p, qty: 1 }); }
@@ -2686,7 +2956,9 @@
             if (!product) return;
             const qty = getCartQty(articleSelectedId);
             const avail = product.stock - qty;
-            $('articleEditLabel').textContent = '🎨 ' + (product.color || '-') + '  ·  Talle ' + (product.talle || '-') + '  ·  Disp: ' + avail + '/' + product.stock;
+            const ec = getEcomStock(product.codigo);
+            const ecTxt = ec !== null ? '  ▸Ecom:' + ec : '';
+            $('articleEditLabel').textContent = '🎨 ' + (product.color || '-') + '  ·  Talle ' + (product.talle || '-') + '  ·  Disp: ' + avail + '/' + product.stock + ecTxt;
             $('articleEditVal').textContent = qty;
             $('articleEditVal').style.color = qty > 0 ? 'var(--success)' : 'var(--text-secondary)';
             $('articleManualInput').value = '';
@@ -2706,12 +2978,22 @@
             const currentQty = getCartQty(articleSelectedId);
             const newQty = currentQty + delta;
             
-            // Warn if exceeding stock
+            // Warn if exceeding local stock
             if (delta > 0 && newQty > p.stock) {
-                showModal('⚠️', 'Superás el stock', 'Stock: ' + p.stock + '. ¿Agregar igual?', 'Sí, agregar', () => {
+                showModal('⚠️', 'Superás el stock local', 'Stock: ' + p.stock + '. ¿Agregar igual?', 'Sí, agregar', () => {
                     _doArticleChangeQty(p, newQty, delta, currentQty);
                 });
                 return;
+            }
+            // Warn if exceeding ecom stock
+            if (delta > 0) {
+                const ec = getEcomStock(p.codigo);
+                if (ec !== null && newQty > ec) {
+                    showModal('⚠️', 'Superás el stock ecom', 'Ecom tiene ' + ec + ' uds. Vas a pedir ' + newQty + '. ¿Continuar igual?', 'Sí, agregar', () => {
+                        _doArticleChangeQty(p, newQty, delta, currentQty);
+                    });
+                    return;
+                }
             }
             _doArticleChangeQty(p, newQty, delta, currentQty);
         }
@@ -2765,9 +3047,14 @@
             closeEditBar();
         }
         
+        // ── Flag: el usuario está activamente en el buscador ──
+        // Cuando está true, isHomeState() devuelve false aunque la búsqueda esté vacía.
+        // Así borrar el input no dispara renderHomeScreen().
+        let _inputFocused = false;
+
         // ===== HOME DASHBOARD =====
         function isHomeState() {
-            return !state.search && state.stock === 'all' && !state.color && !state.size && !state.location && PRODUCTS.length > 0;
+            return !_inputFocused && !state.search && state.stock === 'all' && !state.color && !state.size && !state.location && PRODUCTS.length > 0;
         }
 
         function getArticleStock(name) {
@@ -3905,6 +4192,7 @@
             if (page === 'cart') {
                 $('navCart').classList.add('active');
                 $('articleEditBar').classList.remove('show');
+                _inputFocused = false;
                 renderSlotTabs();
                 renderCart();
             } else {
@@ -3949,6 +4237,7 @@
             $('navHome').classList.add('active');
             $('navStock').classList.remove('active');
             $('navCart').classList.remove('active');
+            _inputFocused = false;
 
             $('searchInput').value = '';
             $('searchClear').classList.remove('show');
@@ -3970,15 +4259,35 @@
         const debouncedFilter = debounce(() => {
             showAutocomplete(state.search);
             applyFilters();
-        }, 120);
-        
+        }, 80); // 80ms — suficiente para evitar renders en cada tecla rápida
+
+        $('searchInput').addEventListener('focus', () => {
+            _inputFocused = true;
+            if (state.search.length >= 2) showAutocomplete(state.search);
+        });
+        $('searchInput').addEventListener('blur', () => {
+            // Delay para que el click en autocomplete pueda procesarse antes
+            setTimeout(() => { _inputFocused = false; }, 200);
+        });
         $('searchInput').addEventListener('input', e => {
-            state.search = e.target.value.trim(); state.searchExact = false; state.color = ''; state.size = '';
+            const val = e.target.value.trim();
+            state.searchExact = false; state.color = ''; state.size = '';
             forceListView = false;
-            $('searchClear').classList.toggle('show', state.search.length > 0);
+            $('searchClear').classList.toggle('show', val.length > 0);
+
+            if (val === state.search) return; // sin cambio real (p.ej. sólo espacios)
+            state.search = val;
+
+            if (val === '') {
+                // Búsqueda vaciada: cancelar debounce pendiente y renderizar inmediatamente
+                debouncedFilter.cancel && debouncedFilter.cancel();
+                $('autocomplete').classList.remove('show');
+                _inputFocused = true;
+                applyFilters();
+                return;
+            }
             debouncedFilter();
         });
-        $('searchInput').addEventListener('focus', () => { if (state.search.length >= 2) showAutocomplete(state.search); });
         $('autocomplete').addEventListener('click', e => {
             const item = e.target.closest('.autocomplete-item');
             if (item) {
@@ -4055,6 +4364,94 @@
         const WORKER_BASE = 'https://ecomm-token-proxy.rafaelassir.workers.dev';
         const PIN_CORRECTO = '9148';
 
+        // ─── STOCK ECOM EN TIEMPO REAL ────────────────────────────────────────
+        let _ecomLoading = false;
+
+        // Helper: obtiene el stock ecom para un SKU (busca en artEcomMap y ecomStockMap)
+        function getEcomStock(sku) {
+            const s = String(sku);
+            if (artEcomMap[s] !== undefined) return artEcomMap[s];
+            if (ecomStockMap[s] !== undefined) return ecomStockMap[s];
+            return null;
+        }
+
+        async function fetchEcomStockForCart() {
+            if (!state.cart.length) { toast('El carrito está vacío', 'warning'); return; }
+            if (_ecomLoading) return;
+            _ecomLoading = true;
+
+            const btn = $('ecomRefreshBtn');
+            const statusEl = $('ecomStockStatus');
+            if (btn) btn.classList.add('loading');
+
+            const skus = [...new Set(state.cart.filter(p => p.codigo).map(p => String(p.codigo)))];
+            if (statusEl) statusEl.innerHTML = '<span style="color:var(--warning)">Consultando ' + skus.length + ' SKUs...</span>';
+
+            try {
+                const map = await _fetchEcomSkus(skus);
+                Object.assign(ecomStockMap, map);
+
+                const hora = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                if (statusEl) statusEl.innerHTML = '<span style="color:var(--success)">✓ Ecom actualizado ' + hora + '</span>';
+                toast('✅ Stock ecom cargado', 'success');
+                renderCart();
+            } catch(e) {
+                if (statusEl) statusEl.innerHTML = '<span style="color:var(--danger)">❌ Error al consultar</span>';
+                toast('❌ Error al actualizar stock ecom', 'error');
+            }
+
+            _ecomLoading = false;
+            if (btn) btn.classList.remove('loading');
+        }
+
+        // ─── Helper: fetch N SKUs con concurrencia controlada ─────────────────
+        // Lanza BATCH_SIZE requests en paralelo, espera a que terminen, repite.
+        // Evita saturar la red con 80+ requests simultáneos.
+        async function _fetchEcomSkus(skus, batchSize = 8) {
+            const result = {};
+            for (let i = 0; i < skus.length; i += batchSize) {
+                const batch = skus.slice(i, i + batchSize);
+                const settled = await Promise.allSettled(batch.map(sku =>
+                    fetch(`${WORKER_BASE}/get-stock?sku=${sku}`)
+                        .then(r => r.json())
+                        .then(d => ({ sku, stock: d.error ? null : d.stock }))
+                        .catch(() => ({ sku, stock: null }))
+                ));
+                settled.forEach(s => {
+                    if (s.status === 'fulfilled' && s.value.stock !== null)
+                        result[s.value.sku] = s.value.stock;
+                });
+            }
+            return result;
+        }
+
+        // ─── STOCK ECOM DESDE VISTA DE ARTÍCULO ──────────────────────────────
+        let _artEcomLoading = false;
+        async function fetchEcomStockForArticle() {
+            if (!isArticleDetailMode()) return;
+            if (_artEcomLoading) return;
+            const prods = state.filtered.filter(p => p.codigo);
+            if (!prods.length) { toast('Sin SKUs en este artículo', 'warning'); return; }
+            _artEcomLoading = true;
+
+            const btn = $('artEcomRefreshBtn');
+            if (btn) { btn.classList.add('loading'); btn.style.animation = 'spin 0.7s linear infinite'; }
+
+            const skus = [...new Set(prods.map(p => String(p.codigo)))];
+            toast('Consultando ' + skus.length + ' SKUs...', '');
+
+            try {
+                artEcomMap = await _fetchEcomSkus(skus);
+                toast('✅ Stock ecom actualizado', 'success');
+                renderArticleDetail();
+            } catch(e) {
+                toast('❌ Error al consultar ecom', 'error');
+            }
+
+            _artEcomLoading = false;
+            if (btn) { btn.classList.remove('loading'); btn.style.animation = ''; }
+        }
+
         // Orden de talles para sorting
         const TALLE_ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','1','2','3','4','5','6','7','8','9','10','11','12','13','14','16','18','20','22','24','26','28','30','32','34','36','38','40','42','44'];
         function talleRank(t) { const i = TALLE_ORDER.indexOf(String(t||'').toUpperCase().trim()); return i >= 0 ? i : 999; }
@@ -4080,58 +4477,117 @@
             $('stockCheckSummary').innerHTML = '';
             $('stockCheckModal').classList.add('show');
 
-            const results = await Promise.all(skus.map(async sku => {
-                try {
-                    const d = await fetch(`${WORKER_BASE}/get-stock?sku=${sku}`).then(r => r.json());
-                    return { sku, stock: d.error ? null : d.stock, ok: !d.error };
-                } catch(e) { return { sku, stock: null, ok: false }; }
-            }));
+            // Reutilizar datos ya cargados del ecomStockMap si están frescos
+            const skusToFetch = skus.filter(s => ecomStockMap[String(s)] === undefined);
+            if (skusToFetch.length) {
+                const fresh = await _fetchEcomSkus(skusToFetch);
+                Object.assign(ecomStockMap, fresh);
+            }
             const stockMap = {};
-            results.forEach(r => { stockMap[String(r.sku)] = r; });
-
-            let html = '', allOk = true, totalItems = 0;
-            // Agrupar por artículo
-            const grupos = {};
-            cartOrdenado.forEach(p => {
-                const key = p.titulo || p.articulo || 'Sin nombre';
-                if (!grupos[key]) grupos[key] = [];
-                grupos[key].push(p);
+            skus.forEach(sku => {
+                const v = ecomStockMap[String(sku)];
+                stockMap[String(sku)] = { sku, stock: v !== undefined ? v : null, ok: v !== undefined && v !== null };
             });
 
-            Object.entries(grupos).forEach(([art, items]) => {
-                html += `<div style="margin-bottom:10px;">
-                    <div style="font-size:0.78em;font-weight:700;opacity:0.5;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">${art}</div>`;
-                items.forEach(p => {
-                    const r = stockMap[String(p.codigo)];
-                    if (!r) return;
-                    totalItems++;
-                    const real = r.stock, pedido = p.qty;
-                    const ok = real !== null && real >= pedido;
-                    if (!ok) allOk = false;
-                    const pct = real !== null ? Math.min(100, Math.round(real / Math.max(real, pedido, 1) * 100)) : 0;
-                    const col = real === null ? '#6b7280' : ok ? '#22c55e' : '#ef4444';
-                    const bg = ok ? 'rgba(34,197,94,0.06)' : real === null ? 'rgba(107,114,128,0.08)' : 'rgba(239,68,68,0.1)';
-                    const icon = real === null ? '❓' : ok ? '✅' : '⚠️';
-                    const sub = (p.color ? p.color : '') + (p.talle ? (p.color ? ' T.'+p.talle : 'T.'+p.talle) : '');
-                    html += `<div style="background:${bg};border-radius:8px;padding:8px 10px;margin-bottom:4px;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <div style="font-size:0.85em;">${icon} <b>${sub || p.codigo}</b></div>
-                            <div style="text-align:right;">
-                                <span style="font-size:0.78em;opacity:0.5;">Ped: ${pedido} · </span>
-                                <span style="font-size:0.88em;color:${col};font-weight:800;">${real !== null ? real+' stock' : 'sin datos'}</span>
-                            </div>
-                        </div>
-                        ${real !== null ? `<div style="margin-top:5px;background:rgba(255,255,255,0.08);border-radius:3px;height:4px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${col};border-radius:3px;"></div></div>` : ''}
-                    </div>`;
+            let html = '', allOk = true, totalItems = 0, sinDatos = 0;
+
+            // Agrupar por artículo → color → talle
+            const grupos = {};
+            cartOrdenado.forEach(p => {
+                const art = p.titulo || p.articulo || 'Sin nombre';
+                const col = p.color || 'Sin color';
+                const tal = p.talle || '-';
+                if (!grupos[art]) grupos[art] = {};
+                if (!grupos[art][col]) grupos[art][col] = {};
+                grupos[art][col][tal] = p;
+            });
+
+            const SO = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
+            function talSort(a, b) {
+                const na = parseFloat(a), nb = parseFloat(b);
+                if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                const ia = SO.indexOf(a.toUpperCase()), ib = SO.indexOf(b.toUpperCase());
+                if (ia > -1 && ib > -1) return ia - ib;
+                if (ia > -1) return -1; if (ib > -1) return 1;
+                return a.localeCompare(b);
+            }
+
+            Object.entries(grupos).forEach(([art, colorMap]) => {
+                // Todos los talles del artículo → cabecera de columnas
+                const tallesSet = new Set();
+                Object.values(colorMap).forEach(talMap => Object.keys(talMap).forEach(t => tallesSet.add(t)));
+                const talles = [...tallesSet].sort(talSort);
+
+                // ¿Algún problema en el artículo?
+                let artOk = true;
+                Object.values(colorMap).forEach(talMap => {
+                    Object.values(talMap).forEach(p => {
+                        const r = stockMap[String(p.codigo)];
+                        if (!r || r.stock === null || r.stock < p.qty) artOk = false;
+                    });
                 });
-                html += `</div>`;
+
+                const thStyle = `text-align:center;font-size:0.62em;color:rgba(255,255,255,0.4);padding:0 3px 5px;font-weight:800;min-width:46px;`;
+                const tdLabel = `text-align:left;font-size:0.72em;font-weight:700;color:var(--primary);padding:3px 8px 3px 0;white-space:nowrap;vertical-align:middle;`;
+
+                html += `<div style="margin-bottom:14px;">
+                    <div style="font-size:0.78em;font-weight:800;text-transform:uppercase;letter-spacing:0.4px;
+                        color:${artOk ? 'var(--success)' : 'var(--danger)'};
+                        display:flex;align-items:center;gap:5px;margin-bottom:7px;">
+                        ${artOk ? '✅' : '⚠️'} ${art}
+                    </div>
+                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                    <table style="border-collapse:separate;border-spacing:2px;width:100%;">
+                        <thead><tr>
+                            <th style="${tdLabel}"></th>
+                            ${talles.map(t => `<th style="${thStyle}">${t}</th>`).join('')}
+                        </tr></thead>
+                        <tbody>`;
+
+                Object.entries(colorMap).forEach(([color, talMap]) => {
+                    html += `<tr>
+                        <td style="${tdLabel}">${color}</td>`;
+                    talles.forEach(tal => {
+                        const p = talMap[tal];
+                        if (!p) {
+                            html += `<td style="text-align:center;padding:1px;"><div style="width:44px;height:52px;background:rgba(255,255,255,0.03);border-radius:6px;border:1px solid rgba(255,255,255,0.06);"></div></td>`;
+                            return;
+                        }
+                        const r = stockMap[String(p.codigo)];
+                        totalItems++;
+                        const real = r ? r.stock : null;
+                        const pedido = p.qty;
+                        const ok = real !== null && real >= pedido;
+                        if (!ok) allOk = false;
+                        if (real === null) sinDatos++;
+                        const cR = real === null ? '#6b7280' : ok ? '#22c55e' : '#ef4444';
+                        const bg = real === null ? 'rgba(107,114,128,0.1)' : ok ? 'rgba(34,197,94,0.13)' : 'rgba(239,68,68,0.18)';
+                        const bord = real === null ? 'rgba(107,114,128,0.25)' : ok ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.5)';
+                        html += `<td style="text-align:center;padding:1px;">
+                            <div style="background:${bg};border:1.5px solid ${bord};border-radius:7px;padding:4px 3px;width:44px;">
+                                <div style="font-size:0.55em;color:rgba(255,255,255,0.38);font-weight:700;line-height:1.3;">PED</div>
+                                <div style="font-size:1.05em;font-weight:900;color:rgba(255,255,255,0.78);line-height:1.1;">${pedido}</div>
+                                <div style="border-top:1px solid rgba(255,255,255,0.08);margin:2px -3px;"></div>
+                                <div style="font-size:0.55em;color:rgba(255,255,255,0.38);font-weight:700;line-height:1.3;">REAL</div>
+                                <div style="font-size:1.05em;font-weight:900;color:${cR};line-height:1.1;">${real !== null ? real : '?'}</div>
+                            </div>
+                        </td>`;
+                    });
+                    html += `</tr>`;
+                });
+
+                html += `</tbody></table></div></div>`;
             });
 
             $('stockCheckContent').innerHTML = html || '<div style="opacity:0.5;text-align:center;">Sin items</div>';
-            $('stockCheckSummary').style.background = allOk ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
+            $('stockCheckSummary').style.background = allOk ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+            $('stockCheckSummary').style.border = allOk ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(239,68,68,0.3)';
+            $('stockCheckSummary').style.borderRadius = '10px';
+            $('stockCheckSummary').style.padding = '10px';
             $('stockCheckSummary').innerHTML = allOk
-                ? `<span style="color:var(--success);">✅ Todo OK — Stock suficiente para los ${totalItems} items</span>`
-                : `<span style="color:var(--danger);">⚠️ Revisá los items marcados en rojo</span>`;
+                ? `<span style="color:var(--success);font-size:1em;">✅ Todo OK — ${totalItems} items con stock suficiente</span>`
+                : `<div style="color:var(--danger);font-size:0.95em;font-weight:800;">⚠️ Hay items con stock insuficiente</div>
+                   ${sinDatos ? '<div style="color:var(--text-secondary);font-size:0.78em;margin-top:3px;">❓ ' + sinDatos + ' sin datos de ecom</div>' : ''}`;
         }
 
         // ─── PIN ──────────────────────────────────────────────────────────────

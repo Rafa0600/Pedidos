@@ -1043,6 +1043,7 @@
             <div class="cart-header">
                 <div class="cart-count"><span id="cartItemCount">0</span> prod. (<span id="cartUnitCount">0</span> uds)</div>
                 <div style="display:flex;gap:6px;align-items:center;">
+                    <button class="cart-remove" onclick="pasteFromTiendaNube()" style="font-size:0.82em;color:var(--success);">🛍️ Pegar TN</button>
                     <button class="cart-remove" onclick="openManualEntry()" style="font-size:0.82em;color:var(--primary);">📋 Manual</button>
                     <button class="cart-remove" onclick="clearCart()" style="font-size:0.82em;">🗑️ Vaciar</button>
                 </div>
@@ -2144,22 +2145,27 @@
 
         function clearCart() {
             showModal('🗑️', 'Vaciar pedido', '¿Vaciar todos los productos de este pedido?', 'Sí, vaciar', () => {
-                state.cart = [];
-                ecomStockMap = {};
-                articlePrices = {};
-                localStorage.removeItem('mikra_prices');
-                restoreFormData(null);
-                // Limpiar también prices del slot activo
-                const slot = _slots.find(s => s.id === _activeSlotId);
-                if (slot) { slot.cart = []; slot.prices = {}; slot.formData = null; }
-                saveSlots();
-                renderCart(); renderSlotTabs(); updateBadge(); render();
-                if (state.orderType === 'presupuesto') renderBudget();
-                // Resetear barra ecom
-                const st = $('ecomStockStatus');
-                if (st) st.innerHTML = '<span style="opacity:0.5;">Stock ecom: —</span>';
+                clearCartSilent();
                 toast('Pedido vaciado', 'success');
             });
+        }
+
+        function clearCartSilent() {
+            state.cart = [];
+            ecomStockMap = {};
+            articlePrices = {};
+            localStorage.removeItem('mikra_prices');
+            restoreFormData(null);
+            // Limpiar también prices y nombre del slot activo (que no quede el
+            // número de pedido viejo en la pestaña)
+            const slot = _slots.find(s => s.id === _activeSlotId);
+            if (slot) { slot.cart = []; slot.prices = {}; slot.formData = null; slot.nombre = 'Nuevo pedido'; }
+            saveSlots();
+            renderCart(); renderSlotTabs(); updateBadge(); render();
+            if (state.orderType === 'presupuesto') renderBudget();
+            // Resetear barra ecom
+            const st = $('ecomStockStatus');
+            if (st) st.innerHTML = '<span style="opacity:0.5;">Stock ecom: —</span>';
         }
         
         // ===== DEBOUNCE UTILITY =====
@@ -3903,9 +3909,28 @@
             
             if (state.orderType === 'pedido') {
                 const cn = $('clientName').value.trim();
-                if (cn) html += '<div style="text-align:center;font-size:13px;font-weight:900;margin-top:3px">' + cn + '</div>';
+                // Si viene de "Pegar TN" el nombre queda como "333 - Flex - Laura Buznego":
+                // separamos número de pedido (grande, en bloque), método de envío
+                // (debajo, con ícono) y nombre del cliente (debajo de todo).
+                const tnMatch = cn.match(/^(\d+)\s*-\s*(Flex|Correo|Retira)(?:\s*-\s*(.+))?$/i);
+                if (tnMatch) {
+                    const shipLabel = tnMatch[2].toLowerCase();
+                    const shipIcon = shipLabel === 'flex' ? '🛵' : shipLabel === 'correo' ? '📦' : '🏪';
+                    const customer = (tnMatch[3] || '').trim();
+                    html += '<div style="text-align:left;background:#000;color:#fff;font-size:30px;font-weight:900;margin-top:4px;padding:4px 8px;letter-spacing:1px;">Nº ' + tnMatch[1] + '</div>';
+                    html += '<div style="text-align:center;background:#000;color:#fff;font-size:24px;font-weight:900;margin-top:2px;padding:5px 0;letter-spacing:2px;">' + shipIcon + ' ' + tnMatch[2].toUpperCase() + ' ' + shipIcon + '</div>';
+                    if (customer) html += '<div style="text-align:center;font-size:14px;font-weight:900;margin-top:3px">' + customer + '</div>';
+                } else if (cn) {
+                    html += '<div style="text-align:center;font-size:13px;font-weight:900;margin-top:3px">' + cn + '</div>';
+                }
+
+                const paymentStatus = document.querySelector('input[name="payment"]:checked')?.value || 'abonado';
+                if (paymentStatus === 'pendiente') {
+                    const amount = $('paymentAmount').value.trim();
+                    html += '<div style="text-align:center;background:#000;color:#fff;font-size:13px;font-weight:900;margin-top:4px;padding:4px 0;">⚠ PENDIENTE' + (amount ? ': $' + amount : '') + '</div>';
+                }
             }
-            
+
             html += '<div class="line-thick"></div>';
             
             sortedArticles.forEach(artName => {
@@ -3960,10 +3985,17 @@
             win.document.close();
             if (mode === 'print') {
                 win.print();
-                askClearCart();
+                // Si hay más de un pedido abierto en pestañas, cerramos directamente
+                // la que se acaba de imprimir (deleteSlot ya impide cerrar la última).
+                if (_slots.length > 1) {
+                    deleteSlot(_activeSlotId);
+                } else {
+                    clearCartSilent();
+                    toast('Pedido vaciado', 'success');
+                }
             }
         }
-        
+
         function showPreparadosOptions() { $('preparadosOptModal').classList.add('show'); }
         function closePreparadosOpt() { $('preparadosOptModal').classList.remove('show'); }
         
@@ -4099,8 +4131,14 @@
         function processManualEntry() {
             const raw = $('manualSkuInput').value.trim();
             if (!raw) { toast('⚠️ Pegá los códigos primero', 'warning'); return; }
-            
+
             const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            // Si se pegó tal cual lo que copia "Copiar pedido" de Tienda Nube, la primera
+            // línea es la cabecera PEDIDO (nº, envío, pago) — la ignoramos y solo
+            // tomamos los códigos y cantidades.
+            if (lines[0] && /^PEDIDO\t/i.test(lines[0])) {
+                lines.shift();
+            }
             const entries = [];
             const errors = [];
             
@@ -4171,6 +4209,93 @@
             }
         }
         
+        async function pasteFromTiendaNube() {
+            let raw;
+            try {
+                raw = await navigator.clipboard.readText();
+            } catch (e) {
+                toast('⚠️ No se pudo leer el portapapeles', 'error');
+                return;
+            }
+            raw = (raw || '').trim();
+            if (!raw) { toast('⚠️ El portapapeles está vacío', 'warning'); return; }
+            handleTnText(raw);
+        }
+
+        // Carga un pedido copiado de Tienda Nube y lo imprime. Lo usan tanto
+        // "Pegar TN" (texto del portapapeles) como el link directo que abre el
+        // userscript de TiendaNube con los datos en el hash de la URL.
+        function handleTnText(raw) {
+            raw = (raw || '').trim();
+            if (!raw) { toast('⚠️ No se encontraron datos del pedido', 'warning'); return; }
+
+            const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            let orderNumber = '', shippingLabel = '', paymentStatus = 'abonado', paymentTotal = '', customerName = '';
+            if (lines[0] && /^PEDIDO\t/i.test(lines[0])) {
+                const parts = lines.shift().split('\t');
+                orderNumber = (parts[1] || '').trim();
+                shippingLabel = (parts[2] || '').trim();
+                paymentStatus = (parts[3] || 'abonado').trim() || 'abonado';
+                paymentTotal = (parts[4] || '').trim();
+                customerName = (parts[5] || '').trim();
+            }
+
+            if (!lines.length) { toast('⚠️ No se encontraron códigos en el portapapeles', 'warning'); return; }
+
+            const loadAndPrint = () => {
+                state.cart = [];
+                let found = 0, notFound = [];
+
+                lines.forEach(line => {
+                    const parts = line.split(/\t+|\s{2,}/);
+                    const codigo = (parts[0] || '').trim();
+                    if (!codigo) return;
+                    let qty = parseInt((parts[1] || '1').replace(/^-/, ''), 10);
+                    if (isNaN(qty) || qty <= 0) qty = 1;
+
+                    const product = PRODUCTS.find(p => String(p.codigo).trim() === codigo);
+                    if (product) {
+                        const existing = state.cart.find(c => c.id === product.id);
+                        if (existing) existing.qty += qty;
+                        else state.cart.push({ ...product, qty });
+                        found++;
+                    } else {
+                        notFound.push(codigo);
+                    }
+                });
+
+                setOrderType('pedido');
+                const delivery = shippingLabel === 'Retira' ? 'local' : (shippingLabel ? 'envio' : 'local');
+                restoreFormData({
+                    clientName: [orderNumber, shippingLabel, customerName].filter(Boolean).join(' - '),
+                    canal: 'tn',
+                    delivery,
+                    payment: paymentStatus === 'pendiente' ? 'pendiente' : 'abonado',
+                    paymentAmount: paymentStatus === 'pendiente' ? paymentTotal : '',
+                });
+
+                saveCart();
+                updateBadge();
+                renderCart();
+                renderSlotTabs();
+                switchPage('cart');
+
+                if (notFound.length) {
+                    toast('⚠️ No encontrados: ' + notFound.join(', '), 'warning');
+                } else {
+                    toast('✓ ' + found + ' productos cargados', 'success');
+                }
+
+                setTimeout(() => downloadTicketDirectPrint(), 400);
+            };
+
+            if (state.cart.length > 0) {
+                showModal('⚠️', 'Carrito con productos', 'Hay ' + state.cart.length + ' productos. Se va a vaciar antes de cargar el pedido de Tienda Nube. ¿Continuar?', 'Sí, continuar', loadAndPrint);
+            } else {
+                loadAndPrint();
+            }
+        }
+
         function askClearCart() { setTimeout(() => $('clearModal').classList.add('show'), 600); }
         function closeClearModal() { $('clearModal').classList.remove('show'); }
         function confirmClearCart() { $('clearModal').classList.remove('show'); clearCart(); }
@@ -4359,6 +4484,31 @@
         applySettingsToUI();
         updateBadge();
         loadData();
+
+        // ===== RECEPCIÓN DIRECTA DESDE EL BOTÓN "IMPRIMIR" DE TIENDA NUBE =====
+        // El userscript de TiendaNube abre/enfoca esta misma ventana con
+        // #tn=<datos codificados> en la URL. Si ya estaba abierta, solo cambia
+        // el hash (sin recargar) y dispara 'hashchange'; si es la primera vez,
+        // hay que esperar a que termine de cargar PRODUCTS antes de procesar.
+        function waitForAppReady(cb) {
+            if ($('loadingScreen').classList.contains('hidden')) { cb(); return; }
+            const iv = setInterval(() => {
+                if ($('loadingScreen').classList.contains('hidden')) {
+                    clearInterval(iv);
+                    cb();
+                }
+            }, 150);
+        }
+        function checkTnHash() {
+            const m = location.hash.match(/tn=([^&]+)/);
+            if (!m) return;
+            // Limpiar el hash ya para que un refresh no repita la impresión.
+            history.replaceState(null, '', location.pathname + location.search);
+            const raw = decodeURIComponent(m[1]);
+            waitForAppReady(() => handleTnText(raw));
+        }
+        window.addEventListener('hashchange', checkTnHash);
+        checkTnHash();
     </script>
     <script>
         const WORKER_BASE = 'https://ecomm-token-proxy.rafaelassir.workers.dev';

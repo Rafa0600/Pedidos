@@ -1291,17 +1291,6 @@
             </div>
         </div>
     </div>
-    <div class="clear-modal-overlay" id="clearModal">
-        <div class="clear-modal">
-            <div class="clear-modal-title">Pedido compartido</div>
-            <div class="clear-modal-msg">¿Qué querés hacer?</div>
-            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
-                <button class="clear-modal-btn" style="background:var(--primary);color:white;" onclick="closeClearModal();downloadPreparacion()">📦 Ver hoja de preparación</button>
-                <button class="clear-modal-btn yes" onclick="confirmClearCart()">🗑️ Vaciar carrito</button>
-                <button class="clear-modal-btn no" onclick="closeClearModal()">Seguir editando</button>
-            </div>
-        </div>
-    </div>
     <div class="clear-modal-overlay" id="manualEntryModal">
         <div class="clear-modal" style="max-width:400px;width:92%;">
             <div class="clear-modal-title">📋 Cargar Pedido Manual</div>
@@ -3372,9 +3361,8 @@
                 state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             }
             window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-            askClearCart();
         }
-        
+
         function showPdfOptions() {
             if (!state.cart.length || !validateForm()) return;
             $('pdfTypeModal').classList.add('show');
@@ -3445,9 +3433,8 @@
             }
             html += '</div></body></html>';
             const win = window.open('', '_blank'); win.document.write(html); win.document.close(); win.print();
-            askClearCart();
         }
-        
+
         function downloadTicket() {
             if (!state.cart.length || !validateForm()) return;
             $('ticketTypeModal').classList.add('show');
@@ -3775,15 +3762,12 @@
                     text: 'Ticket de preparacion'
                 }).then(function() {
                     toast('✓ Compartido', 'success');
-                    askClearCart();
                 }).catch(function() {
                     downloadBlobFile(blob, fileName);
-                    askClearCart();
                 });
             } else {
                 downloadBlobFile(blob, fileName);
                 toast('📥 PDF descargado', 'success');
-                askClearCart();
             }
         }
 
@@ -3848,7 +3832,6 @@
             }
             html += '<div class="line"></div><div class="footer">Gracias por su compra!<br>www.mikra.com.ar</div></body></html>';
             const win = window.open('', '_blank'); win.document.write(html); win.document.close(); win.print();
-            askClearCart();
         }
         
         function downloadTicketPreparados(mode) {
@@ -3985,14 +3968,6 @@
             win.document.close();
             if (mode === 'print') {
                 win.print();
-                // Si hay más de un pedido abierto en pestañas, cerramos directamente
-                // la que se acaba de imprimir (deleteSlot ya impide cerrar la última).
-                if (_slots.length > 1) {
-                    deleteSlot(_activeSlotId);
-                } else {
-                    clearCartSilent();
-                    toast('Pedido vaciado', 'success');
-                }
             }
         }
 
@@ -4296,10 +4271,6 @@
             }
         }
 
-        function askClearCart() { setTimeout(() => $('clearModal').classList.add('show'), 600); }
-        function closeClearModal() { $('clearModal').classList.remove('show'); }
-        function confirmClearCart() { $('clearModal').classList.remove('show'); clearCart(); }
-        
         function toast(msg, type = '') {
             const t = $('toast'); t.textContent = msg; t.className = 'toast show';
             if (type) t.classList.add(type);

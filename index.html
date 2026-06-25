@@ -1325,7 +1325,7 @@
         </div>
     </div>
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbycz2hrgjQxRCvVKtW0o-HAuMQYTfmiBHSgJPFZTX34PwBpAladxb8ZPpt-Vg09zplx/exec';
+        const CLOUDFLARE_URL = 'https://mikra-stock-cache.rafaelassir.workers.dev';
         let mayoristaCacheData = null;
         let minoristaCache = null;
 
@@ -2297,7 +2297,7 @@
                 const secs = Math.round((Date.now() - startTime) / 1000);
                 const el = $('loadingElapsed');
                 if (el) el.textContent = secs + 's';
-                if (!isBackground) $('loadingText').textContent = 'Conectando con Google Sheets... ' + secs + 's';
+                if (!isBackground) $('loadingText').textContent = 'Conectando con Cloudflare... ' + secs + 's';
             }, 1000);
         }
 
@@ -2324,51 +2324,51 @@
             $('syncStatus').textContent = 'Sincronizando...';
             _startSyncProgress(isBackground);
 
+            // Timeout de 15s
+            const _timeout = setTimeout(() => _syncController.abort(), 15000);
+
             try {
-                const response = await fetch(API_URL, { signal: _syncController.signal });
-                const data = await response.json();
-                if (data.success && data.products && data.products.length > 0) {
-                    PRODUCTS = data.products;
-                    
-                    // Images handling
-                    if (data.images && typeof data.images === 'object') {
-                        IMAGES_MAP = data.images;
+                // Productos e imágenes en paralelo desde Cloudflare
+                const [prodResp, imgResp] = await Promise.all([
+                    fetch(CLOUDFLARE_URL,                    { signal: _syncController.signal, cache: 'no-store' }),
+                    fetch(CLOUDFLARE_URL + '?mode=images',   { signal: _syncController.signal, cache: 'no-store' }),
+                ]);
+                clearTimeout(_timeout);
+
+                const data = await prodResp.json();
+                if (!data.success || !data.products || !data.products.length) throw new Error('Sin productos');
+
+                PRODUCTS = data.products;
+
+                // Imágenes
+                try {
+                    const imgData = await imgResp.json();
+                    if (imgData && imgData.images && Object.keys(imgData.images).length) {
+                        IMAGES_MAP = imgData.images;
                         _scheduleImagesSave();
-                    } else {
-                        try { 
-                            const cached = JSON.parse(localStorage.getItem('mikra_images') || '{}');
-                            if (Object.keys(cached).length > 0) IMAGES_MAP = cached;
-                        } catch(e) {}
                     }
-                    
-                    if (Object.keys(IMAGES_MAP).length === 0) {
-                        PRODUCTS.forEach(p => {
-                            if (p.imagen && p.codigo) IMAGES_MAP[p.codigo] = p.imagen;
-                            if (p.image && p.codigo) IMAGES_MAP[p.codigo] = p.image;
-                            if (p.img && p.codigo) IMAGES_MAP[p.codigo] = p.img;
-                            if (p.thumbnail && p.codigo) IMAGES_MAP[p.codigo] = p.thumbnail;
-                        });
-                        if (Object.keys(IMAGES_MAP).length > 0) _scheduleImagesSave();
-                    }
-                    
-                    // Actualizar UI inmediatamente, guardar en background
-                    buildSearchIndex();
-                    updateUniqueArticles();
-                    applyFilters();
-                    _stopSyncProgress(true);
-                    $('syncDot').classList.remove('loading', 'error');
-                    $('syncStatus').textContent = 'Sincronizado';
-                    $('syncTime').textContent = '• ' + new Date().toLocaleTimeString();
-                    $('loadingScreen').classList.add('hidden');
-                    $('loadingText').textContent = 'Cargando inventario...';
-                    const imgCount = Object.keys(IMAGES_MAP).length;
-                    if (isBackground) toast('✓ Actualizado', 'success');
-                    else toast('✓ ' + data.count + ' prod. · ' + imgCount + ' img', 'success');
-                    // Escribir localStorage después de actualizar la UI
-                    _scheduleProductsSave();
-                    localStorage.setItem('mikra_lastSync', new Date().toISOString());
-                } else throw new Error('No products');
+                } catch(e) { /* sin imágenes nuevas — usa las que ya estaban */ }
+
+                // UI inmediata, localStorage en background
+                buildSearchIndex();
+                updateUniqueArticles();
+                applyFilters();
+                _stopSyncProgress(true);
+                $('syncDot').classList.remove('loading', 'error');
+                $('syncStatus').textContent = 'Sincronizado';
+                $('syncTime').textContent = '• ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                $('loadingScreen').classList.add('hidden');
+                $('loadingText').textContent = 'Cargando inventario...';
+                if (data.lastModified) localStorage.setItem('mikra_cfLastModified', data.lastModified);
+
+                if (isBackground) toast('✓ Actualizado', 'success');
+                else toast('✓ ' + (data.count || PRODUCTS.length) + ' productos', 'success');
+
+                _scheduleProductsSave();
+                localStorage.setItem('mikra_lastSync', new Date().toISOString());
+
             } catch (error) {
+                clearTimeout(_timeout);
                 if (error.name === 'AbortError') return; // cancelado por el usuario — ya manejado en cancelSync
                 _stopSyncProgress(false);
                 $('syncDot').classList.remove('loading');
@@ -2386,7 +2386,7 @@
                         $('syncTime').textContent = '• Caché';
                         toast('⚠️ Usando caché', 'warning');
                     } else {
-                        $('loadingText').textContent = '❌ Error de conexión';
+                        $('loadingText').textContent = '❌ No se pudo cargar (Cloudflare)';
                         $('loadingError').style.display = 'block';
                     }
                 } else {
@@ -2395,17 +2395,13 @@
             }
         }
         
-        async function loadData(forceSync) {
+        async function loadData() {
             const hasCache = loadFromCache();
             if (hasCache) {
                 $('loadingScreen').classList.add('hidden');
                 $('syncDot').classList.remove('loading', 'error');
                 $('syncStatus').textContent = 'Caché';
-                if (!forceSync && isCacheFresh()) {
-                    $('syncStatus').textContent = 'Listo';
-                    return;
-                }
-                syncFromAPI(true);
+                syncFromAPI(true); // siempre verifica si hay datos nuevos en Cloudflare
             } else {
                 $('loadingText').textContent = 'Cargando inventario...';
                 $('loadingError').style.display = 'none';

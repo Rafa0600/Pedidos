@@ -74,10 +74,14 @@
         }
         .autocomplete-item:hover { background: var(--bg-input); }
         .autocomplete-name { font-weight: 600; font-size: 0.9em; }
-        .autocomplete-stock { 
+        .autocomplete-stock {
             font-size: 0.78em; color: var(--success);
             background: rgba(74, 222, 128, 0.15); padding: 2px 8px; border-radius: 10px;
         }
+        .autocomplete-header { padding: 8px 16px 4px; font-size: 0.75em; font-weight: 700; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
+        .autocomplete-clear-recent { cursor: pointer; color: var(--primary); font-weight: 600; }
+        .autocomplete-item.recent .autocomplete-name { font-weight: 500; color: var(--text); }
+        .autocomplete-remove { cursor: pointer; color: var(--text-secondary); padding: 0 4px; font-size: 0.85em; }
         
         /* FILTERS */
         .filter-row { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -369,6 +373,11 @@
             width: 48px; min-width: 48px; flex: 0 0 48px;
         }
         .article-size-cell.curva-btn-cell:active { background: rgba(167,139,250,0.3); }
+        .article-size-cell.minus-curva-btn-cell {
+            border-color: #ef4444; background: rgba(239,68,68,0.22); color: #f87171;
+            width: 48px; min-width: 48px; flex: 0 0 48px;
+        }
+        .article-size-cell.minus-curva-btn-cell:active { background: rgba(239,68,68,0.4); }
         
         .asc-size { font-size: 0.72em; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; }
         .asc-stock { font-size: 1.3em; font-weight: 800; margin-top: 2px; line-height: 1; }
@@ -386,7 +395,17 @@
             border-radius: 9px; display: flex; align-items: center; justify-content: center;
             padding: 0 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
-        
+        .asc-sku { font-size: 0.52em; color: var(--text-secondary); margin-top: 2px; line-height: 1.1; word-break: break-all; }
+        .article-compact-list { background: var(--bg-card); border-radius: 10px; overflow: hidden; margin-top: 4px; }
+        .article-single-talle-header { font-size: 0.78em; color: var(--text-secondary); padding: 7px 12px 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+        .article-compact-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--border); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .article-compact-row:last-child { border-bottom: none; }
+        .article-compact-row.selected { background: rgba(79,172,254,0.1); }
+        .acr-photo { width: 60px; height: 60px; flex-shrink: 0; border-radius: 7px; overflow: hidden; background: var(--bg-input); }
+        .acr-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .acr-photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; }
+        .acr-color { flex: 1; min-width: 0; font-weight: 600; font-size: 0.88em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
         /* ARTICLE EDIT BAR (cart mode) */
         .article-edit-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
@@ -515,15 +534,58 @@
         }
         .budget-total-value { color: var(--success); }
         
-        .export-btns { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-        .export-btn {
-            flex: 1; min-width: 75px; padding: 12px 8px; border-radius: 10px; font-weight: 700;
-            font-size: 0.82em; cursor: pointer; border: none;
-            display: flex; align-items: center; justify-content: center; gap: 4px;
+        /* ── Nombre unificado ── */
+        .unified-name-wrap { margin-bottom: 10px; position: relative; }
+        .unified-name-wrap .form-input { font-size: 1em; font-weight: 600; padding-left: 38px; }
+        .unified-name-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1.05em; pointer-events: none; }
+        /* ── Detalles colapsables ── */
+        .order-details-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding-bottom: 8px; user-select: none; }
+        .order-details-arrow { font-size: 0.78em; color: var(--text-secondary); transition: transform 0.2s; display: inline-block; }
+        .order-details-arrow.open { transform: rotate(180deg); }
+        /* Pills horizontales para el form */
+        .delivery-options.pills-row { flex-direction: row; gap: 5px; }
+        .delivery-options.pills-row .delivery-option { flex: 1; padding: 7px 4px; justify-content: center; text-align: center; border-radius: 10px; }
+        .delivery-options.pills-row .delivery-radio { display: none; }
+        .delivery-options.pills-row .delivery-label { font-size: 0.75em; }
+        /* ── Action bar ── */
+        .action-bar { margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .action-btn-whatsapp {
+            width: 100%; padding: 17px; border: none; border-radius: 14px;
+            background: #25D366; color: white; font-size: 1.1em; font-weight: 800;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 4px 16px rgba(37,211,102,0.4); -webkit-tap-highlight-color: transparent;
         }
-        .export-btn.whatsapp { background: #25D366; color: white; }
-        .export-btn.pdf { background: #dc2626; color: white; }
-        .export-btn.ticket { background: #8b5cf6; color: white; }
+        .action-btn-vaciar {
+            width: 100%; padding: 15px; border: none; border-radius: 14px;
+            background: #ef4444; color: white; font-size: 1em; font-weight: 800;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 4px 14px rgba(239,68,68,0.4); -webkit-tap-highlight-color: transparent;
+        }
+        .action-compact-row { display: flex; gap: 5px; }
+        .action-compact-btn {
+            flex: 1; min-width: 0; padding: 10px 2px; border: none; border-radius: 10px;
+            font-size: 0.76em; font-weight: 700; cursor: pointer; text-align: center;
+            -webkit-tap-highlight-color: transparent; line-height: 1.35;
+        }
+        @media (max-width: 600px) {
+            .action-compact-row { flex-wrap: wrap; }
+            .action-compact-btn { flex: 0 0 calc(33.333% - 4px); }
+        }
+        .action-more-toggle {
+            flex: 1; min-width: 52px; padding: 9px 4px; border: 1px solid var(--border); border-radius: 10px;
+            background: var(--bg-card); color: var(--text-secondary); font-size: 0.7em; font-weight: 700;
+            cursor: pointer; -webkit-tap-highlight-color: transparent; text-align: center;
+        }
+        .action-more-panel { display: none; flex-wrap: wrap; gap: 5px; }
+        .action-more-panel.show { display: flex; }
+        .action-more-btn {
+            flex: 1; min-width: 100px; padding: 10px 8px; border: none; border-radius: 9px;
+            font-size: 0.8em; font-weight: 700; cursor: pointer; text-align: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* legacy — keep for compat */
+        .export-btns { display: none; }
+        .export-btn { display: none; }
         
         .cart-items { display: flex; flex-direction: column; gap: 6px; }
 
@@ -588,6 +650,35 @@
             margin-top: 2px; letter-spacing: -0.3px;
         }
         /* ── Barra de refresh ecom ── */
+        /* ── WA Confirm bottom sheet ── */
+        .wa-confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; display: none; align-items: flex-end; justify-content: center; }
+        .wa-confirm-overlay.show { display: flex; }
+        .wa-confirm-sheet {
+            background: var(--bg-card); border-radius: 20px 20px 0 0; padding: 14px 16px 36px;
+            width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+            animation: slideUpSheet 0.22s ease;
+        }
+        @keyframes slideUpSheet { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .wa-confirm-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 14px; }
+        .wa-confirm-title { font-size: 1em; font-weight: 800; margin-bottom: 14px; text-align: center; }
+        .wac-section { margin-bottom: 12px; }
+        .wac-label { font-size: 0.7em; color: var(--text-secondary); font-weight: 700; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .wac-pills { display: flex; gap: 6px; }
+        .wac-pill {
+            flex: 1; padding: 9px 6px; border: 2px solid var(--border); border-radius: 10px;
+            background: var(--bg-input); color: var(--text-secondary); font-size: 0.77em; font-weight: 700;
+            cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent; transition: all 0.12s;
+        }
+        .wac-pill.active { border-color: var(--primary); background: rgba(79,172,254,0.18); color: var(--text); }
+        .wac-ticket-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 14px; background: var(--bg-input); border-radius: 12px;
+            cursor: pointer; margin-bottom: 10px; -webkit-tap-highlight-color: transparent;
+            border: 2px solid transparent; transition: border-color 0.15s;
+        }
+        .wac-ticket-row.on { border-color: var(--primary); }
+        .wac-ticket-label { font-size: 0.88em; font-weight: 600; }
+        /* ── end WA Confirm ── */
         .ecom-stock-bar {
             display: flex; align-items: center; justify-content: space-between;
             padding: 5px 10px 3px; font-size: 0.72em; color: var(--text-secondary);
@@ -760,83 +851,108 @@
         }
 
         /* ===== HOME DASHBOARD ===== */
-        .home-dashboard { padding: 2px 0 8px; }
-        .home-welcome {
-            font-size: 0.78em; color: var(--text-secondary); margin-bottom: 12px;
-            display: flex; align-items: center; gap: 6px;
-        }
-
-        /* ── Nivel 1: tiles de categoría ── */
-        .home-cats-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;
-        }
-        .home-cat-tile {
-            background: var(--bg-card); border: 2px solid var(--border); border-radius: 14px;
-            overflow: hidden; cursor: pointer; text-align: center;
-            transition: border-color 0.15s, transform 0.1s;
-            -webkit-tap-highlight-color: transparent; position: relative;
-        }
+        /* ===== INICIO / DASHBOARD ===== */
+        .home-dashboard { padding: 4px 0 12px; animation: homeFade 0.18s ease; }
+        @keyframes homeFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+        .home-welcome { font-size: 0.82em; color: var(--text-secondary); margin: 2px 0 14px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+        .home-cats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 8px; }
+        @media (min-width: 720px) { .home-cats-grid { grid-template-columns: repeat(4, 1fr); } }
+        .home-cat-tile { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 16px; overflow: hidden; cursor: pointer; text-align: center; position: relative; transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+        .home-cat-tile:hover { border-color: var(--primary); box-shadow: 0 4px 14px rgba(79,172,254,0.18); }
         .home-cat-tile:active { transform: scale(0.96); border-color: var(--primary); }
-        .home-cat-img {
-            width: 100%; aspect-ratio: 3/4; object-fit: cover;
-            background: var(--bg-input); display: block;
-        }
-        .home-cat-img-placeholder {
-            width: 100%; aspect-ratio: 3/4; background: var(--bg-input);
-            display: flex; align-items: center; justify-content: center; font-size: 2.5em;
-        }
-        .home-cat-label-tile {
-            padding: 6px 4px; font-size: 0.82em; font-weight: 800; color: var(--text);
-            background: var(--bg-card); letter-spacing: 0.3px;
-        }
-        .home-cat-count {
-            font-size: 0.65em; color: var(--text-secondary); font-weight: 600;
-            display: block; margin-top: 1px;
-        }
-
-        /* ── Nivel 2: artículos de una categoría ── */
-        .home-back-btn {
-            display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
-            background: none; border: 1px solid var(--border); border-radius: 20px;
-            padding: 6px 14px; color: var(--text-secondary); font-size: 0.8em;
-            font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent;
-        }
+        .home-cat-img { width: 100%; aspect-ratio: 3/4; object-fit: cover; background: var(--bg-input); display: block; }
+        .home-cat-img-placeholder { width: 100%; aspect-ratio: 3/4; background: var(--bg-input); display: flex; align-items: center; justify-content: center; font-size: 2.6em; }
+        .home-cat-label-tile { padding: 8px 4px; font-size: 0.86em; font-weight: 800; color: var(--text); background: var(--bg-card); letter-spacing: 0.2px; line-height: 1.25; }
+        .home-cat-count { font-size: 0.66em; color: var(--text-secondary); font-weight: 600; display: block; margin-top: 2px; }
+        .home-recent-title { font-size: 0.75em; font-weight: 700; color: var(--text-secondary); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.4px; }
+        .home-recent-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .home-recent-chip { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); padding: 7px 8px 7px 12px; border-radius: 16px; font-size: 0.78em; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .home-recent-chip:active { background: var(--bg-input); border-color: var(--primary); }
+        .home-recent-remove { color: var(--text-secondary); font-size: 0.95em; padding: 2px 4px; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
+        .home-recent-remove:active { color: var(--danger); background: rgba(248,113,113,0.15); }
+        .home-back-btn { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 7px 16px; color: var(--text-secondary); font-size: 0.82em; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .home-back-btn:active { background: var(--bg-input); }
-        .home-cat-title {
-            font-size: 1em; font-weight: 800; color: var(--primary);
-            margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
-        }
-        .home-articles { display: flex; flex-direction: column; gap: 6px; }
-        .home-article-btn {
-            padding: 0; background: var(--bg-card); border: 1.5px solid var(--border);
-            border-radius: 12px; font-size: 0.88em; font-weight: 600; color: var(--text);
-            cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent;
-            display: flex; align-items: center; overflow: hidden; text-align: left;
-            gap: 0;
-        }
-        .home-article-btn:active { border-color: var(--primary); background: rgba(79,172,254,0.08); }
-        .home-art-img {
-            width: 90px; height: 90px; object-fit: cover;
-            background: var(--bg-input); flex-shrink: 0;
-        }
-        .home-art-img-placeholder {
-            width: 90px; height: 90px; background: var(--bg-input);
-            display: flex; align-items: center; justify-content: center; font-size: 2em;
-            flex-shrink: 0;
-        }
-        .home-art-info { flex: 1; min-width: 0; padding: 12px 14px; }
+        .home-edit-inline-btn { margin-left:auto; flex-shrink:0; background:none; border:1px solid var(--border); border-radius:20px; padding:5px 11px; font-size:0.82em; cursor:pointer; color:var(--text-secondary); }
+        .home-edit-inline-btn:active { background:var(--bg-input); }
+        .home-cat-title { font-size: 1.05em; font-weight: 800; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .home-child-tiles { display:flex; gap:8px; overflow-x:auto; padding:2px 0 10px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+        .home-child-tiles::-webkit-scrollbar { display:none; }
+        .home-child-tile { flex-shrink:0; width:108px; background:var(--bg-card); border-radius:12px; overflow:hidden; cursor:pointer; border:1.5px solid var(--border); -webkit-tap-highlight-color:transparent; }
+        .home-child-tile:active { opacity:0.8; }
+        .home-child-tile-img { width:100%; height:78px; object-fit:cover; background:var(--bg-input); display:block; }
+        .home-child-tile-img-ph { width:100%; height:78px; display:flex; align-items:center; justify-content:center; font-size:1.8em; background:var(--bg-input); }
+        .home-child-tile-label { font-size:0.74em; font-weight:700; padding:4px 7px 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .home-child-tile-count { font-size:0.63em; color:var(--text-secondary); padding:0 7px 6px; }
+        .home-edit-child-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+        .home-edit-child-row:last-child { border-bottom:none; }
+        .home-edit-child-row.drag-over { background:rgba(79,172,254,0.1); border-radius:6px; }
+        .home-edit-child-row.dragging { opacity:0.3; }
+        .home-edit-child-thumb { width:42px; height:42px; border-radius:7px; object-fit:cover; flex-shrink:0; background:var(--bg-input); }
+        .home-edit-child-thumb-ph { width:42px; height:42px; border-radius:7px; background:var(--bg-input); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:1.2em; }
+        .home-edit-child-info { flex:1; min-width:0; }
+        .home-edit-child-name { font-weight:700; font-size:0.86em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .home-edit-child-count { font-size:0.72em; color:var(--text-secondary); }
+        .home-articles { display: flex; flex-direction: column; gap: 8px; }
+        .home-article-btn { padding: 0; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; color: var(--text); cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; overflow: hidden; text-align: left; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+        .home-article-btn:hover { border-color: var(--primary); }
+        .home-article-btn:active { border-color: var(--primary); background: rgba(79,172,254,0.08); transform: scale(0.99); }
+        .home-art-img { width: 78px; height: 78px; object-fit: cover; background: var(--bg-input); flex-shrink: 0; }
+        .home-art-img-placeholder { width: 78px; height: 78px; background: var(--bg-input); display: flex; align-items: center; justify-content: center; font-size: 1.8em; flex-shrink: 0; }
+        .home-art-info { flex: 1; min-width: 0; padding: 10px 14px; }
         .home-art-name { font-weight: 700; font-size: 0.95em; line-height: 1.3; margin-bottom: 6px; }
-        .home-art-stock {
-            font-size: 0.78em; color: var(--success); font-weight: 700;
-            background: rgba(74,222,128,0.12); padding: 3px 10px; border-radius: 10px;
-            display: inline-block;
-        }
-        .home-article-btn:active .home-art-stock { background: rgba(79,172,254,0.2); color: var(--primary); }
-        .home-config-hint {
-            margin-top: 12px; padding: 8px 12px; background: rgba(79,172,254,0.07);
-            border: 1px dashed var(--border); border-radius: 8px;
-            font-size: 0.68em; color: var(--text-secondary); text-align: center;
-        }
+        .home-art-stock { font-size: 0.76em; color: var(--success); font-weight: 700; background: rgba(74,222,128,0.13); padding: 3px 10px; border-radius: 10px; display: inline-block; }
+        .home-art-stock.zero { color: var(--danger); background: rgba(248,113,113,0.13); }
+        .home-art-prices { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding: 0 10px 0 6px; flex-shrink: 0; }
+        .home-art-price-may { font-size: 0.93em; font-weight: 800; color: #60a5fa; white-space: nowrap; }
+        .home-art-price-min { font-size: 0.93em; font-weight: 800; color: #f59e0b; white-space: nowrap; }
+        .home-art-chevron { color: var(--text-secondary); font-size: 1.2em; padding-right: 12px; flex-shrink: 0; }
+        .home-empty { text-align: center; padding: 30px 16px; color: var(--text-secondary); font-size: 0.88em; }
+        .home-edit-btn { background:transparent; border:1.5px solid var(--primary); color:var(--primary); border-radius:16px; padding:5px 14px; font-size:0.78em; font-weight:700; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+        .home-edit-btn.listo { background:var(--primary); color:#000; }
+        .home-cat-tile.edit-mode { user-select:none; -webkit-user-select:none; }
+        .home-cat-tile.edit-mode:active { transform:none; }
+        .home-cat-tile.editing { border-color:var(--primary); box-shadow:0 0 0 2px rgba(79,172,254,0.35); }
+        .home-edit-panel { background:var(--bg-card); border:1.5px solid var(--primary); border-radius:14px; padding:14px; margin-bottom:12px; }
+        .home-edit-panel-title { font-size:0.88em; font-weight:800; color:var(--primary); margin-bottom:10px; }
+        .home-edit-section-label { font-size:0.7em; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin:10px 0 5px; }
+        .home-edit-art-row { display:flex; align-items:center; gap:5px; padding:7px 0; border-bottom:1px solid var(--border); font-size:0.84em; }
+        .home-edit-art-row:last-child { border-bottom:none; }
+        .home-edit-art-row.drag-over { background:rgba(79,172,254,0.1); border-radius:6px; }
+        .home-edit-art-row.dragging { opacity:0.3; }
+        .art-drag-handle { font-size:0.9em; color:var(--text-secondary); cursor:grab; padding:4px 5px; touch-action:none; flex-shrink:0; }
+        .art-row-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+        .home-edit-art-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .home-edit-art-btn { background:none; border:none; cursor:pointer; padding:4px 7px; font-size:1em; -webkit-tap-highlight-color:transparent; flex-shrink:0; }
+        .home-edit-search { background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:8px 12px; color:var(--text); font-size:0.88em; width:100%; margin-bottom:6px; }
+        .home-edit-suggest { background:var(--bg-input); border-radius:8px; overflow:hidden; border:1px solid var(--border); margin-bottom:8px; }
+        .home-edit-suggest-item { padding:9px 12px; font-size:0.84em; cursor:pointer; border-bottom:1px solid var(--border); color:var(--primary); }
+        .home-edit-suggest-item:last-child { border-bottom:none; }
+        .home-edit-suggest-item:active { background:var(--bg-card); }
+        .home-photo-picker { display:flex; gap:6px; overflow-x:auto; padding:4px 0 8px; -webkit-overflow-scrolling:touch; }
+        .home-photo-opt { width:54px; height:68px; object-fit:cover; border-radius:7px; border:2.5px solid transparent; cursor:pointer; flex-shrink:0; }
+        .home-photo-opt.active { border-color:var(--primary); }
+        .home-photo-opt-auto { width:54px; height:68px; background:var(--bg-input); border-radius:7px; border:2.5px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.4em; flex-shrink:0; }
+        .home-photo-opt-auto.active { border-color:var(--primary); }
+        .home-edit-subcat-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+        .home-edit-subcat-chip { background:var(--bg-input); border:1px solid var(--border); border-radius:14px; padding:4px 10px; font-size:0.75em; display:inline-flex; align-items:center; gap:4px; color:var(--text-secondary); }
+        .home-edit-subcat-chip .x { color:var(--danger); cursor:pointer; padding:0 2px; }
+        .home-art-subcats { display:flex; gap:3px; flex-wrap:wrap; }
+        .home-art-sub-chip { font-size:0.68em; padding:1px 6px; border-radius:9px; cursor:pointer; background:var(--bg-input); color:var(--text-secondary); border:1px solid var(--border); }
+        .home-art-sub-chip.on { background:rgba(79,172,254,0.2); color:var(--primary); border-color:var(--primary); }
+        .home-subcat-row { display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:8px; row-gap:5px; }
+        .home-subcat-chip { border:1px solid var(--border); border-radius:14px; padding:4px 11px; font-size:0.75em; font-weight:700; color:var(--text-secondary); cursor:pointer; background:var(--bg-card); -webkit-tap-highlight-color:transparent; white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; }
+        .home-subcat-chip.active { background:var(--primary); color:#000; border-color:var(--primary); }
+        .home-cat-tile.dragging { opacity:0.2; }
+        .home-cat-tile.drag-over { border-color:var(--primary); background:rgba(79,172,254,0.1); transform:scale(0.97); }
+        .cat-drag-handle { position:absolute; top:5px; left:6px; z-index:3; background:rgba(0,0,0,0.52); color:#fff; border-radius:5px; padding:2px 6px; font-size:0.9em; line-height:1.5; touch-action:none; user-select:none; }
+        .home-cat-tile-add { background:var(--bg-card); border:1.5px dashed var(--border); border-radius:16px; cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; padding:16px 8px; color:var(--text-secondary); font-size:0.82em; min-height:110px; -webkit-tap-highlight-color:transparent; }
+        .home-cat-tile-add:active { border-color:var(--primary); color:var(--primary); }
+        .art-photo-picker { display:flex; gap:5px; overflow-x:auto; padding:4px 0 8px; -webkit-overflow-scrolling:touch; border-bottom:1px solid var(--border); margin-bottom:2px; }
+        .art-photo-opt { width:46px; height:58px; object-fit:cover; border-radius:6px; border:2.5px solid transparent; cursor:pointer; flex-shrink:0; }
+        .art-photo-opt.active { border-color:var(--primary); }
+        .art-photo-auto { width:46px; height:58px; background:var(--bg-input); border-radius:6px; border:2.5px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.2em; flex-shrink:0; }
+        .art-photo-auto.active { border-color:var(--primary); }
+        .home-config-hint { margin-top: 12px; padding: 8px 12px; background: rgba(79,172,254,0.07); border: 1px dashed var(--border); border-radius: 8px; font-size: 0.68em; color: var(--text-secondary); text-align: center; }
         /* ===== SLOT TABS ===== */
         .slot-tabs {
             display: flex; gap: 5px; overflow-x: auto; padding: 6px 0 6px;
@@ -937,6 +1053,17 @@
                 <div class="setting-toggle" id="toggleUbic" onclick="toggleSetting('showUbic')"></div>
             </div>
             <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <span class="setting-label">Categorías del Inicio</span>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="exportCategoryConfig()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--primary);color:#000;font-weight:700;font-size:0.82em;cursor:pointer;">📋 Copiar</button>
+                    <button onclick="showImportCategoryConfig()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--bg-input);color:var(--text);font-weight:700;font-size:0.82em;cursor:pointer;border:1px solid var(--border);">⬆️ Importar</button>
+                </div>
+                <div id="catImportBox" style="display:none;">
+                    <textarea id="catImportText" rows="4" placeholder="Pegá el JSON aquí..." style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.8em;resize:vertical;box-sizing:border-box;margin-top:4px;"></textarea>
+                    <button onclick="importCategoryConfig()" style="width:100%;padding:9px;border:none;border-radius:8px;background:var(--success);color:#000;font-weight:700;font-size:0.82em;cursor:pointer;margin-top:4px;">✓ Aplicar</button>
+                </div>
+            </div>
+            <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px;">
                 <span class="setting-label">Caché de datos</span>
                 <div id="cacheInfo" style="font-size:0.72em;color:var(--text-secondary);"></div>
                 <button onclick="clearAllCache()" style="padding:10px;border:none;border-radius:8px;background:var(--danger);color:white;font-weight:700;font-size:0.82em;cursor:pointer;">🗑️ Borrar caché y recargar</button>
@@ -1010,7 +1137,7 @@
                 Mostrando <strong id="showingCount">0</strong> de <strong id="totalCount">0</strong>
             </div>
             
-            <div id="homeDashboard" style="display:none;"></div>
+            <div id="homeDashboard" class="home-dashboard" style="display:none;"></div>
             <div class="product-list" id="productList"></div>
             <div class="pagination" id="pagination"></div>
             
@@ -1043,12 +1170,22 @@
             <div class="cart-header">
                 <div class="cart-count"><span id="cartItemCount">0</span> prod. (<span id="cartUnitCount">0</span> uds)</div>
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <button class="cart-remove" onclick="pasteFromTiendaNube()" style="font-size:0.82em;color:var(--success);">🛍️ Pegar TN</button>
-                    <button class="cart-remove" onclick="openManualEntry()" style="font-size:0.82em;color:var(--primary);">📋 Manual</button>
-                    <button class="cart-remove" onclick="clearCart()" style="font-size:0.82em;">🗑️ Vaciar</button>
+                    <button class="action-more-toggle" onclick="toggleMoreActions(this)" style="font-size:0.78em;padding:5px 9px;border-radius:8px;line-height:1;">⋯ Más</button>
+                    <button class="cart-remove" onclick="pasteFromTiendaNube()" style="font-size:0.82em;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--success);cursor:pointer;">🛍️ TN</button>
+                    <button class="cart-remove" onclick="openManualEntry()" style="font-size:0.82em;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--primary);cursor:pointer;">📋 Manual</button>
                 </div>
             </div>
-            
+            <div class="action-more-panel" id="moreActionsPanel" style="margin-top:6px;">
+                <button class="action-more-btn" style="background:var(--primary);color:white;" onclick="downloadPreparacion()">📦 Preparar</button>
+                <button class="action-more-btn" style="background:#7c3aed;color:white;" onclick="abrirHistorial()">📋 Historial</button>
+            </div>
+
+            <div class="unified-name-wrap">
+                <span class="unified-name-icon">👤</span>
+                <input type="text" class="form-input" id="clientName" placeholder="Nombre del cliente..."
+                       oninput="syncClientName(this.value)" style="font-size:1em;font-weight:600;">
+            </div>
+
             <div class="order-type-selector">
                 <div class="order-type-btn active" data-type="pedido" onclick="setOrderType('pedido')">
                     <span class="icon">📋</span>Pedido
@@ -1062,71 +1199,66 @@
             </div>
             
             <div class="order-form" id="pedidoForm">
-                <div class="order-form-title">📋 Datos del Pedido</div>
-                <div class="form-group">
-                    <label class="form-label">Nombre del cliente *</label>
-                    <input type="text" class="form-input" id="clientName" placeholder="Nombre...">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Tipo de entrega</label>
-                    <div class="delivery-options">
-                        <label class="delivery-option selected" data-delivery="local">
-                            <input type="radio" name="delivery" value="local" checked>
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">🏪 Retira por Local</span>
-                        </label>
-                        <label class="delivery-option" data-delivery="deposito">
-                            <input type="radio" name="delivery" value="deposito">
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">📦 Retira por Depósito</span>
-                        </label>
-                        <label class="delivery-option" data-delivery="envio">
-                            <input type="radio" name="delivery" value="envio">
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">🚚 Envío</span>
-                        </label>
+                <div id="orderDetailsBody">
+                    <div style="display:flex;gap:6px;margin-bottom:6px;">
+                        <!-- Canal de venta -->
+                        <div style="flex:1;min-width:0;">
+                            <div class="form-label" style="font-size:0.68em;margin-bottom:4px;text-align:center;">Canal</div>
+                            <div class="delivery-options" style="gap:5px;">
+                                <label class="delivery-option" data-canal="tn" style="justify-content:center;padding:7px 4px;">
+                                    <input type="radio" name="canal" value="tn">
+                                    <span class="delivery-radio" style="display:none;"></span>
+                                    <span class="delivery-label">🛍️ TN</span>
+                                </label>
+                                <label class="delivery-option selected" data-canal="local" style="justify-content:center;padding:7px 4px;">
+                                    <input type="radio" name="canal" value="local" checked>
+                                    <span class="delivery-radio" style="display:none;"></span>
+                                    <span class="delivery-label">🏪 Local</span>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Estado del pago -->
+                        <div style="flex:1;min-width:0;">
+                            <div class="form-label" style="font-size:0.68em;margin-bottom:4px;text-align:center;">Estado</div>
+                            <div class="delivery-options" style="gap:5px;">
+                                <label class="delivery-option selected" data-payment="abonado" style="justify-content:center;padding:7px 4px;">
+                                    <input type="radio" name="payment" value="abonado" checked>
+                                    <span class="delivery-radio" style="display:none;"></span>
+                                    <span class="delivery-label">✅ Abonó</span>
+                                </label>
+                                <label class="delivery-option" data-payment="pendiente" style="justify-content:center;padding:7px 4px;">
+                                    <input type="radio" name="payment" value="pendiente">
+                                    <span class="delivery-radio" style="display:none;"></span>
+                                    <span class="delivery-label">⏳ Pendiente</span>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Tipo de entrega -->
+                        <div style="flex:1;min-width:0;">
+                            <div class="form-label" style="font-size:0.68em;margin-bottom:4px;text-align:center;">Entrega</div>
+                            <div class="delivery-options" style="gap:5px;">
+                                <label class="delivery-option selected" data-delivery="local" style="justify-content:center;padding:7px 4px;">
+                                    <input type="radio" name="delivery" value="local" checked>
+                                    <span class="delivery-radio" style="display:none;"></span>
+                                    <span class="delivery-label">🏪 Local</span>
+                                </label>
+                                <label class="delivery-option" data-delivery="deposito" style="justify-content:center;padding:7px 4px;">
+                                    <input type="radio" name="delivery" value="deposito">
+                                    <span class="delivery-radio" style="display:none;"></span>
+                                    <span class="delivery-label">📦 Depósito</span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="shipping-details" id="shippingDetails">
-                    <div class="form-group">
-                        <label class="form-label">Datos del envío</label>
-                        <textarea class="form-textarea" id="shippingAddress" placeholder="Dirección, teléfono..."></textarea>
+                    <div class="shipping-details" id="shippingDetails">
+                        <div style="margin-bottom:6px;">
+                            <textarea class="form-textarea" id="shippingAddress" placeholder="Dirección, teléfono..." style="min-height:52px;"></textarea>
+                        </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Estado del pago</label>
-                    <div class="delivery-options">
-                        <label class="delivery-option selected" data-payment="abonado">
-                            <input type="radio" name="payment" value="abonado" checked>
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">✅ Ya abonó</span>
-                        </label>
-                        <label class="delivery-option" data-payment="pendiente">
-                            <input type="radio" name="payment" value="pendiente">
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">⏳ Falta abonar</span>
-                        </label>
-                    </div>
-                </div>
-                <div class="payment-details" id="paymentDetails">
-                    <div class="form-group">
-                        <label class="form-label">Monto a abonar *</label>
-                        <input type="text" class="form-input" id="paymentAmount" placeholder="$0">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Canal de venta</label>
-                    <div class="delivery-options">
-                        <label class="delivery-option selected" data-canal="local">
-                            <input type="radio" name="canal" value="local" checked>
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">🏪 Local</span>
-                        </label>
-                        <label class="delivery-option" data-canal="tn">
-                            <input type="radio" name="canal" value="tn">
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">🛍️ TN</span>
-                        </label>
+                    <div class="payment-details" id="paymentDetails">
+                        <div style="margin-bottom:6px;">
+                            <input type="text" class="form-input" id="paymentAmount" placeholder="Monto pendiente ($0)">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1138,10 +1270,7 @@
             
             <div class="budget-section" id="budgetSection">
                 <div class="budget-title">💰 Presupuesto</div>
-                <div class="form-group" style="margin-bottom:10px;">
-                    <label class="form-label">Nombre del cliente *</label>
-                    <input type="text" class="form-input" id="clientNamePres" placeholder="Nombre...">
-                </div>
+                <input type="text" id="clientNamePres" style="display:none;" placeholder="Nombre...">
                 <div class="form-group" style="margin-bottom:10px;">
                     <div class="delivery-options">
                         <label class="delivery-option selected" data-budgetenvio="no" id="budgetEnvioNo">
@@ -1174,14 +1303,15 @@
                 </div>
             </div>
             
-            <div class="export-btns">
-                <button class="export-btn whatsapp" onclick="shareWhatsApp()">📱 WhatsApp</button>
-                <button class="export-btn pdf" onclick="showPdfOptions()">📄 PDF</button>
-                <button class="export-btn ticket" onclick="downloadTicketDirectPrint()">🎫 Ticket</button>
-                <button class="export-btn" style="background:var(--primary);color:white;" onclick="downloadPreparacion()">📦 Preparar</button>
-                <button class="export-btn" style="background:#0ea5e9;color:white;" onclick="verificarStock()">🔍 Verificar Stock</button>
-                <button class="export-btn" style="background:#16a34a;color:white;" onclick="pedirPinVenta()">📤 Registrar Venta</button>
-                <button class="export-btn" style="background:#7c3aed;color:white;" onclick="abrirHistorial()">📋 Historial</button>
+            <div class="action-bar">
+                <div class="action-compact-row">
+                    <button class="action-compact-btn" style="background:#25D366;color:white;" onclick="openWaConfirm()">📱<br>WhatsApp</button>
+                    <button class="action-compact-btn" style="background:#dc2626;color:white;" onclick="showPdfOptions()">📄<br>PDF</button>
+                    <button class="action-compact-btn" style="background:#8b5cf6;color:white;" onclick="downloadTicketDirectPrint()">🎫<br>Ticket</button>
+                    <button class="action-compact-btn" style="background:#0ea5e9;color:white;" onclick="verificarStock()">🔍<br>Verificar</button>
+                    <button class="action-compact-btn" style="background:#16a34a;color:white;" onclick="pedirPinVenta()">📤<br>Registrar</button>
+                    <button class="action-compact-btn" style="background:#ef4444;color:white;" onclick="clearCart()">🗑️<br>Vaciar</button>
+                </div>
             </div>
             <div class="ecom-stock-bar">
                 <span id="ecomStockStatus" style="display:flex;align-items:center;gap:5px;">
@@ -1213,6 +1343,18 @@
     
     <div class="toast" id="toast"></div>
     
+    <!-- ARTICLE PHOTO SHEET (long press) -->
+    <div class="wa-confirm-overlay" id="artPhotoSheet" onclick="closeArtPhotoSheet()">
+        <div class="wa-confirm-sheet" onclick="event.stopPropagation()" style="max-height:70vh;overflow-y:auto;">
+            <div class="wa-confirm-handle"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <span style="font-weight:800;font-size:0.95em;" id="artPhotoSheetTitle"></span>
+                <button onclick="closeArtPhotoSheet()" style="background:none;border:none;color:var(--text-secondary);font-size:1.2em;cursor:pointer;padding:4px 8px;">✕</button>
+            </div>
+            <div id="artPhotoPickerContent"></div>
+        </div>
+    </div>
+
     <!-- COLOR PHOTO OVERLAY -->
     <div class="color-photo-overlay" id="colorPhotoOverlay">
         <div class="color-photo-header">
@@ -1235,6 +1377,69 @@
             <div id="stockCheckSummary" style="font-weight:800;font-size:1em;margin-top:8px;text-align:center;padding:8px;border-radius:8px;"></div>
             <div class="clear-modal-btns" style="margin-top:12px;">
                 <button class="clear-modal-btn no" onclick="$('stockCheckModal').classList.remove('show')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WA CONFIRM BOTTOM SHEET -->
+    <div class="wa-confirm-overlay" id="waConfirmOverlay" onclick="closeWaConfirm()">
+        <div class="wa-confirm-sheet" onclick="event.stopPropagation()">
+            <div class="wa-confirm-handle"></div>
+            <div class="wa-confirm-title">📱 Enviar por WhatsApp</div>
+
+            <!-- Pedido -->
+            <div id="waConfirmPedido">
+                <div class="wac-section">
+                    <span class="wac-label">👤 Cliente</span>
+                    <input type="text" class="form-input" id="wacName" placeholder="Nombre del cliente...">
+                </div>
+                <div class="wac-section">
+                    <span class="wac-label">📦 Entrega</span>
+                    <div class="wac-pills">
+                        <button class="wac-pill" data-wacdelivery="local" onclick="selectWacOption('delivery','local')">🏪 Local</button>
+                        <button class="wac-pill" data-wacdelivery="deposito" onclick="selectWacOption('delivery','deposito')">📦 Depósito</button>
+                        <button class="wac-pill" data-wacdelivery="envio" onclick="selectWacOption('delivery','envio')">🚚 Envío</button>
+                    </div>
+                    <textarea class="form-textarea" id="wacAddress" placeholder="Dirección, teléfono..." style="display:none;margin-top:8px;max-height:70px;min-height:60px;"></textarea>
+                </div>
+                <div class="wac-section">
+                    <span class="wac-label">💰 Pago</span>
+                    <div class="wac-pills">
+                        <button class="wac-pill" data-wacpayment="abonado" onclick="selectWacOption('payment','abonado')">✅ Abonado</button>
+                        <button class="wac-pill" data-wacpayment="pendiente" onclick="selectWacOption('payment','pendiente')">⏳ Pendiente</button>
+                    </div>
+                    <input type="text" class="form-input" id="wacPaymentAmount" placeholder="Monto pendiente ($)..." style="display:none;margin-top:8px;">
+                </div>
+            </div>
+
+            <!-- Presupuesto -->
+            <div id="waConfirmPres" style="display:none;">
+                <div class="wac-section">
+                    <span class="wac-label">👤 Cliente</span>
+                    <input type="text" class="form-input" id="wacNamePres" placeholder="Nombre del cliente...">
+                </div>
+                <div class="wac-section">
+                    <span class="wac-label">📦 Entrega</span>
+                    <div class="wac-pills">
+                        <button class="wac-pill" data-wacpdelivery="local" onclick="selectWacPresOption('delivery','local')">🏪 Galería</button>
+                        <button class="wac-pill" data-wacpdelivery="deposito" onclick="selectWacPresOption('delivery','deposito')">📦 Depósito</button>
+                        <button class="wac-pill" data-wacpdelivery="envio" onclick="selectWacPresOption('delivery','envio')">🚚 Envío</button>
+                    </div>
+                    <textarea class="form-textarea" id="wacPresAddress" placeholder="Dirección, teléfono..." style="display:none;margin-top:8px;max-height:70px;min-height:60px;"></textarea>
+                </div>
+                <div class="wac-section">
+                    <span class="wac-label">💰 Pago</span>
+                    <div class="wac-pills">
+                        <button class="wac-pill" data-wacppayment="abonado" onclick="selectWacPresOption('payment','abonado')">✅ Abonado</button>
+                        <button class="wac-pill" data-wacppayment="pendiente" onclick="selectWacPresOption('payment','pendiente')">⏳ Pendiente</button>
+                    </div>
+                    <input type="text" class="form-input" id="wacPresPaymentAmount" placeholder="Monto pendiente ($)..." style="display:none;margin-top:8px;">
+                </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+                <button class="action-btn-whatsapp" onclick="doShareWhatsApp()">📱 Enviar por WhatsApp</button>
+                <button id="wacTicketBtn" onclick="doTicketFromSheet()" style="display:none;background:#1a2744;color:white;border:none;border-radius:14px;padding:14px;font-size:1em;font-weight:700;cursor:pointer;">🎫 Ticket de preparación</button>
             </div>
         </div>
     </div>
@@ -1372,8 +1577,11 @@
                         noEncontrados.push(nombre);
                     }
                 });
+                // Guardar todos los precios del mapa para uso en home screen
+                Object.entries(map).forEach(([k, v]) => { if (v > 0) articlePricesMay[k] = v; });
                 localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
-                renderBudget();
+                localStorage.setItem('mikra_prices_may', JSON.stringify(articlePricesMay));
+                renderBudget(); renderHomeScreen();
                 if (noEncontrados.length === 0) {
                     toast('✅ ' + encontrados + ' precio' + (encontrados !== 1 ? 's' : '') + ' completado' + (encontrados !== 1 ? 's' : ''), 'success');
                 } else {
@@ -1430,8 +1638,11 @@
                         noEncontrados.push(nombre);
                     }
                 });
+                // Guardar todos los precios del mapa para uso en home screen
+                Object.entries(map).forEach(([k, v]) => { if (v > 0) articlePricesMin[k] = v; });
                 localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
-                renderBudget();
+                localStorage.setItem('mikra_prices_min', JSON.stringify(articlePricesMin));
+                renderBudget(); renderHomeScreen();
                 if (noEncontrados.length === 0) {
                     toast('✅ ' + encontrados + ' precio' + (encontrados !== 1 ? 's' : '') + ' minorista completado' + (encontrados !== 1 ? 's' : ''), 'success');
                 } else {
@@ -1445,62 +1656,228 @@
         const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
         
         // ===== QUICK ACCESS DASHBOARD =====
-        // Para agregar un artículo: copiá el nombre exacto de tu BD y pegalo en la lista.
-        // Para agregar una categoría: copiá un bloque completo { icon, cat, articles:[...] }.
+        // Estos son los defaults embebidos — se usan en incógnito o sin localStorage.
+        // Los cambios del usuario se guardan en localStorage y tienen prioridad sobre esto.
         const QUICK_ACCESS = [
             {
                 icon: '👨', cat: 'Hombre',
-                articles: [
-                    'Remera Termica Hombre',
-                    'Remera Dep. SET Hombre',
-                    'Short Dep. SET Hombre',
-                ]
+                img: 'https://http2.mlstatic.com/D_NQ_NP_2X_795975-MLA107396233542_032026-S.jpg',
+                articles: ['Remera Termica Hombre', 'Remera Dep. SET Hombre', 'Short Dep. SET Hombre'],
+                subcats: [], articleSubcats: {}, children: []
             },
             {
                 icon: '👩', cat: 'Dama',
-                articles: [
-                    'Remera Termica Dama',
-                    'Polera Termica Dama',
-                    'Pollera Lycra Adidas Evase',
-                    'Pollera Barbie Evase',
-                    'Pollera Lycra Adidas Recta',
-                    'Pollera Barbie Tablas',
-                    'Calza Dama Oxford -Adidas-',
-                    'Blazer Paño',
-                    'Top Lycra',
-                    'Top + Short Lycra Estampado',
-                    'Pollera Bengalina Pinzas NEW',
-                    'Pollera EcoCuero Evase - Rodilla',
-                    'Campera Lycra Dama',
+                img: null,
+                articles: ['Remera Termica Dama', 'Polera Termica Dama', 'Calza Dama Oxford -Adidas-', 'Blazer Paño', 'Campera Lycra Dama', 'Remera Dama Jersey V'],
+                subcats: [],
+                articleSubcats: { 'Polera Termica Dama': [], 'Remera Termica Dama': [], 'Campera Lycra Dama': [], 'Blazer Paño': [] },
+                children: [
+                    {
+                        name: 'Polleras', img: null,
+                        subcats: ['Cuerina', 'Adidas'],
+                        articles: ['Pollera Morley Aro', 'Pollera Lanilla Brush', 'Pollera Cey 3 Tiempos', 'Pollera Bengalina Pinzas NEW', 'Pollera EcoCuero Evase - Corta', 'Pollera EcoCuero Evase - Rodilla', 'Pollera EcoCuero Evase Larga - Midi', 'Pollera EcoCuero Mini S/cierre', 'Pollera EcoCuero Rodilla S/cierre', 'Pollera Lycra Adidas Recta', 'Pollera Lycra Adidas Evase'],
+                        articleSubcats: {
+                            'Pollera EcoCuero Rodilla S/cierre': ['Cuerina'], 'Pollera EcoCuero Evase - Rodilla': ['Cuerina'],
+                            'Pollera EcoCuero Mini S/cierre': ['Cuerina'], 'Pollera EcoCuero Evase - Corta': ['Cuerina'],
+                            'Pollera EcoCuero Evase Larga - Midi': ['Cuerina'],
+                            'Pollera Lycra Adidas Recta': ['Adidas'], 'Pollera Lycra Adidas Evase': ['Adidas']
+                        },
+                        children: []
+                    },
+                    {
+                        name: 'Calzas',
+                        img: 'https://http2.mlstatic.com/D_NQ_NP_2X_703295-MLA95491184269_102025-S.jpg',
+                        subcats: ['Termica', 'Oxford'],
+                        articles: ['Calza Dama Oxford -Adidas-', 'Calza Dama Oxford -Lisa-', 'Calza Termica Oxford', 'Calza Dama Sublimada', 'Calza Dama Lisa', 'Calza Dama Termica Sublimada', 'Calza Dama Termica Lisa'],
+                        articleSubcats: {
+                            'Calza Dama Termica Sublimada': ['Termica'], 'Calza Dama Termica Lisa': ['Termica'],
+                            'Calza Dama Oxford -Adidas-': ['Oxford'], 'Calza Dama Oxford -Lisa-': ['Oxford'], 'Calza Termica Oxford': ['Oxford']
+                        },
+                        children: []
+                    },
+                    {
+                        name: 'Verano',
+                        img: 'https://http2.mlstatic.com/D_NQ_NP_2X_961084-MLA99992414298_122025-S.jpg',
+                        subcats: [], articleSubcats: {},
+                        articles: ['Top Lycra', 'Top Alg - Lycra', 'Top + Short Lycra Estampado', 'Short Pollera Lycra', 'Top Lycra Especiales', 'Top Lycra Tiritas', 'Top Tiritas Alg - Lycra'],
+                        children: []
+                    }
                 ]
             },
             {
                 icon: '🧒', cat: 'Niño/a',
-                articles: [
-                    'Polera Termica Niño/a',
-                    'Remera Termica Niño/a',
-                    'Calza Niña Termica Lisa',
-                    'Pantalon Termico Ketten',
-                    'Conjunto Deportivo SET Niños',
-                ]
+                img: 'https://http2.mlstatic.com/D_NQ_NP_2X_619393-MLA107400876546_032026-O.jpg',
+                articles: ['Polera Termica Niño/a', 'Remera Termica Niño/a', 'Calza Niña Termica Lisa', 'Pantalon Termico Ketten', 'Conjunto Deportivo SET Niños'],
+                subcats: [], articleSubcats: {}, children: []
             },
         ];
         // ===========================================================================
+
+        const CATEGORY_OVERRIDES_KEY = 'mikra_categoryOverrides';
+        function loadCategoryOverrides() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(CATEGORY_OVERRIDES_KEY) || '{}');
+                if (Array.isArray(saved._order)) {
+                    const known = new Set(QUICK_ACCESS.map(c => c.cat));
+                    saved._order.forEach(name => {
+                        if (!known.has(name) && saved[name] && !Array.isArray(saved[name]))
+                            QUICK_ACCESS.push({ icon: saved[name].icon || '📦', cat: name, articles: [] });
+                    });
+                    QUICK_ACCESS.sort((a, b) => {
+                        const ia = saved._order.indexOf(a.cat), ib = saved._order.indexOf(b.cat);
+                        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+                    });
+                }
+                QUICK_ACCESS.forEach(cat => {
+                    const s = saved[cat.cat];
+                    if (!s) return;
+                    if (Array.isArray(s)) { cat.articles = s; return; }
+                    if (Array.isArray(s.articles)) cat.articles = s.articles;
+                    if (s.img !== undefined) cat.img = s.img;
+                    if (s.icon) cat.icon = s.icon;
+                    if (Array.isArray(s.subcats)) cat.subcats = s.subcats;
+                    if (s.articleSubcats && typeof s.articleSubcats === 'object') cat.articleSubcats = s.articleSubcats;
+                    if (Array.isArray(s.children) && saved._v >= 2) cat.children = s.children;
+                });
+                if (saved._articlePhotos && typeof saved._articlePhotos === 'object') homeArticlePhotos = saved._articlePhotos;
+            } catch(e) {}
+        }
+        function saveCategoryOverrides() {
+            const data = { _order: QUICK_ACCESS.map(c => c.cat), _articlePhotos: homeArticlePhotos, _v: 2 };
+            QUICK_ACCESS.forEach(cat => {
+                data[cat.cat] = { articles: cat.articles, img: cat.img || null, icon: cat.icon,
+                    subcats: cat.subcats || [], articleSubcats: cat.articleSubcats || {}, children: cat.children || [] };
+            });
+            try { localStorage.setItem(CATEGORY_OVERRIDES_KEY, JSON.stringify(data)); } catch(e) {}
+        }
+        function exportCategoryConfig() {
+            const data = { _order: QUICK_ACCESS.map(c => c.cat), _articlePhotos: homeArticlePhotos };
+            QUICK_ACCESS.forEach(cat => {
+                data[cat.cat] = { articles: cat.articles, img: cat.img || null, icon: cat.icon,
+                    subcats: cat.subcats || [], articleSubcats: cat.articleSubcats || {},
+                    children: (cat.children || []).map(ch => ({
+                        name: ch.name, articles: ch.articles || [], img: ch.img || null,
+                        subcats: ch.subcats || [], articleSubcats: ch.articleSubcats || {},
+                        children: (ch.children || []).map(gc => ({ name: gc.name, articles: gc.articles || [], img: gc.img || null, subcats: gc.subcats || [], articleSubcats: gc.articleSubcats || {} }))
+                    }))
+                };
+            });
+            const json = JSON.stringify(data);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(json)
+                    .then(() => toast('✓ Configuración copiada al portapapeles', 'success'))
+                    .catch(() => showExportText(json));
+            } else {
+                showExportText(json);
+            }
+        }
+        function showExportText(json) {
+            const box = $('catImportBox'); if (!box) return;
+            box.style.display = 'block';
+            const ta = $('catImportText'); ta.value = json; ta.select();
+            toast('Copiá el texto del cuadro', 'warning');
+        }
+        function showImportCategoryConfig() {
+            const box = $('catImportBox'); if (!box) return;
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+            if (box.style.display === 'block') { $('catImportText').value = ''; $('catImportText').focus(); }
+        }
+        function importCategoryConfig() {
+            const text = ($('catImportText') || {}).value || '';
+            try {
+                const data = JSON.parse(text.trim());
+                if (data._articlePhotos && typeof data._articlePhotos === 'object') homeArticlePhotos = data._articlePhotos;
+                if (Array.isArray(data._order)) {
+                    QUICK_ACCESS.length = 0;
+                    data._order.forEach(name => {
+                        const s = data[name]; if (!s) return;
+                        QUICK_ACCESS.push({ icon: s.icon || '📦', cat: name, articles: s.articles || [],
+                            img: s.img || null, subcats: s.subcats || [], articleSubcats: s.articleSubcats || {},
+                            children: s.children || [] });
+                    });
+                }
+                saveCategoryOverrides(); renderHomeScreen();
+                $('catImportBox').style.display = 'none';
+                toast('✓ Categorías importadas', 'success');
+            } catch(e) { toast('⚠️ Texto inválido, revisá que esté completo', 'warning'); }
+        }
+
+        const RECENT_KEY = 'mikra_recentSearches';
+        const RECENT_MAX = 8;
+        function getRecentSearches() {
+            try { const r = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return r.map(i => typeof i === 'string' ? { name: i, exact: false } : i); } catch(e) { return []; }
+        }
+        function addRecentSearch(term, exact) {
+            term = (term || '').trim(); if (term.length < 2) return;
+            let list = getRecentSearches().filter(t => t.name.toLowerCase() !== term.toLowerCase());
+            list.unshift({ name: term, exact: !!exact }); list = list.slice(0, RECENT_MAX);
+            try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch(e) {}
+        }
+        function removeRecentSearch(term) {
+            const list = getRecentSearches().filter(t => t.name.toLowerCase() !== (term || '').toLowerCase());
+            try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch(e) {}
+        }
+        function removeHomeRecentSearch(term) { removeRecentSearch(term); renderHomeScreen(); }
+        function showRecentSearches() {
+            const list = getRecentSearches();
+            const ac = $('autocomplete');
+            if (!list.length) { ac.classList.remove('show'); return; }
+            ac.innerHTML =
+                '<div class="autocomplete-header">🕘 Últimas búsquedas<span class="autocomplete-clear-recent" data-clear-recent="1">Borrar</span></div>' +
+                list.map(item => {
+                    const safe = item.name.replace(/"/g, '&quot;');
+                    return '<div class="autocomplete-item recent" data-name="' + safe + '" data-exact="' + (item.exact ? '1' : '0') + '">' +
+                        '<span class="autocomplete-name">🔍 ' + item.name + '</span>' +
+                        '<span class="autocomplete-remove" data-remove="' + safe + '">✕</span></div>';
+                }).join('');
+            ac.classList.add('show');
+        }
+        function clearRecentSearches() {
+            try { localStorage.removeItem(RECENT_KEY); } catch(e) {}
+            $('autocomplete').classList.remove('show');
+        }
+        function refreshSuggestions() {
+            if (state.search.length >= 2) showAutocomplete(state.search);
+            else if (state.search.length === 0) showRecentSearches();
+            else $('autocomplete').classList.remove('show');
+        }
 
         // ── Home nav state ──
         // (homeCatSelected se declara abajo junto al resto de variables de estado)
         
         let PRODUCTS = [];
+        const COMBO_NAME_PATTERN = /\bx\s?\d+\s*$/i;
+        function filterOutCombos(arr) { return arr.filter(p => !COMBO_NAME_PATTERN.test((p.titulo || p.articulo || '').trim())); }
         let UNIQUE_ARTICLES = [];
         let IMAGES_MAP = {};
         let articlePrices = JSON.parse(localStorage.getItem('mikra_prices') || '{}');
+        let articlePricesMay = JSON.parse(localStorage.getItem('mikra_prices_may') || '{}');
+        let articlePricesMin = JSON.parse(localStorage.getItem('mikra_prices_min') || '{}');
         let modalCallback = null;
         let articleSelectedId = null;
         let forceListView = false;
         let articleColorFilter = ''; // '' = all colors
         let showColorStrip = false;
-        let homeCatSelected = null; // null = nivel 1 tiles, string = nivel 2 artículos
-        let showZeroStock = false; // false = ocultar colores/talles sin stock
+        let homeCatSelected = null;
+        let homeCatChild = null;
+        let homeCatGrandchild = null;
+        let homeCatSubcat = null;
+        let homeEditMode = false;
+        let homeEditingCatName = null;
+        let homeEditingChildName = null;
+        let homeEditingGrandchildName = null;
+        let homeArticlePhotos = {
+            'Calza Niña Termica Lisa':              'https://http2.mlstatic.com/D_NQ_NP_2X_832164-MLA110187392590_052026-S.jpg',
+            'Pollera EcoCuero Evase - Rodilla':     'https://http2.mlstatic.com/D_NQ_NP_2X_724811-MLA89369470818_082025-S.jpg',
+            'Remera Dep. SET Hombre':               'https://http2.mlstatic.com/D_NQ_NP_2X_908525-MLA109854464306_042026-S.jpg',
+            'Short Dep. SET Hombre':                'https://http2.mlstatic.com/D_NQ_NP_2X_973717-MLA100846174123_122025-S.jpg',
+            'Calza Dama Termica Sublimada':         'https://http2.mlstatic.com/D_NQ_NP_2X_649232-MLA76956732548_062024-S.jpg',
+            'Pantalon Termico Ketten':              'https://http2.mlstatic.com/D_NQ_NP_2X_786900-MLA98391714359_112025-S.jpg',
+        };
+        let _editPhotoOpenArt = null;
+        let _addingNewCat = false;
+        let _prevHomeState = null;
+        let showZeroStock = false;
         
         const settings = {
             showSku: JSON.parse(localStorage.getItem('mikra_ord_showSku') ?? 'true'),
@@ -1559,6 +1936,7 @@
             localStorage.setItem('mikra_ord_' + key, JSON.stringify(settings[key]));
             updateSettingsUI();
             applySettingsToUI();
+            render();
         }
         function applySettingsToUI() {
             document.body.classList.toggle('hide-sku', !settings.showSku);
@@ -1752,24 +2130,26 @@
         }
 
         function getFormData() {
+            const name = $('clientName')?.value || '';
             return {
-                clientName:        $('clientName')?.value || '',
+                clientName:        name,
                 canal:             document.querySelector('input[name="canal"]:checked')?.value || 'local',
                 delivery:          document.querySelector('input[name="delivery"]:checked')?.value || 'local',
                 shippingAddress:   $('shippingAddress')?.value || '',
                 payment:           document.querySelector('input[name="payment"]:checked')?.value || 'abonado',
                 paymentAmount:     $('paymentAmount')?.value || '',
-                clientNamePres:    $('clientNamePres')?.value || '',
+                clientNamePres:    name,
                 budgetEnvio:       document.querySelector('input[name="budgetEnvio"]:checked')?.value || 'no',
                 budgetShippingCost: $('budgetShippingCost')?.value || '',
             };
         }
 
         function restoreFormData(fd) {
-            $('clientName').value        = fd?.clientName || '';
+            const name = fd?.clientName || fd?.clientNamePres || '';
+            $('clientName').value        = name;
+            if ($('clientNamePres')) $('clientNamePres').value = name;
             $('shippingAddress').value   = fd?.shippingAddress || '';
             $('paymentAmount').value     = fd?.paymentAmount || '';
-            $('clientNamePres').value    = fd?.clientNamePres || '';
             if ($('budgetShippingCost')) $('budgetShippingCost').value = fd?.budgetShippingCost || '';
 
             // Delivery
@@ -1816,6 +2196,23 @@
             $('cartUnitCount').textContent = units;
         }
         
+        function syncClientName(val) {
+            if ($('clientNamePres')) $('clientNamePres').value = val;
+        }
+        function toggleOrderDetails() {
+            const body = $('orderDetailsBody');
+            const arrow = $('orderDetailsArrow');
+            if (!body) return;
+            const open = body.style.display !== 'none';
+            body.style.display = open ? 'none' : 'block';
+            if (arrow) arrow.classList.toggle('open', !open);
+        }
+        function toggleMoreActions(btn) {
+            const panel = $('moreActionsPanel');
+            if (!panel) return;
+            panel.classList.toggle('show');
+            if (btn) btn.textContent = panel.classList.contains('show') ? '✕ Cerrar' : '⋯ Más opciones';
+        }
         function setOrderType(type) {
             state.orderType = type;
             document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
@@ -1896,7 +2293,7 @@
 
                 html += '<div class="ci-card">';
                 html += '<div class="ci-header">' + imgHtml +
-                    '<div class="ci-name">' + _escHtml(artName) + '</div>' +
+                    '<div class="ci-name" onclick="openArticleFromCart(\'' + _escAttr(artName) + '\')" style="cursor:pointer;" title="Ir al artículo">' + _escHtml(artName) + ' <span style="font-size:0.72em;opacity:0.55;">↗</span></div>' +
                     '<span class="ci-uds">' + artUds + ' uds</span>' +
                     '<button class="ci-del" onclick="ciRemoveArticle(\'' + _escAttr(artName) + '\')" title="Eliminar artículo">🗑</button>' +
                     '</div>';
@@ -2212,7 +2609,7 @@
             try {
                 const cached = localStorage.getItem('mikra_products');
                 if (!cached) return false;
-                PRODUCTS = JSON.parse(cached);
+                PRODUCTS = filterOutCombos(JSON.parse(cached));
                 try { IMAGES_MAP = JSON.parse(localStorage.getItem('mikra_images') || '{}'); } catch(e) {}
                 buildSearchIndex();
                 updateUniqueArticles();
@@ -2257,7 +2654,7 @@
             } else {
                 const cached = localStorage.getItem('mikra_products');
                 if (cached) {
-                    PRODUCTS = JSON.parse(cached);
+                    PRODUCTS = filterOutCombos(JSON.parse(cached));
                     try { IMAGES_MAP = JSON.parse(localStorage.getItem('mikra_images') || '{}'); } catch(e) {}
                     buildSearchIndex(); updateUniqueArticles(); applyFilters();
                     $('loadingScreen').classList.add('hidden');
@@ -2338,7 +2735,7 @@
                 const data = await prodResp.json();
                 if (!data.success || !data.products || !data.products.length) throw new Error('Sin productos');
 
-                PRODUCTS = data.products;
+                PRODUCTS = filterOutCombos(data.products);
 
                 // Imágenes
                 try {
@@ -2377,7 +2774,7 @@
                 if (!PRODUCTS.length) {
                     const cached = localStorage.getItem('mikra_products');
                     if (cached) {
-                        PRODUCTS = JSON.parse(cached);
+                        PRODUCTS = filterOutCombos(JSON.parse(cached));
                         try { IMAGES_MAP = JSON.parse(localStorage.getItem('mikra_images') || '{}'); } catch(e) {}
                         buildSearchIndex();
                         updateUniqueArticles();
@@ -2395,6 +2792,36 @@
             }
         }
         
+        const PRICES_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+
+        async function syncPricesBackground() {
+            if (!MAYORISTA_URL || MAYORISTA_URL.includes('REEMPLAZAR')) return;
+            const last = localStorage.getItem('mikra_prices_lastSync');
+            if (last && (Date.now() - new Date(last).getTime()) < PRICES_MAX_AGE_MS) return;
+            try {
+                // Ambas funciones fetch del mismo GAS — corren en paralelo
+                const [mapMay, mapMin] = await Promise.all([
+                    fetchMayoristaPrecios().catch(() => null),
+                    fetchMinoristaPrecios().catch(() => null)
+                ]);
+                let changed = false;
+                if (mapMay) {
+                    Object.entries(mapMay).forEach(([k, v]) => { if (v > 0) articlePricesMay[k] = v; });
+                    localStorage.setItem('mikra_prices_may', JSON.stringify(articlePricesMay));
+                    changed = true;
+                }
+                if (mapMin) {
+                    Object.entries(mapMin).forEach(([k, v]) => { if (v > 0) articlePricesMin[k] = v; });
+                    localStorage.setItem('mikra_prices_min', JSON.stringify(articlePricesMin));
+                    changed = true;
+                }
+                if (changed) {
+                    localStorage.setItem('mikra_prices_lastSync', new Date().toISOString());
+                    if (isHomeState()) renderHomeScreen();
+                }
+            } catch(e) { /* silencioso */ }
+        }
+
         async function loadData() {
             const hasCache = loadFromCache();
             if (hasCache) {
@@ -2407,9 +2834,12 @@
                 $('loadingError').style.display = 'none';
                 syncFromAPI(false);
             }
+            // Precios: actualizar en 2do plano una vez por día (sin bloquear carga)
+            setTimeout(syncPricesBackground, 3000);
         }
         
         function updateUniqueArticles() {
+            ARTICLE_IMG_CACHE = {};
             const map = new Map();
             const n = PRODUCTS.length;
             for (let i = 0; i < n; i++) {
@@ -2418,7 +2848,7 @@
                 if (!name) continue;
                 const entry = map.get(name);
                 if (entry) entry.totalStock += p.stock || 0;
-                else map.set(name, { name, totalStock: p.stock || 0 });
+                else map.set(name, { name, _nameLower: name.toLowerCase(), totalStock: p.stock || 0 });
             }
             UNIQUE_ARTICLES = [...map.values()].sort((a, b) => b.totalStock - a.totalStock);
         }
@@ -2633,11 +3063,12 @@
             colors.forEach(c => {
                 const cm = colorStockMap[c];
                 const isZero = cm.avail <= 0;
+                if (isZero && state.color !== c) return; // ocultar sin stock salvo si está seleccionado
                 const isActive = state.color === c;
                 const imgUrl = cm.imgUrl;
                 const thumbUrl = imgUrl || '';
-                
-                html += '<div class="color-photo-card' + (isZero ? ' zero-stock' : '') + (isActive ? ' active' : '') + '" onclick="selectColorFromOverlay(\'' + c.replace(/'/g, "\\'") + '\')">';
+
+                html += '<div class="color-photo-card' + (isActive ? ' active' : '') + '" onclick="selectColorFromOverlay(\'' + c.replace(/'/g, "\\'") + '\')">';
                 if (thumbUrl) {
                     html += '<img class="cp-img" src="' + thumbUrl + '" loading="lazy" onerror="this.outerHTML=\'<div class=cp-placeholder>📦</div>\'">';
                 } else {
@@ -2689,7 +3120,7 @@
         
         // ===== ARTICLE DETAIL VIEW =====
         function isArticleDetailMode() {
-            return state.searchExact && state.search.length > 0 && !forceListView;
+            return state.search.length > 0;
         }
         
         function renderArticleDetail() {
@@ -2748,12 +3179,11 @@
             
             let html = '';
             html += '<div class="article-stats-row">' +
-                '<span>📦 <strong>' + allProducts.length + '</strong> var.</span>' +
+                '<span>🎨 <strong>' + colorNames.length + '</strong> ' + (colorNames.length === 1 ? 'color' : 'colores') + '</span>' +
                 '<span>📊 <strong>' + totalAvail + '</strong>/' + totalStock + '</span>' +
                 (totalCartQty ? '<span style="color:var(--success)">🛒 ' + totalCartQty + '</span>' : '') +
                 (totalColorsCero > 0 ? '<button class="article-photo-toggle" onclick="toggleZeroStock()" style="' + (showZeroStock ? 'background:rgba(248,113,113,0.2);color:var(--danger);' : '') + '" title="' + (showZeroStock ? 'Ocultar colores sin stock' : 'Ver ' + totalColorsCero + ' color(es) sin stock') + '">🚫' + (showZeroStock ? '✓' : totalColorsCero) + '</button>' : '') +
                 '<button class="article-photo-toggle" id="articlePhotoToggle" onclick="toggleArticlePhotos()">📷</button>' +
-                '<button class="article-photo-toggle" onclick="switchToListView()">📝</button>' +
                 '<button class="article-photo-toggle" id="artEcomRefreshBtn" onclick="fetchEcomStockForArticle()" title="Actualizar stock ecom de este artículo" style="' + (Object.keys(artEcomMap).length ? 'color:var(--success);border-color:var(--success);' : '') + '">🔄</button>' +
                 '</div>';
             
@@ -2762,71 +3192,97 @@
                 ? colorNames
                 : colorNames.filter(c => colorMeta[c].avail > 0 || colorMeta[c].cart > 0);
             
-            visibleColors.forEach(color => {
-                const prods = colorGroups[color];
-                
-                const cm = colorMeta[color];
-                const colorAvail = cm.avail;
-                const colorStock = cm.stock;
-                const colorCart = cm.cart;
-                const colorIsZero = colorAvail <= 0;
-                
-                let colorImgUrl = cm.imgUrl;
-                
-                html += '<div class="article-color-section">';
-                html += '<div class="article-color-sticky' + (colorIsZero ? '" style="opacity:0.5;border-bottom-color:var(--danger)"' : '"') + '>🎨 ' + color + 
-                    (colorIsZero ? ' <span style="color:var(--danger);font-size:0.75em">✗</span>' : '') +
-                    '<span class="color-stock-badge">' + colorAvail + '/' + colorStock + (colorCart ? ' 🛒' + colorCart : '') + '</span></div>';
-                
-                if (colorImgUrl) {
-                    html += '<img class="article-color-img" src="' + colorImgUrl + '" onclick="showImgModal(\'' + prods[0].codigo + '\')" onerror="this.remove()">';
-                }
-                
-                html += '<div class="article-sizes-grid">';
-                // Construir mapa talle → producto para este color
-                const talleMap = {};
-                prods.forEach(p => { if (p.talle) talleMap[p.talle] = p; });
-                allSizes.forEach(talle => {
-                    const p = talleMap[talle];
-                    if (!p) {
-                        // Placeholder vacío para alineación
-                        html += '<div class="article-size-cell" style="opacity:0;pointer-events:none;">' +
-                            '<div class="asc-size">' + talle + '</div>' +
-                            '<div class="asc-stock">-</div>' +
-                            '</div>';
-                        return;
-                    }
+            const isSingleTalleMode = !!state.size;
+
+            if (isSingleTalleMode) {
+                // Modo compacto: un talle filtrado → fila horizontal foto + color + celda
+                html += '<div class="article-single-talle-header">Talle filtrado: <strong>' + state.size + '</strong></div>';
+                html += '<div class="article-compact-list">';
+                visibleColors.forEach(color => {
+                    const prods = colorGroups[color];
+                    const p = prods[0];
+                    if (!p) return;
                     const cartQty = getCartQty(p.id);
                     const inCart = cartQty > 0;
                     const available = p.stock - cartQty;
                     const stockClass = available > 5 ? 'high' : available > 0 ? 'med' : 'low';
                     const isZero = available <= 0 && cartQty === 0;
                     const isSelected = articleSelectedId === p.id;
-
-                    // Badge ecom
                     const ec = artEcomMap[String(p.codigo)] !== undefined ? artEcomMap[String(p.codigo)] : null;
-                    const ecHtml = ec !== null
-                        ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>'
-                        : '';
-
-                    html += '<div class="article-size-cell' + 
-                        (isZero ? ' zero' : '') + 
-                        (inCart ? ' in-cart' : '') +
-                        (isSelected ? ' selected' : '') + 
-                        '" data-pid="' + p.id + '" onclick="articleTapSize(' + p.id + ')">' +
-                        (inCart ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
-                        '<div class="asc-size">' + talle + '</div>' +
-                        '<div class="asc-stock ' + stockClass + '">' + available + '</div>' +
-                        ecHtml +
+                    const ecHtml = ec !== null ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>' : '';
+                    const colorImgUrl = colorMeta[color].imgUrl;
+                    html += '<div class="article-compact-row' + (isSelected ? ' selected' : '') + '" onclick="articleTapSize(' + p.id + ')">' +
+                        '<div class="acr-photo">' + (colorImgUrl ? '<img src="' + colorImgUrl + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '<div class="acr-photo-placeholder">📦</div>') + '</div>' +
+                        '<div class="acr-color">🎨 ' + color + '</div>' +
+                        '<div class="article-size-cell' + (isZero ? ' zero' : '') + (inCart ? ' in-cart' : '') + (isSelected ? ' selected' : '') + '" data-pid="' + p.id + '" style="flex-shrink:0;">' +
+                            (inCart ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
+                            '<div class="asc-size">' + state.size + '</div>' +
+                            '<div class="asc-stock ' + stockClass + '">' + available + '</div>' +
+                            ecHtml +
+                            (settings.showSku ? '<div class="asc-sku">' + p.codigo + '</div>' : '') +
+                        '</div>' +
                         '</div>';
                 });
-                // Botón Curva inline al final de los talles
-                const colorKey = color.replace(/'/g, "\\'");
-                html += '<div class="article-size-cell curva-btn-cell" onclick="addCurvaColor(\'' + colorKey + '\')" title="Agregar 1 de cada talle">' +
-                    '<div class="asc-size" style="font-size:0.6em;line-height:1.2;">+<br>Curva</div>' +
-                    '</div>';
-                html += '</div></div>';
-            });
+                html += '</div>';
+            } else {
+                visibleColors.forEach(color => {
+                    const prods = colorGroups[color];
+                    const cm = colorMeta[color];
+                    const colorAvail = cm.avail;
+                    const colorStock = cm.stock;
+                    const colorCart = cm.cart;
+                    const colorIsZero = colorAvail <= 0;
+                    const colorImgUrl = cm.imgUrl;
+
+                    html += '<div class="article-color-section">';
+                    html += '<div class="article-color-sticky' + (colorIsZero ? '" style="opacity:0.5;border-bottom-color:var(--danger)"' : '"') + '>🎨 ' + color +
+                        (colorIsZero ? ' <span style="color:var(--danger);font-size:0.75em">✗</span>' : '') +
+                        '<span class="color-stock-badge">' + colorAvail + '/' + colorStock + (colorCart ? ' 🛒' + colorCart : '') + '</span></div>';
+
+                    if (colorImgUrl) {
+                        html += '<img class="article-color-img" src="' + colorImgUrl + '" onclick="showImgModal(\'' + prods[0].codigo + '\')" onerror="this.remove()">';
+                    }
+
+                    html += '<div class="article-sizes-grid">';
+                    const talleMap = {};
+                    prods.forEach(p => { if (p.talle) talleMap[p.talle] = p; });
+                    allSizes.forEach(talle => {
+                        const p = talleMap[talle];
+                        if (!p) {
+                            html += '<div class="article-size-cell" style="opacity:0;pointer-events:none;"><div class="asc-size">' + talle + '</div><div class="asc-stock">-</div></div>';
+                            return;
+                        }
+                        const cartQty = getCartQty(p.id);
+                        const inCart = cartQty > 0;
+                        const available = p.stock - cartQty;
+                        const stockClass = available > 5 ? 'high' : available > 0 ? 'med' : 'low';
+                        const isZero = available <= 0 && cartQty === 0;
+                        const isSelected = articleSelectedId === p.id;
+                        const ec = artEcomMap[String(p.codigo)] !== undefined ? artEcomMap[String(p.codigo)] : null;
+                        const ecHtml = ec !== null ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>' : '';
+
+                        html += '<div class="article-size-cell' +
+                            (isZero ? ' zero' : '') +
+                            (inCart ? ' in-cart' : '') +
+                            (isSelected ? ' selected' : '') +
+                            '" data-pid="' + p.id + '" onclick="articleTapSize(' + p.id + ')">' +
+                            (inCart ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
+                            '<div class="asc-size">' + talle + '</div>' +
+                            '<div class="asc-stock ' + stockClass + '">' + available + '</div>' +
+                            ecHtml +
+                            (settings.showSku ? '<div class="asc-sku">' + p.codigo + '</div>' : '') +
+                            '</div>';
+                    });
+                    const colorKey = color.replace(/'/g, "\\'");
+                    const colorProds = state.filtered.filter(p => (p.color || 'Sin color') === color);
+                    const canRemoveCurva = colorProds.length > 0 && colorProds.every(p => getCartQty(p.id) >= 1);
+                    html += '<div class="article-size-cell curva-btn-cell" onclick="addCurvaColor(\'' + colorKey + '\')" title="Agregar 1 de cada talle"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">+<br>Curva</div></div>';
+                    if (canRemoveCurva) {
+                        html += '<div class="article-size-cell minus-curva-btn-cell" onclick="removeCurvaColor(\'' + colorKey + '\')" title="Quitar 1 de cada talle"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">−<br>Curva</div></div>';
+                    }
+                    html += '</div></div>';
+                });
+            }
             
             $('showingCount').textContent = allProducts.length;
             $('totalCount').textContent = allProducts.length;
@@ -3063,67 +3519,792 @@
             return match ? getProductImageFull(match.codigo, match) : '';
         }
 
+        function imgRetryOrFallback(img, placeholderClass, placeholderIcon) {
+            let candidates = [];
+            try { candidates = JSON.parse(img.dataset.candidates || '[]'); } catch(e) {}
+            if (candidates.length) {
+                const next = candidates.shift();
+                img.dataset.candidates = JSON.stringify(candidates);
+                img.src = next; return;
+            }
+            const div = document.createElement('div'); div.className = placeholderClass; div.textContent = placeholderIcon; img.replaceWith(div);
+        }
+        function imgVerifyLoaded(img, placeholderClass, placeholderIcon) {
+            if (img.naturalWidth >= 50 && img.naturalHeight >= 50) return;
+            img.dataset.usedFallback = '1'; imgRetryOrFallback(img, placeholderClass, placeholderIcon);
+        }
+
+        let ARTICLE_IMG_CACHE = {};
+        function getArticleImageCandidates(name) {
+            if (!(name in ARTICLE_IMG_CACHE)) {
+                const lower = name.toLowerCase();
+                const seen = new Set(), urls = [];
+                for (const p of PRODUCTS) {
+                    if ((p.titulo || p.articulo || '').toLowerCase() !== lower) continue;
+                    const u = getProductImageFull(p.codigo, p);
+                    if (u && !seen.has(u)) { seen.add(u); urls.push(u); }
+                }
+                ARTICLE_IMG_CACHE[name] = urls;
+            }
+            return ARTICLE_IMG_CACHE[name];
+        }
+        function getChildCoverImg(child) {
+            if (child.img) return child.img;
+            for (const a of (child.articles || [])) { const c = getArticleImageCandidates(a); if (c.length) return c[0]; }
+            return '';
+        }
+        function gatherImgCandidates(articles) {
+            const seen = new Set(), out = [];
+            for (const a of articles) for (const u of getArticleImageCandidates(a)) if (!seen.has(u)) { seen.add(u); out.push(u); }
+            return out;
+        }
+
+        // Commit una búsqueda desde las chips recientes del home
+        function commitSearch(name, exact) {
+            $('searchInput').value = name; state.search = name; state.searchExact = !!exact;
+            addRecentSearch(name, exact);
+            $('searchClear').classList.add('show'); $('autocomplete').classList.remove('show'); applyFilters();
+        }
+
+        // ── Abre un artículo desde el home guardando el estado de navegación ──
+        function openArticleFromHome(name) {
+            addRecentSearch(name, true);
+            _prevHomeState = { catSelected: homeCatSelected, catChild: homeCatChild, catGrandchild: homeCatGrandchild, catSubcat: homeCatSubcat };
+            history.pushState({ app: 'mikra', level: 'article' }, '');
+            searchArticle(name);
+        }
+
+        function openArticleFromCart(name) {
+            switchPage('products');
+            searchArticle(name);
+        }
+
+        // ── Long-press en tile de artículo → editar foto ──
+        let _artLpTimer = null, _artLpFired = false;
+        function artLongPressStart(name) {
+            _artLpFired = false;
+            _artLpTimer = setTimeout(() => {
+                _artLpTimer = null; _artLpFired = true;
+                openArticlePhotoSheet(name);
+            }, 550);
+        }
+        function artLongPressEnd() {
+            if (_artLpTimer) { clearTimeout(_artLpTimer); _artLpTimer = null; }
+        }
+        function artTileClick(e, name) {
+            if (_artLpFired) { e.preventDefault(); e.stopPropagation(); _artLpFired = false; return; }
+            openArticleFromHome(name);
+        }
+        function openArticlePhotoSheet(artName) {
+            const candidates = getArticleImageCandidates(artName);
+            const current = homeArticlePhotos[artName] || '';
+            let html = '<div class="home-photo-picker" style="flex-wrap:wrap;padding:0 0 8px;gap:6px;">';
+            html += '<div class="home-photo-opt-auto' + (!current ? ' active' : '') + '" onclick="setArtPhotoFromSheet(\'' + artName.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\',null)" title="Automático">↩️</div>';
+            candidates.forEach(url => {
+                html += '<img class="home-photo-opt' + (current === url ? ' active' : '') + '" src="' + url + '" loading="lazy" referrerpolicy="no-referrer" onclick="setArtPhotoFromSheet(\'' + artName.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\',\'' + url.replace(/'/g,"\\'") + '\')">';
+            });
+            if (!candidates.length) html += '<div style="color:var(--text-secondary);font-size:0.85em;padding:8px 0;">Sin fotos disponibles — sincronizá primero.</div>';
+            html += '</div>';
+            $('artPhotoPickerContent').innerHTML = html;
+            $('artPhotoSheetTitle').textContent = '📷 ' + artName;
+            $('artPhotoSheet').classList.add('show');
+        }
+        function closeArtPhotoSheet() { $('artPhotoSheet').classList.remove('show'); }
+        function setArtPhotoFromSheet(artName, url) {
+            if (url) homeArticlePhotos[artName] = url;
+            else delete homeArticlePhotos[artName];
+            saveCategoryOverrides();
+            ARTICLE_IMG_CACHE = {};
+            closeArtPhotoSheet();
+            renderHomeScreen();
+            toast('✓ Foto actualizada', 'success');
+        }
+
+        // ── Edit mode ──
+        function toggleHomeEditMode() {
+            homeEditMode = !homeEditMode;
+            if (!homeEditMode) { homeEditingCatName = null; _addingNewCat = false; }
+            _editPhotoOpenArt = null; renderHomeScreen();
+        }
+        function openHomeCatEdit(catName) {
+            homeEditingCatName = homeEditingCatName === catName ? null : catName;
+            _editPhotoOpenArt = null; _addingNewCat = false; homeEditingChildName = null;
+            renderHomeScreen();
+            if (homeEditingCatName) setTimeout(() => { const p = document.getElementById('homeCatEditPanel'); if (p) p.scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 60);
+        }
+        function catRemoveArticleFromEdit(catName, artName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat) return;
+            cat.articles = cat.articles.filter(a => a !== artName);
+            if (cat.articleSubcats) delete cat.articleSubcats[artName];
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catAddArticleFromEdit(catName, artName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            if (!cat || cat.articles.includes(artName)) return;
+            cat.articles.push(artName); saveCategoryOverrides();
+            const prevQ = (document.getElementById('homeCatEditSearch') || {}).value || '';
+            renderHomeCatEditPanel();
+            const inp = document.getElementById('homeCatEditSearch');
+            if (inp && prevQ) { inp.value = prevQ; _renderEditSuggest('homeCatEditSearch','homeCatEditSuggest'); inp.focus(); }
+        }
+        function _renderEditSuggest(inpId, boxId) {
+            const inp = document.getElementById(inpId), box = document.getElementById(boxId);
+            if (!inp || !box) return;
+            const q = (inp.value || '').trim().toLowerCase();
+            const cat = QUICK_ACCESS.find(c => c.cat === homeEditingCatName);
+            if (!cat || q.length < 2) { box.innerHTML = ''; box.style.display = 'none'; return; }
+            const child = homeEditingChildName && (cat.children || []).find(c => c.name === homeEditingChildName);
+            const gc = child && homeEditingGrandchildName && (child.children || []).find(c => c.name === homeEditingGrandchildName);
+            const articles = gc ? (gc.articles || []) : child ? child.articles : cat.articles;
+            const already = new Set(articles.map(a => a.toLowerCase()));
+            const matches = UNIQUE_ARTICLES.filter(a => (a._nameLower || a.name.toLowerCase()).includes(q) && !already.has(a._nameLower || a.name.toLowerCase())).sort((a,b) => b.totalStock - a.totalStock).slice(0,8);
+            if (!matches.length) { box.innerHTML = ''; box.style.display = 'none'; return; }
+            const catEsc = homeEditingCatName.replace(/'/g,"\\'");
+            const childEsc = child ? homeEditingChildName.replace(/'/g,"\\'") : null;
+            const gcEsc = gc ? homeEditingGrandchildName.replace(/'/g,"\\'") : null;
+            box.innerHTML = matches.map(a => {
+                const artEsc = a.name.replace(/'/g,"\\'");
+                const cb = gc ? 'catAddArticleToGrandchild(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\',\''+artEsc+'\')'
+                    : child ? 'catAddArticleToChild(\''+catEsc+'\',\''+childEsc+'\',\''+artEsc+'\')'
+                    : 'catAddArticleFromEdit(\''+catEsc+'\',\''+artEsc+'\')';
+                return '<div class="home-edit-suggest-item" onclick="'+cb+'">+ '+a.name+'<span style="margin-left:6px;color:var(--text-secondary);font-size:0.82em;">('+a.totalStock+')</span></div>';
+            }).join('');
+            box.style.display = 'block';
+        }
+        function renderHomeCatEditSuggest() { _renderEditSuggest('homeCatEditSearch','homeCatEditSuggest'); }
+        function renderHomeCatChildEditSuggest() { _renderEditSuggest('homeCatChildSearch','homeCatChildSuggest'); }
+        function renderHomeCatGcEditSuggest() { _renderEditSuggest('homeCatGcSearch','homeCatGcSuggest'); }
+        function catSetPhoto(catName, imgUrl) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat) return;
+            cat.img = imgUrl || null; saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catAddSubcat(catName) {
+            const inp = document.getElementById('homeCatNewSubcat'); if (!inp) return;
+            const name = inp.value.trim(); if (!name) return;
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat) return;
+            if (!cat.subcats) cat.subcats = [];
+            if (!cat.subcats.includes(name)) { cat.subcats.push(name); saveCategoryOverrides(); }
+            inp.value = ''; renderHomeCatEditPanel();
+        }
+        function catRemoveSubcat(catName, subcatName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat) return;
+            cat.subcats = (cat.subcats || []).filter(s => s !== subcatName);
+            if (cat.articleSubcats) Object.keys(cat.articleSubcats).forEach(a => { if (Array.isArray(cat.articleSubcats[a])) cat.articleSubcats[a] = cat.articleSubcats[a].filter(s => s !== subcatName); });
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catToggleArticleSubcat(catName, artName, subcatName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat) return;
+            if (!cat.articleSubcats) cat.articleSubcats = {};
+            if (!cat.articleSubcats[artName]) cat.articleSubcats[artName] = [];
+            const arr = cat.articleSubcats[artName], i = arr.indexOf(subcatName);
+            if (i < 0) arr.push(subcatName); else arr.splice(i, 1);
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function setHomeCatSubcat(s) { homeCatSubcat = s; renderHomeScreen(); }
+        function catAddChildSubcat(catName, childName) {
+            const inp = document.getElementById('homeCatChildNewSubcat'); if (!inp) return;
+            const name = inp.value.trim(); if (!name) return;
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName); if (!child) return;
+            if (!child.subcats) child.subcats = [];
+            if (!child.subcats.includes(name)) { child.subcats.push(name); saveCategoryOverrides(); }
+            inp.value = ''; renderHomeCatEditPanel();
+        }
+        function catRemoveChildSubcat(catName, childName, subcatName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName); if (!child) return;
+            child.subcats = (child.subcats || []).filter(s => s !== subcatName);
+            if (child.articleSubcats) Object.keys(child.articleSubcats).forEach(a => { if (Array.isArray(child.articleSubcats[a])) child.articleSubcats[a] = child.articleSubcats[a].filter(s => s !== subcatName); });
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catToggleChildArticleSubcat(catName, childName, artName, subcatName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName); if (!child) return;
+            if (!child.articleSubcats) child.articleSubcats = {};
+            if (!child.articleSubcats[artName]) child.articleSubcats[artName] = [];
+            const arr = child.articleSubcats[artName], i = arr.indexOf(subcatName);
+            if (i < 0) arr.push(subcatName); else arr.splice(i, 1);
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function openHomeCatGrandchildEdit(gcName) {
+            homeEditingGrandchildName = homeEditingGrandchildName === gcName ? null : gcName;
+            _editPhotoOpenArt = null; renderHomeCatEditPanel();
+        }
+        function catAddGrandchild(catName, childName) {
+            const inp = document.getElementById('homeCatChildNewGc'); if (!inp) return;
+            const name = inp.value.trim(); if (!name) return;
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName); if (!child) return;
+            if (!child.children) child.children = [];
+            if (!child.children.find(c => c.name === name)) { child.children.push({ name, articles: [], img: null }); saveCategoryOverrides(); }
+            inp.value = ''; renderHomeCatEditPanel();
+        }
+        function catRemoveGrandchild(catName, childName, gcName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName); if (!child) return;
+            child.children = (child.children || []).filter(c => c.name !== gcName);
+            if (homeEditingGrandchildName === gcName) homeEditingGrandchildName = null;
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catAddArticleToGrandchild(catName, childName, gcName, artName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName);
+            const gc = child && (child.children || []).find(c => c.name === gcName);
+            if (!gc || (gc.articles || []).includes(artName)) return;
+            if (!gc.articles) gc.articles = []; gc.articles.push(artName); saveCategoryOverrides();
+            const prevQ = (document.getElementById('homeCatGcSearch') || {}).value || '';
+            renderHomeCatEditPanel();
+            const inp = document.getElementById('homeCatGcSearch');
+            if (inp && prevQ) { inp.value = prevQ; _renderEditSuggest('homeCatGcSearch','homeCatGcSuggest'); inp.focus(); }
+        }
+        function catRemoveArticleFromGrandchild(catName, childName, gcName, artName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName);
+            const gc = child && (child.children || []).find(c => c.name === gcName); if (!gc) return;
+            gc.articles = (gc.articles || []).filter(a => a !== artName);
+            if (gc.articleSubcats) delete gc.articleSubcats[artName];
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catSetGrandchildPhoto(catName, childName, gcName, url) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName);
+            const gc = child && (child.children || []).find(c => c.name === gcName); if (!gc) return;
+            gc.img = url; saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catAddGrandchildSubcat(catName, childName, gcName) {
+            const inp = document.getElementById('homeCatGcNewSubcat'); if (!inp) return;
+            const name = inp.value.trim(); if (!name) return;
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName);
+            const gc = child && (child.children || []).find(c => c.name === gcName); if (!gc) return;
+            if (!gc.subcats) gc.subcats = [];
+            if (!gc.subcats.includes(name)) { gc.subcats.push(name); saveCategoryOverrides(); }
+            inp.value = ''; renderHomeCatEditPanel();
+        }
+        function catRemoveGrandchildSubcat(catName, childName, gcName, subcatName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName);
+            const gc = child && (child.children || []).find(c => c.name === gcName); if (!gc) return;
+            gc.subcats = (gc.subcats || []).filter(s => s !== subcatName);
+            if (gc.articleSubcats) Object.keys(gc.articleSubcats).forEach(a => { if (Array.isArray(gc.articleSubcats[a])) gc.articleSubcats[a] = gc.articleSubcats[a].filter(s => s !== subcatName); });
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catToggleGrandchildArticleSubcat(catName, childName, gcName, artName, subcatName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName);
+            const child = cat && (cat.children || []).find(c => c.name === childName);
+            const gc = child && (child.children || []).find(c => c.name === gcName); if (!gc) return;
+            if (!gc.articleSubcats) gc.articleSubcats = {};
+            if (!gc.articleSubcats[artName]) gc.articleSubcats[artName] = [];
+            const arr = gc.articleSubcats[artName], i = arr.indexOf(subcatName);
+            if (i < 0) arr.push(subcatName); else arr.splice(i, 1);
+            saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function openCatEditSheet(catName, childName, gcName) {
+            homeEditingCatName = catName; homeEditingChildName = childName || null; homeEditingGrandchildName = gcName || null; _editPhotoOpenArt = null;
+            let el = document.getElementById('_catEditSheet');
+            if (!el) {
+                el = document.createElement('div'); el.id = '_catEditSheet';
+                el.style.cssText = 'position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,0.48);';
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'background:var(--bg);border-radius:20px 20px 0 0;max-height:88vh;overflow-y:auto;';
+                wrap.innerHTML = '<div style="position:sticky;top:0;background:var(--bg);z-index:1;padding:10px 16px 8px;display:flex;align-items:center;border-bottom:1px solid var(--border);margin-bottom:4px;"><div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto;"></div><button onclick="closeCatEditSheet()" style="position:absolute;right:14px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.1em;line-height:1;padding:4px 6px;">✕</button></div><div id="_catEditSheetPanel" style="padding:8px 16px 40px;"></div>';
+                el.appendChild(wrap);
+                el.addEventListener('click', e => { if (e.target === el) closeCatEditSheet(); });
+                document.body.appendChild(el);
+            }
+            renderHomeCatEditPanel();
+        }
+        function closeCatEditSheet() {
+            homeEditingCatName = null; homeEditingChildName = null; homeEditingGrandchildName = null; _editPhotoOpenArt = null;
+            const el = document.getElementById('_catEditSheet'); if (el) el.remove();
+        }
+        function openHomeCatChildEdit(childName) {
+            homeEditingChildName = homeEditingChildName === childName ? null : childName;
+            homeEditingGrandchildName = null; _editPhotoOpenArt = null; renderHomeCatEditPanel();
+            setTimeout(() => { const p = document.getElementById('homeCatEditPanel'); if (p) p.scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 60);
+        }
+        function catAddChild(catName) {
+            const inp = document.getElementById('homeCatNewChild');
+            const name = (inp ? inp.value : '').trim(); if (!name) { toast('Ingresá un nombre','warning'); return; }
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat) return;
+            if (!cat.children) cat.children = [];
+            if (cat.children.find(c => c.name === name)) { toast('Ya existe esa subcategoría','warning'); return; }
+            cat.children.push({ name, articles: [], img: null }); saveCategoryOverrides();
+            homeEditingChildName = name; renderHomeCatEditPanel();
+        }
+        function catRemoveChild(catName, childName) {
+            if (!confirm('¿Eliminar "' + childName + '"?')) return;
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat || !cat.children) return;
+            cat.children = cat.children.filter(c => c.name !== childName); saveCategoryOverrides();
+            if (homeEditingChildName === childName) homeEditingChildName = null; renderHomeCatEditPanel();
+        }
+        function catSetChildPhoto(catName, childName, url) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat || !cat.children) return;
+            const child = cat.children.find(c => c.name === childName); if (!child) return;
+            child.img = url || null; saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function catAddArticleToChild(catName, childName, artName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat || !cat.children) return;
+            const child = cat.children.find(c => c.name === childName);
+            if (!child || child.articles.includes(artName)) return;
+            child.articles.push(artName); saveCategoryOverrides(); homeEditingChildName = childName;
+            const prevQ = (document.getElementById('homeCatChildSearch') || {}).value || '';
+            renderHomeCatEditPanel();
+            const inp = document.getElementById('homeCatChildSearch');
+            if (inp && prevQ) { inp.value = prevQ; _renderEditSuggest('homeCatChildSearch','homeCatChildSuggest'); inp.focus(); }
+        }
+        function catRemoveArticleFromChild(catName, childName, artName) {
+            const cat = QUICK_ACCESS.find(c => c.cat === catName); if (!cat || !cat.children) return;
+            const child = cat.children.find(c => c.name === childName); if (!child) return;
+            child.articles = child.articles.filter(a => a !== artName); saveCategoryOverrides(); renderHomeCatEditPanel();
+        }
+        function _artPhotoPickerHtml(artName) {
+            const esc = s => String(s).replace(/'/g,"\\'");
+            const artCands = getArticleImageCandidates(artName);
+            const curPhoto = homeArticlePhotos[artName] || null;
+            let h = '<div class="art-photo-picker">';
+            h += '<div class="art-photo-auto' + (!curPhoto ? ' active' : '') + '" onclick="catSetArtPhoto(\''+esc(artName)+'\',null)">↩️</div>';
+            artCands.forEach(url => { h += '<img class="art-photo-opt'+(curPhoto===url?' active':'')+'" src="'+url+'" referrerpolicy="no-referrer" loading="lazy" onclick="catSetArtPhoto(\''+esc(artName)+'\',\''+url.replace(/'/g,"\\'")+'\')">'; });
+            return h + '</div>';
+        }
+        function catToggleArtPhotoRow(artName) { _editPhotoOpenArt = _editPhotoOpenArt === artName ? null : artName; renderHomeCatEditPanel(); }
+        function catSetArtPhoto(artName, url) {
+            if (url) homeArticlePhotos[artName] = url; else delete homeArticlePhotos[artName];
+            saveCategoryOverrides(); _editPhotoOpenArt = null; renderHomeCatEditPanel();
+        }
+        function toggleAddCatForm() {
+            _addingNewCat = !_addingNewCat; homeEditingCatName = null; renderHomeScreen();
+            if (_addingNewCat) setTimeout(() => { const inp = document.getElementById('newCatNameInput'); if (inp) inp.focus(); }, 50);
+        }
+        function saveNewCat() {
+            const name = (document.getElementById('newCatNameInput') || {}).value || '';
+            const icon = (document.getElementById('newCatIconInput') || {}).value || '📦';
+            if (!name.trim()) { toast('Ingresá un nombre','warning'); return; }
+            if (QUICK_ACCESS.find(c => c.cat === name.trim())) { toast('Ya existe','warning'); return; }
+            QUICK_ACCESS.push({ icon: icon.trim() || '📦', cat: name.trim(), articles: [], subcats: [], articleSubcats: {}, children: [] });
+            saveCategoryOverrides(); _addingNewCat = false; homeEditingCatName = name.trim(); renderHomeScreen();
+            setTimeout(() => { const p = document.getElementById('homeCatEditPanel'); if (p) p.scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 80);
+        }
+        function deleteCat(catName) {
+            if (!confirm('¿Eliminar "' + catName + '"?')) return;
+            const idx = QUICK_ACCESS.findIndex(c => c.cat === catName); if (idx < 0) return;
+            QUICK_ACCESS.splice(idx, 1); saveCategoryOverrides();
+            if (homeEditingCatName === catName) homeEditingCatName = null; renderHomeScreen();
+        }
+
+        // ── Drag tiles de categoría ──
+        let _dragCatIdx = null, _dragGhost = null, _dragOverIdx = null, _catLongPressTimer = null, _catLongPressFired = false;
+        function _catDragBegin(ci, tile, clientX, clientY) {
+            _catLongPressFired = true; if (navigator.vibrate) navigator.vibrate(35);
+            _dragCatIdx = ci; _dragOverIdx = null;
+            const r = tile.getBoundingClientRect();
+            _dragGhost = tile.cloneNode(true);
+            _dragGhost.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;width:'+r.width+'px;opacity:0.88;box-shadow:0 8px 28px rgba(0,0,0,0.45);border:2px solid var(--primary);border-radius:16px;overflow:hidden;transition:none;left:'+(clientX-r.width/2)+'px;top:'+(clientY-r.height/2)+'px;';
+            document.body.appendChild(_dragGhost); tile.classList.add('dragging');
+        }
+        function _catDragMoveXY(clientX, clientY) {
+            if (_dragCatIdx === null || !_dragGhost) return;
+            _dragGhost.style.left = (clientX - _dragGhost.offsetWidth/2) + 'px';
+            _dragGhost.style.top = (clientY - _dragGhost.offsetHeight/2) + 'px';
+            _dragGhost.style.display = 'none';
+            const el = document.elementFromPoint(clientX, clientY);
+            _dragGhost.style.display = '';
+            document.querySelectorAll('.home-cat-tile[data-ci]').forEach(ti => ti.classList.remove('drag-over'));
+            if (el) { const target = el.closest('.home-cat-tile[data-ci]'); if (target) { const ti = parseInt(target.dataset.ci); if (!isNaN(ti) && ti !== _dragCatIdx) { target.classList.add('drag-over'); _dragOverIdx = ti; } else _dragOverIdx = null; } }
+        }
+        function _catDragFinish() {
+            if (_dragGhost) { _dragGhost.remove(); _dragGhost = null; }
+            document.querySelectorAll('.home-cat-tile').forEach(t => t.classList.remove('dragging','drag-over'));
+            if (_dragCatIdx !== null && _dragOverIdx !== null && _dragCatIdx !== _dragOverIdx) { [QUICK_ACCESS[_dragCatIdx], QUICK_ACCESS[_dragOverIdx]] = [QUICK_ACCESS[_dragOverIdx], QUICK_ACCESS[_dragCatIdx]]; saveCategoryOverrides(); }
+            _dragCatIdx = null; _dragOverIdx = null; renderHomeScreen();
+        }
+        function catTileLongPress(e, ci) {
+            if (!homeEditMode) return;
+            const tile = e.currentTarget, touch = e.touches[0];
+            let startX = touch.clientX, startY = touch.clientY, lastX = startX, lastY = startY;
+            _catLongPressFired = false;
+            const startDrag = () => { _catDragBegin(ci, tile, lastX, lastY); document.addEventListener('touchmove', _catTouchMove, {passive:false}); document.addEventListener('touchend', _catTouchEnd); cleanup(); };
+            const onMove = (ev) => { lastX = ev.touches[0].clientX; lastY = ev.touches[0].clientY; if (Math.abs(lastX-startX) > 20 || Math.abs(lastY-startY) > 20) { clearTimeout(_catLongPressTimer); cleanup(); } };
+            const onEnd = () => { clearTimeout(_catLongPressTimer); cleanup(); };
+            const cleanup = () => { document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onEnd); };
+            _catLongPressTimer = setTimeout(startDrag, 380);
+            document.addEventListener('touchmove', onMove, {passive:true}); document.addEventListener('touchend', onEnd);
+        }
+        function _catTouchMove(e) { e.preventDefault(); _catDragMoveXY(e.touches[0].clientX, e.touches[0].clientY); }
+        function _catTouchEnd() { document.removeEventListener('touchmove', _catTouchMove); document.removeEventListener('touchend', _catTouchEnd); _catDragFinish(); }
+        function catTileMouseDown(e, ci) {
+            if (!homeEditMode || e.button !== 0) return;
+            const tile = e.currentTarget; let startX = e.clientX, startY = e.clientY, lastX = startX, lastY = startY; _catLongPressFired = false;
+            const startDrag = () => { _catDragBegin(ci, tile, lastX, lastY); document.addEventListener('mousemove', _catMouseMove); document.addEventListener('mouseup', _catMouseEnd); cleanup(); };
+            const onMove = (ev) => { lastX = ev.clientX; lastY = ev.clientY; if (Math.abs(lastX-startX) > 20 || Math.abs(lastY-startY) > 20) { clearTimeout(_catLongPressTimer); cleanup(); } };
+            const onEnd = () => { clearTimeout(_catLongPressTimer); cleanup(); };
+            const cleanup = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onEnd); };
+            _catLongPressTimer = setTimeout(startDrag, 380);
+            document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onEnd);
+        }
+        function _catMouseMove(e) { _catDragMoveXY(e.clientX, e.clientY); }
+        function _catMouseEnd() { document.removeEventListener('mousemove', _catMouseMove); document.removeEventListener('mouseup', _catMouseEnd); _catDragFinish(); }
+        function catTileClick(ci) { if (_catLongPressFired) { _catLongPressFired = false; return; } openHomeCatEdit(QUICK_ACCESS[ci].cat); }
+
+        // ── Drag artículos en el panel de edición ──
+        let _dragArtIdx = null, _dragArtGhost = null, _dragArtOverIdx = null, _dragArtList = null;
+        function artDragStart(e, idx) { const cat = QUICK_ACCESS.find(c => c.cat === homeEditingCatName); _dragArtList = cat ? cat.articles : null; _artDragBegin(e, idx); }
+        function artDragChildStart(e, idx) { const cat = QUICK_ACCESS.find(c => c.cat === homeEditingCatName); const child = cat && (cat.children||[]).find(c=>c.name===homeEditingChildName); _dragArtList = child ? child.articles : null; _artDragBegin(e, idx); }
+        function artDragGrandchildStart(e, idx) { const cat = QUICK_ACCESS.find(c=>c.cat===homeEditingCatName); const child = cat&&(cat.children||[]).find(c=>c.name===homeEditingChildName); const gc = child&&(child.children||[]).find(c=>c.name===homeEditingGrandchildName); _dragArtList = gc ? (gc.articles||[]) : null; _artDragBegin(e, idx); }
+        function _artDragBegin(e, idx) {
+            e.preventDefault(); e.stopPropagation(); _dragArtIdx = idx; _dragArtOverIdx = null;
+            const row = e.currentTarget.closest('.home-edit-art-row'), r = row.getBoundingClientRect();
+            _dragArtGhost = row.cloneNode(true);
+            _dragArtGhost.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;width:'+r.width+'px;opacity:0.88;box-shadow:0 4px 18px rgba(0,0,0,0.45);background:var(--bg-card);border-radius:8px;border:1px solid var(--primary);padding:7px 5px;box-sizing:border-box;left:'+r.left+'px;top:'+r.top+'px;transition:none;';
+            document.body.appendChild(_dragArtGhost); row.classList.add('dragging');
+            if (e.type === 'mousedown') { document.addEventListener('mousemove', _artMouseMove); document.addEventListener('mouseup', _artMouseEnd); }
+            else { document.addEventListener('touchmove', _artDragMove, {passive:false}); document.addEventListener('touchend', _artDragEnd); }
+        }
+        function _artDragMoveXY(cx, cy) {
+            if (_dragArtIdx === null || !_dragArtGhost) return;
+            _dragArtGhost.style.left = (cx - _dragArtGhost.offsetWidth/2) + 'px';
+            _dragArtGhost.style.top = (cy - _dragArtGhost.offsetHeight/2) + 'px';
+            _dragArtGhost.style.display = 'none';
+            const el = document.elementFromPoint(cx, cy); _dragArtGhost.style.display = '';
+            document.querySelectorAll('.home-edit-art-row[data-ai]').forEach(r => r.classList.remove('drag-over'));
+            if (el) { const target = el.closest('.home-edit-art-row[data-ai]'); if (target) { const ti = parseInt(target.dataset.ai); if (!isNaN(ti) && ti !== _dragArtIdx) { target.classList.add('drag-over'); _dragArtOverIdx = ti; } else _dragArtOverIdx = null; } }
+        }
+        function _artDragMove(e) { e.preventDefault(); const t = e.touches[0]; _artDragMoveXY(t.clientX, t.clientY); }
+        function _artMouseMove(e) { _artDragMoveXY(e.clientX, e.clientY); }
+        function _artMouseEnd() { document.removeEventListener('mousemove', _artMouseMove); document.removeEventListener('mouseup', _artMouseEnd); _artDragEnd(); }
+        function _artDragEnd() {
+            document.removeEventListener('touchmove', _artDragMove); document.removeEventListener('touchend', _artDragEnd);
+            if (_dragArtGhost) { _dragArtGhost.remove(); _dragArtGhost = null; }
+            document.querySelectorAll('.home-edit-art-row').forEach(r => r.classList.remove('dragging','drag-over'));
+            if (_dragArtIdx !== null && _dragArtOverIdx !== null && _dragArtIdx !== _dragArtOverIdx && _dragArtList) { const [moved] = _dragArtList.splice(_dragArtIdx,1); _dragArtList.splice(_dragArtOverIdx,0,moved); saveCategoryOverrides(); }
+            _dragArtIdx = null; _dragArtOverIdx = null; _dragArtList = null; renderHomeCatEditPanel();
+        }
+
+        // ── Drag subcategorías/hijos en el panel ──
+        let _dragChildIdx = null, _dragChildGhost = null, _dragChildOverIdx = null, _dragChildList = null;
+        function childDragStart(e, idx) {
+            e.preventDefault(); e.stopPropagation();
+            const cat = QUICK_ACCESS.find(c => c.cat === homeEditingCatName);
+            const child = homeEditingChildName && (cat.children||[]).find(c=>c.name===homeEditingChildName);
+            _dragChildList = child ? (child.children||null) : (cat ? (cat.children||null) : null);
+            if (!_dragChildList) return;
+            _dragChildIdx = idx; _dragChildOverIdx = null;
+            const row = e.currentTarget.closest('.home-edit-child-row'), r = row.getBoundingClientRect();
+            _dragChildGhost = row.cloneNode(true);
+            _dragChildGhost.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;width:'+r.width+'px;opacity:0.88;box-shadow:0 4px 18px rgba(0,0,0,0.45);background:var(--bg-card);border-radius:8px;border:1px solid var(--primary);box-sizing:border-box;left:'+r.left+'px;top:'+r.top+'px;transition:none;';
+            document.body.appendChild(_dragChildGhost); row.classList.add('dragging');
+            if (e.type === 'mousedown') { document.addEventListener('mousemove', _childMouseMove); document.addEventListener('mouseup', _childMouseEnd); }
+            else { document.addEventListener('touchmove', _childTouchMove, {passive:false}); document.addEventListener('touchend', _childDragEnd); }
+        }
+        function _childDragMoveXY(cx, cy) {
+            if (_dragChildIdx === null || !_dragChildGhost) return;
+            _dragChildGhost.style.left = (cx - _dragChildGhost.offsetWidth/2) + 'px';
+            _dragChildGhost.style.top = (cy - _dragChildGhost.offsetHeight/2) + 'px';
+            _dragChildGhost.style.display = 'none';
+            const el = document.elementFromPoint(cx, cy); _dragChildGhost.style.display = '';
+            document.querySelectorAll('.home-edit-child-row[data-ci]').forEach(r => r.classList.remove('drag-over'));
+            if (el) { const target = el.closest('.home-edit-child-row[data-ci]'); if (target) { const ti = parseInt(target.dataset.ci); if (!isNaN(ti) && ti !== _dragChildIdx) { target.classList.add('drag-over'); _dragChildOverIdx = ti; } else _dragChildOverIdx = null; } }
+        }
+        function _childTouchMove(e) { e.preventDefault(); const t = e.touches[0]; _childDragMoveXY(t.clientX, t.clientY); }
+        function _childMouseMove(e) { _childDragMoveXY(e.clientX, e.clientY); }
+        function _childMouseEnd() { document.removeEventListener('mousemove', _childMouseMove); document.removeEventListener('mouseup', _childMouseEnd); _childDragEnd(); }
+        function _childDragEnd() {
+            document.removeEventListener('touchmove', _childTouchMove); document.removeEventListener('touchend', _childDragEnd);
+            if (_dragChildGhost) { _dragChildGhost.remove(); _dragChildGhost = null; }
+            document.querySelectorAll('.home-edit-child-row').forEach(r => r.classList.remove('dragging','drag-over'));
+            if (_dragChildIdx !== null && _dragChildOverIdx !== null && _dragChildIdx !== _dragChildOverIdx && _dragChildList) { const [moved] = _dragChildList.splice(_dragChildIdx,1); _dragChildList.splice(_dragChildOverIdx,0,moved); saveCategoryOverrides(); }
+            _dragChildIdx = null; _dragChildOverIdx = null; _dragChildList = null; renderHomeCatEditPanel();
+        }
+
+        function renderHomeCatEditPanel() {
+            const panel = document.getElementById('homeCatEditPanel') || document.getElementById('_catEditSheetPanel');
+            if (!panel || !homeEditingCatName) return;
+            const cat = QUICK_ACCESS.find(c => c.cat === homeEditingCatName); if (!cat) return;
+            const esc = s => String(s).replace(/'/g,"\\'"); const catEsc = esc(cat.cat);
+
+            if (homeEditingGrandchildName) {
+                const child = (cat.children||[]).find(c=>c.name===homeEditingChildName);
+                if (!child) { homeEditingGrandchildName = null; renderHomeCatEditPanel(); return; }
+                const gc = (child.children||[]).find(c=>c.name===homeEditingGrandchildName);
+                if (!gc) { homeEditingGrandchildName = null; renderHomeCatEditPanel(); return; }
+                const childEsc = esc(child.name), gcEsc = esc(gc.name);
+                const gcCands = gatherImgCandidates(gc.articles||[]).slice(0,16);
+                let html = '<button style="background:none;border:none;color:var(--primary);font-size:0.82em;font-weight:700;cursor:pointer;padding:0 0 8px;" onclick="homeEditingGrandchildName=null;renderHomeCatEditPanel()">← '+cat.icon+' '+cat.cat+' › '+child.name+'</button>';
+                html += '<div class="home-edit-panel-title">✏️ '+child.name+' › '+gc.name+'</div>';
+                html += '<div class="home-edit-section-label">Artículos ('+(gc.articles||[]).length+')</div>';
+                (gc.articles||[]).forEach((artName,idx) => {
+                    const artEsc=esc(artName), artSubs=(gc.articleSubcats&&gc.articleSubcats[artName])||[];
+                    html += '<div class="home-edit-art-row" data-ai="'+idx+'"><div class="art-drag-handle" ontouchstart="artDragGrandchildStart(event,'+idx+')" onmousedown="artDragGrandchildStart(event,'+idx+')">⋮⋮</div><div class="art-row-body"><span class="home-edit-art-name">'+artName+'</span>';
+                    if (gc.subcats&&gc.subcats.length) html += '<span class="home-art-subcats">'+gc.subcats.map(s=>'<span class="home-art-sub-chip'+(artSubs.includes(s)?' on':'')+'" onclick="catToggleGrandchildArticleSubcat(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\',\''+artEsc+'\',\''+esc(s)+'\')">'+s+'</span>').join('')+'</span>';
+                    html += '</div><button class="home-edit-art-btn" onclick="catRemoveArticleFromGrandchild(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\',\''+artEsc+'\')" style="color:var(--danger)">✕</button></div>';
+                });
+                html += '<div class="home-edit-section-label">Filtros rápidos</div>';
+                if (gc.subcats&&gc.subcats.length) html += '<div class="home-edit-subcat-row">'+gc.subcats.map(s=>'<span class="home-edit-subcat-chip">'+s+' <span class="x" onclick="catRemoveGrandchildSubcat(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\',\''+esc(s)+'\')">✕</span></span>').join('')+'</div>';
+                else html += '<div style="font-size:0.78em;color:var(--text-secondary);margin-bottom:6px;">Sin filtros.</div>';
+                html += '<div style="display:flex;gap:6px;margin-top:8px;"><input id="homeCatGcNewSubcat" class="home-edit-search" style="flex:1;margin:0;" placeholder="Ej: Liso..." onkeydown="if(event.key===\'Enter\')catAddGrandchildSubcat(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\')"><button onclick="catAddGrandchildSubcat(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\')" style="padding:0 12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">+</button></div>';
+                html += '<div class="home-edit-section-label">Agregar artículo</div>';
+                html += '<input id="homeCatGcSearch" class="home-edit-search" placeholder="Buscar..." oninput="renderHomeCatGcEditSuggest()">';
+                html += '<div id="homeCatGcSuggest" class="home-edit-suggest" style="display:none;"></div>';
+                if (gcCands.length) { html += '<div class="home-edit-section-label">Foto de portada</div><div class="home-photo-picker"><div class="home-photo-opt-auto'+(!gc.img?' active':'')+'" onclick="catSetGrandchildPhoto(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\',null)">↩️</div>'+gcCands.map(url=>'<img class="home-photo-opt'+(gc.img===url?' active':'')+'" src="'+url+'" referrerpolicy="no-referrer" loading="lazy" onclick="catSetGrandchildPhoto(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\',\''+url.replace(/'/g,"\\'")+'\')">').join('')+'</div>'; }
+                html += '<button style="width:100%;margin-top:14px;background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:8px;font-size:0.8em;font-weight:700;cursor:pointer;" onclick="catRemoveGrandchild(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\')">🗑️ Eliminar sub-subcategoría</button>';
+                panel.innerHTML = html; return;
+            }
+
+            if (homeEditingChildName) {
+                const child = (cat.children||[]).find(c=>c.name===homeEditingChildName);
+                if (!child) { homeEditingChildName = null; renderHomeCatEditPanel(); return; }
+                const childEsc = esc(child.name), childCands = gatherImgCandidates(child.articles).slice(0,16);
+                let html = '<button style="background:none;border:none;color:var(--primary);font-size:0.82em;font-weight:700;cursor:pointer;padding:0 0 8px;" onclick="homeEditingChildName=null;renderHomeCatEditPanel()">← '+cat.icon+' '+cat.cat+'</button>';
+                html += '<div class="home-edit-panel-title">✏️ '+cat.cat+' › '+child.name+'</div>';
+                html += '<div class="home-edit-section-label">Artículos ('+child.articles.length+')</div>';
+                child.articles.forEach((artName,idx) => {
+                    const artEsc=esc(artName), photoOpen=_editPhotoOpenArt===artName, artSubs=(child.articleSubcats&&child.articleSubcats[artName])||[];
+                    html += '<div class="home-edit-art-row" data-ai="'+idx+'"><div class="art-drag-handle" ontouchstart="artDragChildStart(event,'+idx+')" onmousedown="artDragChildStart(event,'+idx+')">⋮⋮</div><div class="art-row-body"><span class="home-edit-art-name">'+artName+'</span>';
+                    if (child.subcats&&child.subcats.length) html += '<span class="home-art-subcats">'+child.subcats.map(s=>'<span class="home-art-sub-chip'+(artSubs.includes(s)?' on':'')+'" onclick="catToggleChildArticleSubcat(\''+catEsc+'\',\''+childEsc+'\',\''+artEsc+'\',\''+esc(s)+'\')">'+s+'</span>').join('')+'</span>';
+                    html += '</div><button class="home-edit-art-btn" onclick="catToggleArtPhotoRow(\''+artEsc+'\')" style="color:var(--primary);font-size:0.85em;">📷</button><button class="home-edit-art-btn" onclick="catRemoveArticleFromChild(\''+catEsc+'\',\''+childEsc+'\',\''+artEsc+'\')" style="color:var(--danger)">✕</button></div>';
+                    if (photoOpen) html += _artPhotoPickerHtml(artName);
+                });
+                html += '<div class="home-edit-section-label">Filtros rápidos</div>';
+                if (child.subcats&&child.subcats.length) html += '<div class="home-edit-subcat-row">'+child.subcats.map(s=>'<span class="home-edit-subcat-chip">'+s+' <span class="x" onclick="catRemoveChildSubcat(\''+catEsc+'\',\''+childEsc+'\',\''+esc(s)+'\')">✕</span></span>').join('')+'</div>';
+                else html += '<div style="font-size:0.78em;color:var(--text-secondary);margin-bottom:6px;">Sin filtros.</div>';
+                html += '<div style="display:flex;gap:6px;margin-top:8px;"><input id="homeCatChildNewSubcat" class="home-edit-search" style="flex:1;margin:0;" placeholder="Ej: Cuerina..." onkeydown="if(event.key===\'Enter\')catAddChildSubcat(\''+catEsc+'\',\''+childEsc+'\')"><button onclick="catAddChildSubcat(\''+catEsc+'\',\''+childEsc+'\')" style="padding:0 12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">+</button></div>';
+                html += '<div class="home-edit-section-label">Agregar artículo</div>';
+                html += '<input id="homeCatChildSearch" class="home-edit-search" placeholder="Buscar..." oninput="renderHomeCatChildEditSuggest()"><div id="homeCatChildSuggest" class="home-edit-suggest" style="display:none;"></div>';
+                if (childCands.length) { html += '<div class="home-edit-section-label">Foto de portada</div><div class="home-photo-picker"><div class="home-photo-opt-auto'+(!child.img?' active':'')+'" onclick="catSetChildPhoto(\''+catEsc+'\',\''+childEsc+'\',null)">↩️</div>'+childCands.map(url=>'<img class="home-photo-opt'+(child.img===url?' active':'')+'" src="'+url+'" referrerpolicy="no-referrer" loading="lazy" onclick="catSetChildPhoto(\''+catEsc+'\',\''+childEsc+'\',\''+url.replace(/'/g,"\\'")+'\')">').join('')+'</div>'; }
+                html += '<div class="home-edit-section-label">Sub-subcategorías</div>';
+                (child.children||[]).forEach((gc,ci) => {
+                    const gcThumb=getChildCoverImg(gc), gcEsc=esc(gc.name);
+                    html += '<div class="home-edit-child-row" data-ci="'+ci+'" onclick="openHomeCatGrandchildEdit(\''+gcEsc+'\')"><div class="art-drag-handle" ontouchstart="childDragStart(event,'+ci+')" onmousedown="childDragStart(event,'+ci+')">⋮⋮</div>';
+                    if (gcThumb) html += '<img class="home-edit-child-thumb" src="'+gcThumb+'" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">'; else html += '<div class="home-edit-child-thumb-ph">📦</div>';
+                    html += '<div class="home-edit-child-info"><div class="home-edit-child-name">'+gc.name+'</div><div class="home-edit-child-count">'+((gc.articles||[]).length)+' artículos</div></div>';
+                    html += '<button class="home-edit-art-btn" onclick="event.stopPropagation();catRemoveGrandchild(\''+catEsc+'\',\''+childEsc+'\',\''+gcEsc+'\')" style="color:var(--danger)">✕</button></div>';
+                });
+                html += '<div style="display:flex;gap:6px;margin-top:8px;"><input id="homeCatChildNewGc" class="home-edit-search" style="margin:0;flex:1;" placeholder="Ej: Cuerina, Lisa..." onkeydown="if(event.key===\'Enter\')catAddGrandchild(\''+catEsc+'\',\''+childEsc+'\')"><button style="background:var(--success);color:#1a2744;border:none;border-radius:8px;padding:0 14px;font-weight:700;font-size:0.85em;cursor:pointer;" onclick="catAddGrandchild(\''+catEsc+'\',\''+childEsc+'\')">+</button></div>';
+                html += '<button style="width:100%;margin-top:14px;background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:8px;font-size:0.8em;font-weight:700;cursor:pointer;" onclick="catRemoveChild(\''+catEsc+'\',\''+childEsc+'\')">🗑️ Eliminar subcategoría</button>';
+                panel.innerHTML = html; return;
+            }
+
+            const candidates = gatherImgCandidates(cat.articles).slice(0,16);
+            let html = '<div class="home-edit-panel-title">✏️ Editando: '+cat.icon+' '+cat.cat+'</div>';
+            html += '<div class="home-edit-section-label">Artículos ('+cat.articles.length+')</div>';
+            cat.articles.forEach((artName,idx) => {
+                const artSubs=(cat.articleSubcats&&cat.articleSubcats[artName])||[], artEsc=esc(artName), photoOpen=_editPhotoOpenArt===artName;
+                html += '<div class="home-edit-art-row" data-ai="'+idx+'"><div class="art-drag-handle" ontouchstart="artDragStart(event,'+idx+')" onmousedown="artDragStart(event,'+idx+')">⋮⋮</div><div class="art-row-body"><span class="home-edit-art-name">'+artName+'</span>';
+                if (cat.subcats&&cat.subcats.length) html += '<span class="home-art-subcats">'+cat.subcats.map(s=>'<span class="home-art-sub-chip'+(artSubs.includes(s)?' on':'')+'" onclick="catToggleArticleSubcat(\''+catEsc+'\',\''+artEsc+'\',\''+esc(s)+'\')">'+s+'</span>').join('')+'</span>';
+                html += '</div><button class="home-edit-art-btn" onclick="catToggleArtPhotoRow(\''+artEsc+'\')" style="color:var(--primary);font-size:0.85em;">📷</button><button class="home-edit-art-btn" onclick="catRemoveArticleFromEdit(\''+catEsc+'\',\''+artEsc+'\')" style="color:var(--danger)">✕</button></div>';
+                if (photoOpen) html += _artPhotoPickerHtml(artName);
+            });
+            html += '<div class="home-edit-section-label">Agregar artículo</div>';
+            html += '<input id="homeCatEditSearch" class="home-edit-search" placeholder="Buscar..." oninput="renderHomeCatEditSuggest()"><div id="homeCatEditSuggest" class="home-edit-suggest" style="display:none;"></div>';
+            if (candidates.length) { html += '<div class="home-edit-section-label">Foto de portada</div><div class="home-photo-picker"><div class="home-photo-opt-auto'+(!cat.img?' active':'')+'" onclick="catSetPhoto(\''+catEsc+'\',null)">↩️</div>'+candidates.map(url=>'<img class="home-photo-opt'+(cat.img===url?' active':'')+'" src="'+url+'" referrerpolicy="no-referrer" loading="lazy" onclick="catSetPhoto(\''+catEsc+'\',\''+url.replace(/'/g,"\\'")+'\')">').join('')+'</div>'; }
+            html += '<div class="home-edit-section-label">Filtros rápidos</div>';
+            html += '<div class="home-edit-subcat-row">'+(cat.subcats||[]).map(s=>'<span class="home-edit-subcat-chip">'+s+' <span class="x" onclick="catRemoveSubcat(\''+catEsc+'\',\''+esc(s)+'\')">✕</span></span>').join('')+'</div>';
+            html += '<div style="display:flex;gap:6px;margin-top:8px;"><input id="homeCatNewSubcat" class="home-edit-search" style="margin:0;flex:1;" placeholder="Ej: Invierno..." onkeydown="if(event.key===\'Enter\')catAddSubcat(\''+catEsc+'\')"><button style="background:var(--primary);color:#000;border:none;border-radius:8px;padding:0 14px;font-weight:700;font-size:0.85em;cursor:pointer;" onclick="catAddSubcat(\''+catEsc+'\')">+</button></div>';
+            html += '<div class="home-edit-section-label">Subcategorías (navegables)</div>';
+            (cat.children||[]).forEach((child,ci) => {
+                const childThumb=getChildCoverImg(child), childEsc=esc(child.name);
+                html += '<div class="home-edit-child-row" data-ci="'+ci+'" onclick="openHomeCatChildEdit(\''+childEsc+'\')"><div class="art-drag-handle" ontouchstart="childDragStart(event,'+ci+')" onmousedown="childDragStart(event,'+ci+')">⋮⋮</div>';
+                if (childThumb) html += '<img class="home-edit-child-thumb" src="'+childThumb+'" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">'; else html += '<div class="home-edit-child-thumb-ph">📦</div>';
+                html += '<div class="home-edit-child-info"><div class="home-edit-child-name">'+child.name+'</div><div class="home-edit-child-count">'+child.articles.length+' artículos</div></div>';
+                html += '<button class="home-edit-art-btn" onclick="event.stopPropagation();catRemoveChild(\''+catEsc+'\',\''+childEsc+'\')" style="color:var(--danger)">✕</button></div>';
+            });
+            html += '<div style="display:flex;gap:6px;margin-top:8px;"><input id="homeCatNewChild" class="home-edit-search" style="margin:0;flex:1;" placeholder="Ej: Polleras, Remeras..." onkeydown="if(event.key===\'Enter\')catAddChild(\''+catEsc+'\')"><button style="background:var(--success);color:#1a2744;border:none;border-radius:8px;padding:0 14px;font-weight:700;font-size:0.85em;cursor:pointer;" onclick="catAddChild(\''+catEsc+'\')">+</button></div>';
+            html += '<button style="width:100%;margin-top:14px;background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:8px;font-size:0.8em;font-weight:700;cursor:pointer;" onclick="deleteCat(\''+catEsc+'\')">🗑️ Eliminar categoría</button>';
+            panel.innerHTML = html;
+        }
+
         function renderHomeScreen() {
             $('homeDashboard').style.display = 'block';
             $('productList').style.display = 'none';
             $('pagination').innerHTML = '';
             $('resultsInfo').style.display = 'none';
+            $('stockFilters').style.display = 'none';
+            $('locationSearch').style.display = 'none';
+            $('filtersCollapse').style.display = 'none';
 
-            let html = '<div class="home-dashboard">';
-            html += '<div class="home-welcome">⚡ ' + PRODUCTS.length.toLocaleString() + ' SKUs cargados</div>';
+            const esc = s => String(s).replace(/'/g, "\\'");
+            let html = '';
 
             if (!homeCatSelected) {
-                // ── Nivel 1: tiles de categoría ──
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+                    '<span style="font-size:0.75em;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.4px;">Categorías</span>' +
+                    '<button class="home-edit-btn' + (homeEditMode ? ' listo' : '') + '" onclick="toggleHomeEditMode()">' + (homeEditMode ? '✓ Listo' : 'Editar') + '</button></div>';
+
                 html += '<div class="home-cats-grid">';
-                QUICK_ACCESS.forEach(cat => {
-                    // Buscar imagen del primer artículo que tenga
-                    let imgUrl = '';
-                    for (const artName of cat.articles) {
-                        imgUrl = getArticleImage(artName);
-                        if (imgUrl) break;
-                    }
-                    const totalStock = cat.articles.reduce((sum, a) => sum + (getArticleStock(a) || 0), 0);
-                    html += '<div class="home-cat-tile" onclick="selectHomeCat(\'' + cat.cat.replace(/'/g, "\\'") + '\')">';
-                    if (imgUrl) {
-                        html += '<img class="home-cat-img" src="' + imgUrl + '" onerror="this.outerHTML=\'<div class=home-cat-img-placeholder>' + cat.icon + '</div>\'">';
+                QUICK_ACCESS.forEach((cat, ci) => {
+                    const candidates = gatherImgCandidates(cat.articles);
+                    const imgUrl = cat.img || candidates[0] || '';
+                    const restJson = JSON.stringify(candidates.filter(u => u !== imgUrl).slice(0,7)).replace(/"/g,'&quot;');
+                    if (homeEditMode) {
+                        const isEditing = homeEditingCatName === cat.cat;
+                        html += '<div class="home-cat-tile edit-mode' + (isEditing ? ' editing' : '') + '" data-ci="' + ci + '" ontouchstart="catTileLongPress(event,' + ci + ')" onmousedown="catTileMouseDown(event,' + ci + ')" onclick="catTileClick(' + ci + ')">';
+                        html += '<div class="cat-drag-handle" style="pointer-events:none;">⋮⋮</div>';
                     } else {
-                        html += '<div class="home-cat-img-placeholder">' + cat.icon + '</div>';
+                        html += '<div class="home-cat-tile" onclick="selectHomeCat(\'' + esc(cat.cat) + '\')">';
                     }
-                    html += '<div class="home-cat-label-tile">' + cat.icon + ' ' + cat.cat +
-                        '<span class="home-cat-count">' + cat.articles.length + ' artículos</span></div>';
-                    html += '</div>';
+                    html += imgUrl
+                        ? '<img class="home-cat-img" src="' + imgUrl + '" data-candidates="' + restJson + '" loading="lazy" referrerpolicy="no-referrer" onload="imgVerifyLoaded(this,\'home-cat-img-placeholder\',\'' + cat.icon + '\')" onerror="imgRetryOrFallback(this,\'home-cat-img-placeholder\',\'' + cat.icon + '\')">'
+                        : '<div class="home-cat-img-placeholder">' + cat.icon + '</div>';
+                    html += '<div class="home-cat-label-tile">' + cat.icon + ' ' + cat.cat + '<span class="home-cat-count">' + cat.articles.length + ' artículos</span></div></div>';
                 });
+                if (homeEditMode) html += '<div class="home-cat-tile-add" onclick="toggleAddCatForm()">＋<span style="font-size:0.72em;">Nueva categoría</span></div>';
                 html += '</div>';
+
+                if (homeEditMode && _addingNewCat) {
+                    html += '<div class="home-edit-panel" style="margin-bottom:8px;"><div class="home-edit-panel-title">＋ Nueva categoría</div>' +
+                        '<input id="newCatIconInput" class="home-edit-search" style="margin-bottom:6px;width:70px;" placeholder="📦" maxlength="4">' +
+                        '<input id="newCatNameInput" class="home-edit-search" placeholder="Nombre..." onkeydown="if(event.key===\'Enter\')saveNewCat()">' +
+                        '<button style="width:100%;background:var(--primary);color:#000;border:none;border-radius:8px;padding:9px;font-weight:700;font-size:0.85em;cursor:pointer;margin-top:6px;" onclick="saveNewCat()">Crear</button></div>';
+                }
+                if (homeEditMode && homeEditingCatName) html += '<div id="homeCatEditPanel" class="home-edit-panel"></div>';
+
+                if (!homeEditMode) {
+                    const recents = getRecentSearches();
+                    if (recents.length) {
+                        html += '<div class="home-recent-title">🕘 Últimas búsquedas</div><div class="home-recent-list">' +
+                            recents.map(r => {
+                                const safe = r.name.replace(/'/g, "\\'");
+                                return '<span class="home-recent-chip" onclick="commitSearch(\'' + safe + '\',' + (r.exact?'true':'false') + ')">🔍 ' + r.name + '<span class="home-recent-remove" onclick="event.stopPropagation();removeHomeRecentSearch(\'' + safe + '\')">✕</span></span>';
+                            }).join('') + '</div>';
+                    }
+                }
             } else {
-                // ── Nivel 2: artículos de la categoría seleccionada ──
                 const cat = QUICK_ACCESS.find(c => c.cat === homeCatSelected);
-                html += '<button class="home-back-btn" onclick="goHomeLevel1()">← Categorías</button>';
-                html += '<div class="home-cat-title">' + cat.icon + ' ' + cat.cat + '</div>';
+                const activeChild = cat && cat.children && cat.children.find(c => c.name === homeCatChild);
+                const activeGrandchild = activeChild && activeChild.children && activeChild.children.find(c => c.name === homeCatGrandchild);
+
+                if (activeGrandchild) {
+                    const gcEsc = esc(activeGrandchild.name);
+                    html += '<div class="home-subcat-row"><button class="home-back-btn" onclick="setHomeCatGrandchild(null)">← ' + activeChild.name + '</button>';
+                    if (activeGrandchild.subcats && activeGrandchild.subcats.length) {
+                        html += '<span class="home-subcat-chip' + (!homeCatSubcat?' active':'') + '" onclick="setHomeCatSubcat(null)">Todos</span>';
+                        activeGrandchild.subcats.forEach(s => { html += '<span class="home-subcat-chip' + (homeCatSubcat===s?' active':'') + '" onclick="setHomeCatSubcat(\'' + esc(s) + '\')">' + s + '</span>'; });
+                    }
+                    html += '<button class="home-edit-inline-btn" onclick="openCatEditSheet(\'' + esc(cat.cat) + '\',\'' + esc(activeChild.name) + '\',\'' + gcEsc + '\')">✏️</button></div>';
+                    html += '<div class="home-cat-title">' + cat.icon + ' ' + cat.cat + ' › ' + activeChild.name + ' › ' + activeGrandchild.name + '</div>';
+                    var catArticles = activeGrandchild.articles || [];
+                    if (homeCatSubcat && activeGrandchild.articleSubcats) catArticles = catArticles.filter(a => ((activeGrandchild.articleSubcats[a])||[]).includes(homeCatSubcat));
+
+                } else if (activeChild) {
+                    html += '<div class="home-subcat-row"><button class="home-back-btn" onclick="setHomeCatChild(null)">← ' + (cat?cat.cat:'Atrás') + '</button>';
+                    if (activeChild.subcats && activeChild.subcats.length) {
+                        html += '<span class="home-subcat-chip' + (!homeCatSubcat?' active':'') + '" onclick="setHomeCatSubcat(null)">Todos</span>';
+                        activeChild.subcats.forEach(s => { html += '<span class="home-subcat-chip' + (homeCatSubcat===s?' active':'') + '" onclick="setHomeCatSubcat(\'' + esc(s) + '\')">' + s + '</span>'; });
+                    }
+                    html += '<button class="home-edit-inline-btn" onclick="openCatEditSheet(\'' + esc(cat.cat) + '\',\'' + esc(activeChild.name) + '\')">✏️</button></div>';
+                    html += '<div class="home-cat-title">' + (cat?cat.icon+' '+cat.cat:'') + ' › ' + activeChild.name + '</div>';
+                    if (activeChild.children && activeChild.children.length) {
+                        html += '<div class="home-child-tiles">';
+                        activeChild.children.forEach(gc => {
+                            const gcImg = getChildCoverImg(gc);
+                            html += '<div class="home-child-tile" onclick="setHomeCatGrandchild(\'' + esc(gc.name) + '\')">';
+                            html += gcImg ? '<img class="home-child-tile-img" src="' + gcImg + '" loading="lazy" referrerpolicy="no-referrer">' : '<div class="home-child-tile-img-ph">📦</div>';
+                            html += '<div class="home-child-tile-label">' + gc.name + '</div><div class="home-child-tile-count">' + (gc.articles||[]).length + ' artículos</div></div>';
+                        });
+                        html += '</div>';
+                    }
+                    var catArticles = activeChild.articles;
+                    if (homeCatSubcat && activeChild.articleSubcats) catArticles = catArticles.filter(a => ((activeChild.articleSubcats[a])||[]).includes(homeCatSubcat));
+
+                } else {
+                    html += '<div class="home-subcat-row"><button class="home-back-btn" onclick="goHomeLevel1()">← Categorías</button>';
+                    if (cat && cat.subcats && cat.subcats.length) {
+                        html += '<span class="home-subcat-chip' + (!homeCatSubcat?' active':'') + '" onclick="setHomeCatSubcat(null)">Todos</span>';
+                        cat.subcats.forEach(s => { html += '<span class="home-subcat-chip' + (homeCatSubcat===s?' active':'') + '" onclick="setHomeCatSubcat(\'' + esc(s) + '\')">' + s + '</span>'; });
+                    }
+                    html += '<button class="home-edit-inline-btn" onclick="openCatEditSheet(\'' + esc(cat.cat) + '\')">✏️</button></div>';
+                    html += '<div class="home-cat-title">' + (cat?cat.icon+' '+cat.cat:'') + '</div>';
+                    if (cat && cat.children && cat.children.length && !homeCatSubcat) {
+                        html += '<div class="home-child-tiles">';
+                        cat.children.forEach(child => {
+                            const childImg = getChildCoverImg(child);
+                            html += '<div class="home-child-tile" onclick="setHomeCatChild(\'' + esc(child.name) + '\')">';
+                            html += childImg ? '<img class="home-child-tile-img" src="' + childImg + '" loading="lazy" referrerpolicy="no-referrer">' : '<div class="home-child-tile-img-ph">📦</div>';
+                            html += '<div class="home-child-tile-label">' + child.name + '</div><div class="home-child-tile-count">' + child.articles.length + ' artículos</div></div>';
+                        });
+                        html += '</div>';
+                    }
+                    var catArticles = cat ? cat.articles : [];
+                    if (homeCatSubcat && cat && cat.articleSubcats) catArticles = catArticles.filter(a => ((cat.articleSubcats[a])||[]).includes(homeCatSubcat));
+                }
+
                 html += '<div class="home-articles">';
-                cat.articles.forEach(artName => {
+                catArticles.forEach(artName => {
                     const stock = getArticleStock(artName);
-                    const imgUrl = getArticleImage(artName);
-                    const imgHtml = imgUrl
-                        ? '<img class="home-art-img" src="' + imgUrl + '" loading="lazy" onerror="this.outerHTML=\'<div class=home-art-img-placeholder>📦</div>\'">'
-                        : '<div class="home-art-img-placeholder">📦</div>';
+                    const candidates = getArticleImageCandidates(artName);
+                    const manualPhoto = homeArticlePhotos[artName] || '';
+                    const allCands = manualPhoto ? [manualPhoto, ...candidates.filter(u => u !== manualPhoto)] : candidates;
+                    const candidateData = JSON.stringify(allCands.slice(0, 10)).replace(/"/g, '&quot;');
+                    const imgHtml = '<div class="home-art-img-placeholder" data-imgcandidates="' + candidateData + '">📦</div>';
                     const stockHtml = stock !== null
-                        ? '<span class="home-art-stock">' + stock + ' uds</span>'
-                        : '<span class="home-art-stock" style="color:var(--text-secondary)">—</span>';
-                    html += '<button class="home-article-btn" onclick="searchArticle(\'' + artName.replace(/'/g, "\\'") + '\')">' +
-                        imgHtml +
-                        '<span class="home-art-info"><span class="home-art-name">' + artName + '</span><br>' + stockHtml + '</span>' +
-                        '</button>';
+                        ? '<span class="home-art-stock' + (stock<=0?' zero':'') + '">' + stock + ' uds</span>'
+                        : '<span class="home-art-stock" style="color:var(--text-secondary);background:none;">sin datos</span>';
+                    const artKey = artName.trim().toLowerCase();
+                    const pMay = articlePricesMay[artKey] || 0;
+                    const pMin = articlePricesMin[artKey] || 0;
+                    const pricesHtml = (pMay > 0 || pMin > 0)
+                        ? '<span class="home-art-prices">' +
+                          (pMay > 0 ? '<span class="home-art-price-may">May $' + Math.round(pMay).toLocaleString() + '</span>' : '') +
+                          (pMin > 0 ? '<span class="home-art-price-min">Min $' + Math.round(pMin).toLocaleString() + '</span>' : '') +
+                          '</span>'
+                        : '';
+                    html += '<button class="home-article-btn" onpointerdown="artLongPressStart(\'' + esc(artName) + '\')" onpointerup="artLongPressEnd()" onpointercancel="artLongPressEnd()" onclick="artTileClick(event,\'' + esc(artName) + '\')">' +
+                        imgHtml + '<span class="home-art-info"><span class="home-art-name">' + artName + '</span><br>' + stockHtml + '</span>' + pricesHtml + '<span class="home-art-chevron">›</span></button>';
                 });
+                if (!catArticles.length && homeCatSubcat) html += '<div class="home-empty">Sin artículos en "' + homeCatSubcat + '"</div>';
                 html += '</div>';
             }
 
-            html += '</div>';
             $('homeDashboard').innerHTML = html;
+            if (homeEditMode && homeEditingCatName) renderHomeCatEditPanel();
+            setTimeout(loadArticleTileImages, 0);
+        }
+
+        function loadArticleTileImages() {
+            document.querySelectorAll('#homeDashboard [data-imgcandidates]').forEach(el => {
+                let urls = [];
+                try { urls = JSON.parse(el.dataset.imgcandidates || '[]'); } catch(e) {}
+                if (!urls.length) return;
+                (function tryNext() {
+                    if (!urls.length) return;
+                    const url = urls.shift();
+                    const t = new Image();
+                    t.referrerPolicy = 'no-referrer';
+                    t.onload = function() {
+                        if (t.naturalWidth < 50 || t.naturalHeight < 50) { tryNext(); return; }
+                        if (!el.isConnected) return;
+                        const img = document.createElement('img');
+                        img.className = 'home-art-img';
+                        img.src = url;
+                        img.referrerPolicy = 'no-referrer';
+                        el.replaceWith(img);
+                    };
+                    t.onerror = tryNext;
+                    t.src = url;
+                })();
+            });
         }
 
         function toggleZeroStock() {
             showZeroStock = !showZeroStock;
             renderArticleDetail();
+        }
+
+        function removeCurvaColor(color) {
+            const prods = state.filtered.filter(p => (p.color || 'Sin color') === color);
+            if (!prods.length) return;
+            if (!prods.every(p => getCartQty(p.id) >= 1)) {
+                toast('No hay una curva completa para quitar', 'warning');
+                return;
+            }
+            prods.forEach(p => {
+                const item = state.cart.find(c => c.id === p.id);
+                if (!item) return;
+                item.qty -= 1;
+                if (item.qty <= 0) state.cart = state.cart.filter(c => c.id !== p.id);
+            });
+            saveCart(); updateBadge(); renderArticleDetail(); renderSlotTabs();
+            toast('Curva quitada (' + prods.length + ' talles)', 'success');
         }
 
         function addCurvaColor(color) {
@@ -3158,99 +4339,39 @@
         }
         
         function selectHomeCat(catName) {
-            homeCatSelected = catName;
-            renderHomeScreen();
+            homeCatSelected = catName; homeCatSubcat = null; homeCatChild = null; homeCatGrandchild = null;
+            history.pushState({ app: 'mikra', level: 'cat' }, '');
+            renderHomeScreen(); window.scrollTo({ top: 0 });
         }
-
         function goHomeLevel1() {
-            homeCatSelected = null;
-            renderHomeScreen();
-            window.scrollTo({ top: 0 });
+            homeCatSelected = null; homeCatSubcat = null; homeCatChild = null; homeCatGrandchild = null;
+            renderHomeScreen(); window.scrollTo({ top: 0 });
         }
-
+        function setHomeCatChild(name) {
+            if (name) history.pushState({ app: 'mikra', level: 'child' }, '');
+            homeCatChild = name; homeCatGrandchild = null; homeCatSubcat = null;
+            renderHomeScreen(); window.scrollTo({ top: 0 });
+        }
+        function setHomeCatGrandchild(name) {
+            if (name) history.pushState({ app: 'mikra', level: 'grandchild' }, '');
+            homeCatGrandchild = name; homeCatSubcat = null;
+            renderHomeScreen(); window.scrollTo({ top: 0 });
+        }
         function hideHomeScreen() {
             $('homeDashboard').style.display = 'none';
             $('productList').style.display = '';
             $('resultsInfo').style.display = '';
+            $('stockFilters').style.display = '';
+            $('filtersCollapse').style.display = '';
         }
         
         // ===== RENDER =====
         function render() {
             if (isArticleDetailMode()) { hideHomeScreen(); renderArticleDetail(); updateBadge(); return; }
             hideArticleDetail();
-            
             if (isHomeState()) { renderHomeScreen(); return; }
-            hideHomeScreen();
-            
-            const start = (state.page - 1) * state.pageSize;
-            const items = state.filtered.slice(start, start + state.pageSize);
-            const totalPages = Math.ceil(state.filtered.length / state.pageSize);
-            
-            $('showingCount').textContent = Math.min(start + state.pageSize, state.filtered.length);
-            $('totalCount').textContent = state.filtered.length.toLocaleString();
-            
-            if (!items.length) {
-                $('productList').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>No se encontraron productos</div></div>';
-                $('pagination').innerHTML = '';
-                return;
-            }
-            
-            let html = '';
-            let lastColor = null;
-            
-            if (forceListView && state.searchExact && state.search) {
-                html += '<div style="padding:8px;text-align:center;background:var(--bg-input);border-radius:8px;margin-bottom:2px;cursor:pointer;font-size:0.78em;font-weight:600;color:var(--primary);" onclick="switchToDetailView()">📊 Volver a vista detalle</div>';
-            }
-            
-            items.forEach(p => {
-                if (p.color !== lastColor) {
-                    html += '<div class="color-divider">🎨 ' + (p.color || 'Sin color') + '</div>';
-                    lastColor = p.color;
-                }
-                const cartQty = getCartQty(p.id);
-                const inCart = cartQty > 0;
-                const availableStock = p.stock - cartQty;
-                const stockClass = p.stock > 5 ? 'high' : p.stock > 0 ? 'med' : 'low';
-                const noStock = p.stock === 0;
-                
-                let qtyHtml = inCart
-                    ? '<div class="qty-control"><button class="qty-btn" onclick="changeQty(' + p.id + ',-1,event)">−</button><span class="qty-val">' + cartQty + '</span><button class="qty-btn" onclick="changeQty(' + p.id + ',1,event)">+</button></div>'
-                    : '<button class="btn-add' + (noStock ? ' no-stock' : '') + '" onclick="listAddToCart(' + p.id + ',' + noStock + ',event)">+</button>';
-                
-                let stockDisplay = '<div class="stock-num ' + stockClass + '">' + p.stock + '</div><div class="stock-label">stock</div>';
-                if (inCart) stockDisplay += '<div class="stock-remaining" style="color:var(--success)">🛒 ' + cartQty + '</div>';
-                
-                const imgUrl = getProductImage(p.codigo);
-                const thumbHtml = imgUrl 
-                    ? '<img class="product-thumb" loading="lazy" src="' + imgUrl + '" onclick="showImgModal(\'' + p.codigo + '\')" onerror="this.outerHTML=\'<div class=product-thumb-placeholder>📦</div>\'">'
-                    : '<div class="product-thumb-placeholder">📦</div>';
-                
-                let skuParts = [];
-                if (settings.showSku) skuParts.push('SKU: ' + p.codigo);
-                if (settings.showUbic && p.ubicacion) skuParts.push('📍 ' + p.ubicacion);
-                const skuHtml = skuParts.length ? '<div class="product-sku">' + skuParts.join(' | ') + '</div>' : '';
-                
-                html += '<div class="product-item' + (inCart ? ' in-cart' : '') + (noStock ? ' no-stock' : '') + '">' +
-                    thumbHtml +
-                    '<div class="product-info">' +
-                    '<div class="product-meta">' + (p.color || '-') + ' • T:' + (p.talle || '-') + '</div>' +
-                    skuHtml +
-                    '<div class="product-name" onclick="searchArticle(\'' + (p.titulo || p.articulo || '').replace(/'/g, "\\'") + '\')">' + (p.titulo || p.articulo || '-') + '</div></div>' +
-                    '<div class="product-right"><div class="product-stock">' + stockDisplay + '</div>' + qtyHtml + '</div></div>';
-            });
-            
-            $('productList').innerHTML = html;
-            if (state.showImages) $('productList').classList.add('show-images');
-            else $('productList').classList.remove('show-images');
-            
-            if (totalPages > 1) {
-                let h = '<button class="page-btn" onclick="goPage(' + (state.page - 1) + ')"' + (state.page === 1 ? ' disabled' : '') + '>‹</button>';
-                for (let i = Math.max(1, state.page - 2); i <= Math.min(totalPages, state.page + 2); i++) {
-                    h += '<button class="page-btn' + (i === state.page ? ' active' : '') + '" onclick="goPage(' + i + ')">' + i + '</button>';
-                }
-                h += '<button class="page-btn" onclick="goPage(' + (state.page + 1) + ')"' + (state.page === totalPages ? ' disabled' : '') + '>›</button>';
-                $('pagination').innerHTML = h;
-            } else { $('pagination').innerHTML = ''; }
+            // Caso borde (búsqueda vacía, input enfocado o filtros sin texto) → home tiles
+            renderHomeScreen();
         }
         
         function listAddToCart(id, noStock, e) {
@@ -3271,10 +4392,10 @@
         function validateForm() {
             if (state.orderType === 'reposicion') return true;
             if (state.orderType === 'presupuesto') {
-                const name = $('clientNamePres').value.trim();
+                const name = $('clientName').value.trim();
                 if (!name) {
-                    $('clientNamePres').classList.add('error'); $('clientNamePres').focus();
-                    setTimeout(() => $('clientNamePres').classList.remove('error'), 500);
+                    $('clientName').classList.add('error'); $('clientName').focus();
+                    setTimeout(() => $('clientName').classList.remove('error'), 500);
                     showModal('👤', 'Nombre requerido', 'Ingresa el nombre del cliente.', 'Entendido', null);
                     return false;
                 }
@@ -3316,6 +4437,141 @@
             return { clientName, clientDisplayName, canal, canalPrefix, deliveryType, deliveryText, shippingAddress, paymentStatus, paymentText, paymentAmount };
         }
         
+        // ===== WA CONFIRM SHEET =====
+        let _wacDelivery = 'local', _wacPayment = 'abonado', _wacTicket = false;
+
+        function openWaConfirm() {
+            if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
+            const isPedido = state.orderType === 'pedido';
+            const isPres   = state.orderType === 'presupuesto';
+            $('waConfirmPedido').style.display = isPedido ? 'block' : 'none';
+            $('waConfirmPres').style.display   = isPres   ? 'block' : 'none';
+            if (isPedido) {
+                const info = getOrderInfo();
+                $('wacName').value = info.clientName !== 'Sin nombre' ? info.clientName : '';
+                $('wacAddress').value = info.shippingAddress || '';
+                $('wacPaymentAmount').value = info.paymentAmount || '';
+                selectWacOption('delivery', info.deliveryType || 'local');
+                selectWacOption('payment',  info.paymentStatus || 'abonado');
+            } else if (isPres) {
+                $('wacNamePres').value = $('clientName').value.trim();
+                selectWacPresOption('delivery', 'local');
+                selectWacPresOption('payment', 'abonado');
+            }
+            // Mostrar botón ticket solo para pedido y presupuesto
+            const ticketBtn = $('wacTicketBtn');
+            if (ticketBtn) ticketBtn.style.display = (isPedido || isPres) ? 'block' : 'none';
+            $('waConfirmOverlay').classList.add('show');
+        }
+        function closeWaConfirm() { $('waConfirmOverlay').classList.remove('show'); }
+
+        function doTicketFromSheet() {
+            const isPres = state.orderType === 'presupuesto';
+            // Sync name to main form
+            const name = isPres ? ($('wacNamePres')?.value.trim() || '') : ($('wacName')?.value.trim() || '');
+            if ($('clientName')) $('clientName').value = name;
+            if ($('clientNamePres')) $('clientNamePres').value = name;
+            // Sync delivery/payment for pedido
+            if (!isPres) {
+                const delVal  = _wacDelivery;
+                const payVal  = _wacPayment;
+                const delOpt  = document.querySelector('.delivery-option[data-delivery="' + delVal + '"]');
+                if (delOpt) delOpt.click();
+                const payOpt  = document.querySelector('.delivery-option[data-payment="' + payVal + '"]');
+                if (payOpt) payOpt.click();
+                if ($('shippingAddress')) $('shippingAddress').value = $('wacAddress')?.value.trim() || '';
+                if ($('paymentAmount'))   $('paymentAmount').value   = $('wacPaymentAmount')?.value.trim() || '';
+            }
+            closeWaConfirm();
+            sharePrepTicketPDF();
+        }
+
+        let _wacPresDelivery = 'local', _wacPresPayment = 'abonado';
+        function selectWacPresOption(type, val) {
+            if (type === 'delivery') {
+                _wacPresDelivery = val;
+                document.querySelectorAll('[data-wacpdelivery]').forEach(b => b.classList.toggle('active', b.dataset.wacpdelivery === val));
+                $('wacPresAddress').style.display = val === 'envio' ? 'block' : 'none';
+            } else {
+                _wacPresPayment = val;
+                document.querySelectorAll('[data-wacppayment]').forEach(b => b.classList.toggle('active', b.dataset.wacppayment === val));
+                $('wacPresPaymentAmount').style.display = val === 'pendiente' ? 'block' : 'none';
+            }
+        }
+        function selectWacOption(type, val) {
+            if (type === 'delivery') {
+                _wacDelivery = val;
+                document.querySelectorAll('[data-wacdelivery]').forEach(b => b.classList.toggle('active', b.dataset.wacdelivery === val));
+                $('wacAddress').style.display = val === 'envio' ? 'block' : 'none';
+            } else {
+                _wacPayment = val;
+                document.querySelectorAll('[data-wacpayment]').forEach(b => b.classList.toggle('active', b.dataset.wacpayment === val));
+                $('wacPaymentAmount').style.display = val === 'pendiente' ? 'block' : 'none';
+            }
+        }
+        function toggleWacTicket() {
+            _wacTicket = !_wacTicket;
+            $('wacTicketToggle').classList.toggle('on', _wacTicket);
+            $('wacTicketRow').classList.toggle('on', _wacTicket);
+        }
+
+        function doShareWhatsApp() {
+            const isPedido = state.orderType === 'pedido';
+            const isPres   = state.orderType === 'presupuesto';
+
+            // Leer valores del sheet
+            const name = isPedido ? ($('wacName').value.trim() || 'Sin nombre')
+                       : isPres   ? ($('wacNamePres').value.trim() || 'Sin nombre')
+                       : '';
+            const address   = $('wacAddress')?.value.trim() || '';
+            const payAmt    = $('wacPaymentAmount')?.value.trim() || '';
+
+            // Sincronizar de vuelta al form principal
+            if ($('clientName')) $('clientName').value = name;
+            if ($('clientNamePres')) $('clientNamePres').value = name;
+            if (isPedido) {
+                // Sync radio buttons
+                const delRadio = document.querySelector('input[name="delivery"][value="' + _wacDelivery + '"]');
+                if (delRadio) { delRadio.checked = true; delRadio.closest('.delivery-option')?.click(); }
+                const payRadio = document.querySelector('input[name="payment"][value="' + _wacPayment + '"]');
+                if (payRadio) { payRadio.checked = true; payRadio.closest('.delivery-option')?.click(); }
+                if ($('shippingAddress')) $('shippingAddress').value = address;
+                if ($('paymentAmount'))   $('paymentAmount').value   = payAmt;
+            }
+
+            // Construir texto WA
+            let text = '';
+            if (state.orderType === 'reposicion') {
+                text = 'REPOSICION GALERIA\n─────────────────\n\n';
+                state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
+                text += '\n─────────────────\nTOTAL: ' + state.cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
+                text += '\nCODIGOS:\n'; state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+            } else if (isPres) {
+                let total = 0;
+                const grouped = {};
+                state.cart.forEach(p => { const n=p.titulo||p.articulo; if(!grouped[n]) grouped[n]={qty:0,price:articlePrices[n]||0}; grouped[n].qty+=p.qty; });
+                text = 'PRESUPUESTO MIKRA\n─────────────────\n' + name + '\n─────────────────\n\n';
+                Object.entries(grouped).forEach(([n,d]) => { if(d.price>0) { text+=n+' x'+d.qty+' = $'+(d.qty*d.price).toLocaleString()+'\n'; total+=d.qty*d.price; } });
+                const shipping = getBudgetShipping();
+                text += shipping > 0 ? '\nEnvio: $'+shipping.toLocaleString()+'\nTOTAL: $'+(total+shipping).toLocaleString()+'\n' : '\nTOTAL: $'+total.toLocaleString()+'\n';
+                text += '\nCODIGOS:\n'; state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+            } else {
+                const canal      = document.querySelector('input[name="canal"]:checked')?.value || 'local';
+                const canalLabel = canal === 'tn' ? 'TN' : 'Local';
+                const delivLabel = _wacDelivery==='local' ? 'Local (Galeria)' : _wacDelivery==='deposito' ? 'Deposito' : 'Envio';
+                const payLabel   = _wacPayment==='abonado' ? 'Ya abono' : 'Falta abonar' + (payAmt ? ': $'+payAmt : '');
+                text = 'PEDIDO MIKRA\n─────────────────\n' + canalLabel + ' - ' + name + '\n' + delivLabel + '\n';
+                if (_wacDelivery === 'envio' && address) text += address + '\n';
+                text += payLabel + '\n─────────────────\n\n';
+                state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo||p.articulo) + ', ' + (p.color||'-') + ', T:' + (p.talle||'-') + '\n'; });
+                text += '\n─────────────────\nTOTAL: ' + state.cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
+                text += '\nCODIGOS:\n'; state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+            }
+
+            closeWaConfirm();
+            window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+        }
+
         function shareWhatsApp() {
             if (!state.cart.length) return;
             if (!validateForm()) return;
@@ -3331,7 +4587,7 @@
                 let total = 0;
                 const grouped = {};
                 state.cart.forEach(p => { const n = p.titulo || p.articulo; if (!grouped[n]) grouped[n] = { qty: 0, price: articlePrices[n] || 0 }; grouped[n].qty += p.qty; });
-                const clientPres = $('clientNamePres').value.trim() || 'Sin nombre';
+                const clientPres = $('clientName').value.trim() || 'Sin nombre';
                 text = 'PRESUPUESTO MIKRA\n─────────────────\n';
                 text += clientPres + '\n─────────────────\n\n';
                 Object.entries(grouped).forEach(([n, d]) => { if (d.price > 0) { text += n + ' x' + d.qty + ' = $' + (d.qty * d.price).toLocaleString() + '\n'; total += d.qty * d.price; } });
@@ -3567,9 +4823,19 @@
                 if (estW(9) <= maxW || estW(6.5) <= maxW) return 6; // fits in one line
                 return 10; // needs 2 lines
             }
+            var delivVal  = (document.querySelector('input[name="delivery"]:checked') || {}).value || '';
+            var payVal    = (document.querySelector('input[name="payment"]:checked') || {}).value || '';
+            var addrVal   = ($('shippingAddress') || {}).value || '';
+            var payAmtVal = ($('paymentAmount') || {}).value || '';
+            var delivTxt  = delivVal === 'local' ? 'Retira Galeria' : delivVal === 'deposito' ? 'Retira Deposito' : delivVal === 'envio' ? 'Envio' : '';
+            var payTxt    = payVal === 'abonado' ? 'Ya abono' : payVal === 'pendiente' ? 'Falta abonar' + (payAmtVal ? ' $' + payAmtVal : '') : '';
+
             function calcHeight() {
                 var y = 6 + 6 + 5 + 4; // header
                 if (state.orderType === 'pedido' && $('clientName').value.trim()) y += 5;
+                if (delivTxt) y += 5;
+                if (delivVal === 'envio' && addrVal) y += 5;
+                if (payTxt) y += 5;
                 y += 4; // thick line
                 sortedArticles.forEach(function(artName) {
                     var colors = articlesMap[artName];
@@ -3610,6 +4876,21 @@
                     pdf.text(cn, pw / 2, y, 'center');
                     y += 5;
                 }
+            }
+            if (delivTxt) {
+                pdf.setFontSize(10);
+                pdf.text(delivTxt, pw / 2, y, 'center');
+                y += 5;
+            }
+            if (delivVal === 'envio' && addrVal) {
+                pdf.setFontSize(8);
+                pdf.text(addrVal.replace(/\n/g, ' '), pw / 2, y, 'center');
+                y += 5;
+            }
+            if (payTxt) {
+                pdf.setFontSize(10);
+                pdf.text(payTxt, pw / 2, y, 'center');
+                y += 5;
             }
 
             // Thick line
@@ -3970,12 +5251,73 @@
         function showPreparadosOptions() { $('preparadosOptModal').classList.add('show'); }
         function closePreparadosOpt() { $('preparadosOptModal').classList.remove('show'); }
         
-        function downloadPreparacion() {
+        function downloadPresupuestoTicket(name) {
+            const date = new Date().toLocaleDateString('es-AR');
+            const grouped = {};
+            state.cart.forEach(p => {
+                const n = p.titulo || p.articulo;
+                if (!grouped[n]) grouped[n] = { qty: 0, price: articlePrices[n] || 0 };
+                grouped[n].qty += p.qty;
+            });
+            const shipping = getBudgetShipping();
+            let total = 0;
+            Object.values(grouped).forEach(d => { total += d.qty * d.price; });
+
+            let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Presupuesto Mikra</title>' +
+                '<style>' +
+                'body{font-family:Arial,sans-serif;padding:20px;max-width:480px;margin:0 auto;font-size:13px;}' +
+                'h1{font-size:17px;color:#1a2744;margin-bottom:2px;}' +
+                '.subtitle{color:#888;font-size:11px;margin-bottom:12px;}' +
+                '.client-box{background:#f0f4ff;border:1px solid #c7d2e8;border-radius:8px;padding:10px 14px;margin-bottom:14px;}' +
+                '.client-name{font-size:15px;font-weight:bold;color:#1a2744;}' +
+                'table{width:100%;border-collapse:collapse;margin-bottom:10px;}' +
+                'th{background:#1a2744;color:white;padding:7px 8px;text-align:left;font-size:12px;}' +
+                'td{padding:7px 8px;border-bottom:1px solid #eee;font-size:12px;}' +
+                'td.right{text-align:right;}' +
+                '.total-row{background:#f5f5f5;font-weight:bold;}' +
+                '.grand-total{background:#1a2744;color:white;border-radius:8px;padding:12px 14px;text-align:right;font-size:16px;font-weight:bold;margin-top:8px;}' +
+                '@media print{body{padding:10px}}' +
+                '</style></head><body>';
+
+            html += '<h1>💰 PRESUPUESTO MIKRA</h1>';
+            html += '<div class="subtitle">Fecha: ' + date + '</div>';
+            html += '<div class="client-box"><div class="client-name">👤 ' + (name || 'Sin nombre') + '</div></div>';
+
+            html += '<table><thead><tr><th>Artículo</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>';
+            Object.entries(grouped).forEach(([n, d]) => {
+                const sub = d.qty * d.price;
+                html += '<tr><td>' + n + '</td><td class="right">x' + d.qty + '</td><td class="right">$' + (d.price > 0 ? d.price.toLocaleString() : '—') + '</td><td class="right">' + (d.price > 0 ? '$' + sub.toLocaleString() : '—') + '</td></tr>';
+            });
+            if (shipping > 0) {
+                html += '<tr class="total-row"><td colspan="3">🚚 Envío</td><td class="right">$' + shipping.toLocaleString() + '</td></tr>';
+            }
+            html += '</tbody></table>';
+            html += '<div class="grand-total">TOTAL: $' + (total + shipping).toLocaleString() + '</div>';
+            html += '</body></html>';
+
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            setTimeout(() => win.print(), 400);
+        }
+
+        function downloadPreparacion(info) {
             if (!state.cart.length) return;
             const date = new Date().toLocaleDateString('es-AR');
-            let clientName = '';
-            if (state.orderType === 'pedido') clientName = $('clientName').value.trim();
-            
+            if (!info) {
+                const orderInfo = state.orderType === 'pedido' ? getOrderInfo() : null;
+                const canal = document.querySelector('input[name="canal"]:checked')?.value || 'local';
+                info = {
+                    name: $('clientName').value.trim() || '',
+                    canal: canal,
+                    deliveryType: orderInfo?.deliveryType || '',
+                    address: orderInfo?.shippingAddress || '',
+                    paymentStatus: orderInfo?.paymentStatus || '',
+                    paymentAmount: orderInfo?.paymentAmount || ''
+                };
+            }
+            const clientName = info.name || '';
+
             // Group cart by article then by color
             const articles = {};
             state.cart.forEach(p => {
@@ -3988,12 +5330,15 @@
                     articles[artName][color].imgUrl = getProductImageFull(p.codigo, p);
                 }
             });
-            
+
             let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preparación</title>' +
                 '<style>' +
                 'body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; }' +
                 'h1 { font-size: 18px; color: #1a2744; margin-bottom: 3px; }' +
-                '.subtitle { font-size: 12px; color: #666; margin-bottom: 15px; }' +
+                '.subtitle { font-size: 12px; color: #666; margin-bottom: 8px; }' +
+                '.info-box { background: #f0f4ff; border: 1px solid #c7d2e8; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; }' +
+                '.info-row { margin-bottom: 3px; }' +
+                '.info-row:last-child { margin-bottom: 0; }' +
                 '.article-title { background: #1a2744; color: white; padding: 8px 14px; font-size: 14px; font-weight: bold; margin-top: 12px; border-radius: 6px 6px 0 0; page-break-inside: avoid; }' +
                 '.color-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #ddd; border-top: none; page-break-inside: avoid; min-height: 80px; }' +
                 '.color-row:last-child { border-radius: 0 0 6px 6px; }' +
@@ -4010,38 +5355,45 @@
                 '.grand-total { margin-top: 15px; padding: 12px; background: #1a2744; color: white; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; }' +
                 '@media print { .color-row { break-inside: avoid; } }' +
                 '</style></head><body>';
-            
+
             html += '<h1>📦 PREPARACIÓN DE PEDIDO</h1>';
-            html += '<div class="subtitle">Fecha: ' + date + (clientName ? ' · Cliente: ' + clientName : '') + '</div>';
-            
+            html += '<div class="subtitle">Fecha: ' + date + '</div>';
+
+            // Cuadro con datos del pedido (nuevo: cliente, entrega, pago)
+            html += '<div class="info-box">';
+            if (clientName) html += '<div class="info-row"><strong>Cliente:</strong> ' + clientName + '</div>';
+            const delivTexts = { local: '🏪 Retira Galería', deposito: '📦 Retira Depósito', envio: '🚚 Envío a domicilio' };
+            if (info.deliveryType && delivTexts[info.deliveryType]) {
+                html += '<div class="info-row"><strong>Entrega:</strong> ' + delivTexts[info.deliveryType];
+                if (info.deliveryType === 'envio' && info.address) html += ' &mdash; ' + info.address.replace(/\n/g, ', ');
+                html += '</div>';
+            }
+            if (info.paymentStatus) {
+                const payText = info.paymentStatus === 'abonado' ? '✅ Ya abonó'
+                              : '⏳ Falta abonar' + (info.paymentAmount ? ' $' + info.paymentAmount : '');
+                html += '<div class="info-row"><strong>Pago:</strong> ' + payText + '</div>';
+            }
+            html += '</div>';
+
             let grandTotal = 0;
-            
+
             Object.entries(articles).forEach(([artName, colors]) => {
                 html += '<div class="article-title">' + artName + '</div>';
-                
                 Object.entries(colors).forEach(([color, data]) => {
                     let colorTotal = 0;
                     data.items.forEach(p => colorTotal += p.qty);
                     grandTotal += colorTotal;
-                    
+
                     html += '<div class="color-row">';
-                    
-                    // Checkbox for marking done
                     html += '<div class="check-box"></div>';
-                    
-                    // Image
                     if (data.imgUrl) {
                         html += '<img class="color-img" src="' + data.imgUrl + '" onerror="this.outerHTML=\'<div class=no-img>Sin img</div>\'">';
                     } else {
                         html += '<div class="no-img">Sin img</div>';
                     }
-                    
-                    // Color info + sizes
                     html += '<div class="color-info">';
                     html += '<div class="color-name">🎨 ' + color + '</div>';
                     html += '<div class="sizes-table">';
-                    
-                    // Sort sizes
                     data.items.sort((a, b) => {
                         const sa = a.talle || '', sb = b.talle || '';
                         const na = parseFloat(sa), nb = parseFloat(sb);
@@ -4050,27 +5402,24 @@
                         if (ia > -1 && ib > -1) return ia - ib;
                         return sa.localeCompare(sb);
                     });
-                    
                     data.items.forEach(p => {
                         html += '<div class="size-box"><div class="size-label">' + (p.talle || '-') + '</div><div class="size-qty">' + p.qty + '</div></div>';
                     });
-                    
-                    html += '</div>'; // sizes-table
+                    html += '</div>';
                     html += '<div class="color-total">Subtotal: ' + colorTotal + ' uds</div>';
-                    html += '</div>'; // color-info
-                    html += '</div>'; // color-row
+                    html += '</div>';
+                    html += '</div>';
                 });
             });
-            
+
             html += '<div class="grand-total">TOTAL A PREPARAR: ' + grandTotal + ' unidades</div>';
             html += '</body></html>';
-            
+
             const win = window.open('', '_blank');
             win.document.write(html);
             win.document.close();
-            // Wait for images to load before printing (once only)
             const imgs = win.document.querySelectorAll('img');
-            if (imgs.length === 0) { win.print(); return; }
+            if (imgs.length === 0) { setTimeout(() => win.print(), 400); return; }
             let loaded = 0, printed = false;
             const doPrint = () => { if (printed) return; printed = true; win.print(); };
             const tryPrint = () => { loaded++; if (loaded >= imgs.length) setTimeout(doPrint, 400); };
@@ -4308,18 +5657,15 @@
         }
 
         function goHome() {
+            closeCatEditSheet();
             if (isHomeState() && !homeCatSelected && $('page-products').classList.contains('active')) return;
 
-            // Guardar estado actual de búsqueda antes de limpiar
             if (state.search) {
-                _savedStockState = {
-                    search: state.search,
-                    searchExact: state.searchExact,
-                    filtered: [...state.filtered]
-                };
+                _savedStockState = { search: state.search, searchExact: state.searchExact, filtered: [...state.filtered] };
             }
 
-            homeCatSelected = null;
+            homeCatSelected = null; homeCatChild = null; homeCatGrandchild = null; homeCatSubcat = null;
+            _prevHomeState = null;
 
             if (!$('page-products').classList.contains('active')) {
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -4349,13 +5695,12 @@
         
         // ===== EVENT LISTENERS =====
         const debouncedFilter = debounce(() => {
-            showAutocomplete(state.search);
             applyFilters();
         }, 80); // 80ms — suficiente para evitar renders en cada tecla rápida
 
         $('searchInput').addEventListener('focus', () => {
             _inputFocused = true;
-            if (state.search.length >= 2) showAutocomplete(state.search);
+            refreshSuggestions();
         });
         $('searchInput').addEventListener('blur', () => {
             // Delay para que el click en autocomplete pueda procesarse antes
@@ -4373,20 +5718,30 @@
             if (val === '') {
                 // Búsqueda vaciada: cancelar debounce pendiente y renderizar inmediatamente
                 debouncedFilter.cancel && debouncedFilter.cancel();
-                $('autocomplete').classList.remove('show');
+                showRecentSearches();
                 _inputFocused = true;
                 applyFilters();
                 return;
             }
+            refreshSuggestions();
             debouncedFilter();
         });
+        $('searchInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                if (state.search.length >= 2) addRecentSearch(state.search, state.searchExact);
+                $('autocomplete').classList.remove('show');
+                $('searchInput').blur();
+            }
+        });
         $('autocomplete').addEventListener('click', e => {
+            if (e.target.closest('[data-clear-recent]')) { e.stopPropagation(); clearRecentSearches(); return; }
+            const rm = e.target.closest('[data-remove]');
+            if (rm) { e.stopPropagation(); removeRecentSearch(rm.dataset.remove); showRecentSearches(); return; }
             const item = e.target.closest('.autocomplete-item');
             if (item) {
                 const name = item.dataset.name;
-                $('searchInput').value = name; state.search = name; state.searchExact = true;
-                forceListView = false; articleColorFilter = ''; showColorStrip = false;
-                $('searchClear').classList.add('show'); $('autocomplete').classList.remove('show'); applyFilters();
+                const exact = item.classList.contains('recent') ? item.dataset.exact === '1' : true;
+                commitSearch(name, exact);
             }
         });
         document.addEventListener('click', e => { if (!e.target.closest('.search-container')) $('autocomplete').classList.remove('show'); });
@@ -4447,6 +5802,7 @@
         });
 
         // INIT — Cache-first: shows cached data instantly, syncs in background
+        loadCategoryOverrides();
         initSlots();
         applySettingsToUI();
         updateBadge();
@@ -4906,6 +6262,50 @@
             $('historialModal').classList.remove('show');
             toast('Historial limpiado', 'info');
         }
+
+        // ── Historial / botón atrás PWA ──
+        history.replaceState({ app: 'mikra', level: 'root' }, '');
+
+        function _showExitConfirm() {
+            history.pushState({ app: 'mikra', level: 'root' }, '');
+            if (confirm('¿Salir de la aplicación?')) { history.back(); history.back(); }
+        }
+
+        window.addEventListener('popstate', () => {
+            if (document.getElementById('_catEditSheet')) {
+                const lvl = homeCatGrandchild ? 'grandchild' : homeCatChild ? 'child' : homeCatSelected ? 'cat' : 'root';
+                history.pushState({ app: 'mikra', level: lvl }, '');
+                closeCatEditSheet(); return;
+            }
+            // Dentro del home — navegar hacia atrás por niveles
+            if (isHomeState()) {
+                if (homeCatGrandchild) { homeCatGrandchild = null; homeCatSubcat = null; renderHomeScreen(); }
+                else if (homeCatChild) { homeCatChild = null; homeCatGrandchild = null; homeCatSubcat = null; renderHomeScreen(); }
+                else if (homeCatSelected) { homeCatSelected = null; homeCatSubcat = null; homeCatChild = null; homeCatGrandchild = null; renderHomeScreen(); }
+                else { _showExitConfirm(); }
+                window.scrollTo({ top: 0 }); return;
+            }
+            // Volviendo desde detalle de artículo al estado del home
+            if (_prevHomeState) {
+                homeCatSelected   = _prevHomeState.catSelected;
+                homeCatChild      = _prevHomeState.catChild;
+                homeCatGrandchild = _prevHomeState.catGrandchild || null;
+                homeCatSubcat     = _prevHomeState.catSubcat;
+                _prevHomeState = null;
+                state.search = ''; state.searchExact = false;
+                $('searchInput').value = ''; $('searchClear').classList.remove('show'); $('autocomplete').classList.remove('show');
+                $('articleDetailView').classList.remove('active');
+                applyFilters();
+                window.scrollTo({ top: 0 }); return;
+            }
+            // En cualquier otra vista (lista de resultados) → volver al home
+            if (!isHomeState()) {
+                state.search = ''; state.searchExact = false;
+                $('searchInput').value = ''; $('searchClear').classList.remove('show'); $('autocomplete').classList.remove('show');
+                $('articleDetailView').classList.remove('active');
+                applyFilters(); window.scrollTo({ top: 0 });
+            }
+        });
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')

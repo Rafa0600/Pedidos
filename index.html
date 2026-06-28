@@ -1178,6 +1178,7 @@
             <div class="action-more-panel" id="moreActionsPanel" style="margin-top:6px;">
                 <button class="action-more-btn" style="background:var(--primary);color:white;" onclick="downloadPreparacion()">📦 Preparar</button>
                 <button class="action-more-btn" style="background:#7c3aed;color:white;" onclick="abrirHistorial()">📋 Historial</button>
+                <button class="action-more-btn" id="devolucionBtn" style="background:#dc2626;color:white;" onclick="toggleDevolucionMode()">📥 Devolución</button>
             </div>
 
             <div class="unified-name-wrap">
@@ -2212,6 +2213,15 @@
             if (!panel) return;
             panel.classList.toggle('show');
             if (btn) btn.textContent = panel.classList.contains('show') ? '✕ Cerrar' : '⋯ Más opciones';
+        }
+        function toggleDevolucionMode() {
+            _devolucionMode = !_devolucionMode;
+            const btn = $('devolucionBtn');
+            if (btn) {
+                btn.style.background = _devolucionMode ? '#7f1d1d' : '#dc2626';
+                btn.textContent = _devolucionMode ? '✓ Devolución' : '📥 Devolución';
+            }
+            toast(_devolucionMode ? 'Modo: Devolución Local' : 'Modo: Reposición Local', 'info');
         }
         function setOrderType(type) {
             state.orderType = type;
@@ -3533,6 +3543,33 @@
             if (img.naturalWidth >= 50 && img.naturalHeight >= 50) return;
             img.dataset.usedFallback = '1'; imgRetryOrFallback(img, placeholderClass, placeholderIcon);
         }
+        // Pre-load ML's "not available" placeholder once so we know its exact dimensions
+        let _mlRGifW = -1, _mlRGifH = -1;
+        (function() {
+            const t = new Image();
+            t.onload = function() { _mlRGifW = t.naturalWidth; _mlRGifH = t.naturalHeight; };
+            t.src = 'https://http2.mlstatic.com/resources/frontend/statics/img-not-available/1.1.0/R.gif';
+        })();
+
+        function imgHideIfNotAvailable(img) {
+            const w = img.naturalWidth, h = img.naturalHeight;
+            // 1. currentSrc check (works only if browser exposes redirect target)
+            if (img.currentSrc && img.currentSrc.includes('not-available')) { img.style.display = 'none'; return; }
+            // 2. Tiny/transparent spacer images
+            if (w < 20 || h < 20) { img.style.display = 'none'; return; }
+            // 3. Exact dimension match with preloaded R.gif (reliable if R.gif has unique size)
+            if (_mlRGifW > 0 && w === _mlRGifW && h === _mlRGifH) { img.style.display = 'none'; return; }
+            // 4. Async fetch to read actual response.url after redirects (most reliable)
+            const src = img.src;
+            if (!src || !src.startsWith('http')) return;
+            fetch(src, { referrerPolicy: 'no-referrer' })
+                .then(function(r) {
+                    if (r.url && r.url.includes('not-available')) img.style.display = 'none';
+                })
+                .catch(function() {
+                    // CORS blocked — rely on dimension match already done above
+                });
+        }
 
         let ARTICLE_IMG_CACHE = {};
         function getArticleImageCandidates(name) {
@@ -3601,7 +3638,7 @@
             let html = '<div class="home-photo-picker" style="flex-wrap:wrap;padding:0 0 8px;gap:6px;">';
             html += '<div class="home-photo-opt-auto' + (!current ? ' active' : '') + '" onclick="setArtPhotoFromSheet(\'' + artName.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\',null)" title="Automático">↩️</div>';
             candidates.forEach(url => {
-                html += '<img class="home-photo-opt' + (current === url ? ' active' : '') + '" src="' + url + '" loading="lazy" referrerpolicy="no-referrer" onclick="setArtPhotoFromSheet(\'' + artName.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\',\'' + url.replace(/'/g,"\\'") + '\')">';
+                html += '<img class="home-photo-opt' + (current === url ? ' active' : '') + '" src="' + url + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'" onload="imgHideIfNotAvailable(this)" onclick="setArtPhotoFromSheet(\'' + artName.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\',\'' + url.replace(/'/g,"\\'") + '\')">';
             });
             if (!candidates.length) html += '<div style="color:var(--text-secondary);font-size:0.85em;padding:8px 0;">Sin fotos disponibles — sincronizá primero.</div>';
             html += '</div>';
@@ -4232,10 +4269,10 @@
                 catArticles.forEach(artName => {
                     const stock = getArticleStock(artName);
                     const candidates = getArticleImageCandidates(artName);
-                    const manualPhoto = homeArticlePhotos[artName] || '';
-                    const allCands = manualPhoto ? [manualPhoto, ...candidates.filter(u => u !== manualPhoto)] : candidates;
-                    const candidateData = JSON.stringify(allCands.slice(0, 10)).replace(/"/g, '&quot;');
-                    const imgHtml = '<div class="home-art-img-placeholder" data-imgcandidates="' + candidateData + '">📦</div>';
+                    const imgUrl = homeArticlePhotos[artName] || candidates[0] || '';
+                    const imgHtml = imgUrl
+                        ? '<div class="home-art-img-placeholder" style="position:relative;">📦<img class="home-art-img" src="' + imgUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'" onload="imgHideIfNotAvailable(this)">' + '</div>'
+                        : '<div class="home-art-img-placeholder">📦</div>';
                     const stockHtml = stock !== null
                         ? '<span class="home-art-stock' + (stock<=0?' zero':'') + '">' + stock + ' uds</span>'
                         : '<span class="home-art-stock" style="color:var(--text-secondary);background:none;">sin datos</span>';
@@ -4257,32 +4294,6 @@
 
             $('homeDashboard').innerHTML = html;
             if (homeEditMode && homeEditingCatName) renderHomeCatEditPanel();
-            setTimeout(loadArticleTileImages, 0);
-        }
-
-        function loadArticleTileImages() {
-            document.querySelectorAll('#homeDashboard [data-imgcandidates]').forEach(el => {
-                let urls = [];
-                try { urls = JSON.parse(el.dataset.imgcandidates || '[]'); } catch(e) {}
-                if (!urls.length) return;
-                (function tryNext() {
-                    if (!urls.length) return;
-                    const url = urls.shift();
-                    const t = new Image();
-                    t.referrerPolicy = 'no-referrer';
-                    t.onload = function() {
-                        if (t.naturalWidth < 50 || t.naturalHeight < 50) { tryNext(); return; }
-                        if (!el.isConnected) return;
-                        const img = document.createElement('img');
-                        img.className = 'home-art-img';
-                        img.src = url;
-                        img.referrerPolicy = 'no-referrer';
-                        el.replaceWith(img);
-                    };
-                    t.onerror = tryNext;
-                    t.src = url;
-                })();
-            });
         }
 
         function toggleZeroStock() {
@@ -4438,7 +4449,7 @@
         }
         
         // ===== WA CONFIRM SHEET =====
-        let _wacDelivery = 'local', _wacPayment = 'abonado', _wacTicket = false;
+        let _wacDelivery = 'local', _wacPayment = 'abonado', _wacTicket = false, _devolucionMode = false;
 
         function openWaConfirm() {
             if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
@@ -4520,9 +4531,11 @@
             const isPres   = state.orderType === 'presupuesto';
 
             // Leer valores del sheet
-            const name = isPedido ? ($('wacName').value.trim() || 'Sin nombre')
-                       : isPres   ? ($('wacNamePres').value.trim() || 'Sin nombre')
+            const name = isPedido ? $('wacName').value.trim()
+                       : isPres   ? $('wacNamePres').value.trim()
                        : '';
+            if (isPedido && !name) { toast('Ingresá el nombre del cliente', 'warning'); $('wacName').focus(); return; }
+            if (isPres   && !name) { toast('Ingresá el nombre del cliente', 'warning'); $('wacNamePres').focus(); return; }
             const address   = $('wacAddress')?.value.trim() || '';
             const payAmt    = $('wacPaymentAmount')?.value.trim() || '';
 
@@ -4542,10 +4555,12 @@
             // Construir texto WA
             let text = '';
             if (state.orderType === 'reposicion') {
-                text = 'REPOSICION GALERIA\n─────────────────\n\n';
+                const repoTitle = _devolucionMode ? 'Local - Devolución' : 'Local - Reposición';
+                const repoSign  = _devolucionMode ? '+' : '-';
+                text = repoTitle + '\n─────────────────\n\n';
                 state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
                 text += '\n─────────────────\nTOTAL: ' + state.cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
-                text += '\nCODIGOS:\n'; state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+                text += '\nCODIGOS:\n'; state.cart.forEach(p => { text += p.codigo + '\t' + repoSign + p.qty + '\n'; });
             } else if (isPres) {
                 let total = 0;
                 const grouped = {};
@@ -4577,12 +4592,14 @@
             if (!validateForm()) return;
             let text = '';
             if (state.orderType === 'reposicion') {
-                text = 'REPOSICION GALERIA\n─────────────────\n\n';
+                const repoTitle = _devolucionMode ? 'Local - Devolución' : 'Local - Reposición';
+                const repoSign  = _devolucionMode ? '+' : '-';
+                text = repoTitle + '\n─────────────────\n\n';
                 state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
                 const total = state.cart.reduce((a, p) => a + p.qty, 0);
                 text += '\n─────────────────\nTOTAL: ' + total + ' uds\n';
                 text += '\nCODIGOS:\n';
-                state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+                state.cart.forEach(p => { text += p.codigo + '\t' + repoSign + p.qty + '\n'; });
             } else if (state.orderType === 'presupuesto') {
                 let total = 0;
                 const grouped = {};

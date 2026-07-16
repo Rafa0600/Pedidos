@@ -1515,8 +1515,25 @@
             <div class="clear-modal-msg">¿Qué tipo de PDF querés?</div>
             <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
                 <button class="clear-modal-btn" style="background:#8b5cf6;color:white;font-size:0.95em;font-weight:800;" onclick="closePdfTypeModal();sharePrepTicketPDF()">📤 Compartir Presupuesto (Ticket)</button>
-                <button class="clear-modal-btn" style="background:#dc2626;color:white;font-size:0.95em;" onclick="closePdfTypeModal();downloadPDF()">📋 Detalles PDF</button>
+                <button class="clear-modal-btn" style="background:#dc2626;color:white;font-size:0.95em;" onclick="closePdfTypeModal();detallesPDF()">📋 Detalles PDF</button>
                 <button class="clear-modal-btn no" onclick="closePdfTypeModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <div class="clear-modal-overlay" id="ivaModal">
+        <div class="clear-modal">
+            <div class="clear-modal-title">🧾 IVA en el presupuesto</div>
+            <div class="clear-modal-msg">¿Agregar IVA al presupuesto detallado?</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;">
+                <span style="font-size:0.95em;font-weight:600;">IVA</span>
+                <input type="number" id="ivaPercent" value="21" min="0" max="100" step="0.5" inputmode="decimal"
+                    style="width:90px;padding:10px;font-size:16px;text-align:center;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-weight:700;">
+                <span style="font-size:0.95em;font-weight:600;">%</span>
+            </div>
+            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
+                <button class="clear-modal-btn" style="background:#dc2626;color:white;font-weight:800;" onclick="confirmarIvaPDF()">📋 Generar con IVA</button>
+                <button class="clear-modal-btn no" onclick="cerrarIvaModal();downloadPDF(0)">Sin IVA</button>
+                <button class="clear-modal-btn no" onclick="cerrarIvaModal()">Cancelar</button>
             </div>
         </div>
     </div>
@@ -4637,8 +4654,26 @@
             $('pdfTypeModal').classList.add('show');
         }
         function closePdfTypeModal() { $('pdfTypeModal').classList.remove('show'); }
+
+        // Presupuesto detallado → primero pregunta IVA (predeterminado 21%). Otros tipos: directo.
+        function detallesPDF() {
+            if (state.orderType === 'presupuesto') {
+                $('ivaPercent').value = '21';
+                $('ivaModal').classList.add('show');
+            } else {
+                downloadPDF(0);
+            }
+        }
+        function cerrarIvaModal() { $('ivaModal').classList.remove('show'); }
+        function confirmarIvaPDF() {
+            let pct = parseFloat($('ivaPercent').value);
+            if (isNaN(pct) || pct < 0) pct = 21;   // si lo dejan vacío/inválido → 21% por defecto
+            cerrarIvaModal();
+            downloadPDF(pct);
+        }
         
-        function downloadPDF() {
+        function downloadPDF(ivaPct) {
+            ivaPct = Number(ivaPct) || 0;   // 0 = sin IVA
             if (!state.cart.length || !validateForm()) return;
             const date = new Date().toLocaleDateString('es-AR');
             const total = state.cart.reduce((a, p) => a + p.qty, 0);
@@ -4693,11 +4728,19 @@
             }
             if (state.orderType === 'presupuesto') {
                 const shipping = getBudgetShipping();
-                if (shipping > 0) {
-                    html += '<br>Envio: $' + shipping.toLocaleString();
-                    html += '<br><strong>TOTAL: $' + (grandTotal + shipping).toLocaleString() + '</strong>';
+                const neto = grandTotal + shipping;
+                if (shipping > 0) html += '<br>Envio: $' + shipping.toLocaleString();
+                if (ivaPct > 0) {
+                    const iva = Math.round(neto * ivaPct / 100);
+                    const totalConIva = neto + iva;
+                    const pctTxt = Number.isInteger(ivaPct) ? ivaPct : ivaPct.toFixed(1);
+                    html += '<div style="margin-top:10px;border-top:1px solid #ccc;padding-top:8px">' +
+                            'Total Neto: $' + neto.toLocaleString() +
+                            '<br>IVA ' + pctTxt + '%: $' + iva.toLocaleString() +
+                            '<br><strong style="font-size:16px">TOTAL: $' + totalConIva.toLocaleString() + '</strong>' +
+                            '</div>';
                 } else {
-                    html += '<br><strong>TOTAL: $' + grandTotal.toLocaleString() + '</strong>';
+                    html += '<br><strong>TOTAL: $' + neto.toLocaleString() + '</strong>';
                 }
             }
             html += '</div></body></html>';

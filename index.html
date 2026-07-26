@@ -1040,6 +1040,22 @@
         </div>
     </div>
 
+    <!-- PROMPT NOMBRE PARA TICKET -->
+    <div class="modal" id="ticketNameModal">
+        <div class="modal-content">
+            <div class="modal-icon">🎫</div>
+            <div class="modal-title">Nombre del pedido</div>
+            <div class="modal-text">Escribí el nombre para el ticket:</div>
+            <input type="text" id="ticketNameInput" class="form-input" placeholder="Nombre del cliente..."
+                   style="width:100%;margin:10px 0 4px;font-size:1em;font-weight:600;text-align:center;"
+                   onkeydown="if(event.key==='Enter')confirmTicketName()">
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeTicketNameModal()">Cancelar</button>
+                <button class="modal-btn confirm" onclick="confirmTicketName()">🖨️ Imprimir</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SETTINGS -->
     <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
         <div class="settings-panel">
@@ -4755,7 +4771,27 @@
         
         // Ticket button now prints Preparados directly
         function downloadTicketDirectPrint() {
-            if (!state.cart.length || !validateForm()) return;
+            if (!state.cart.length) return;
+            const name = $('clientName').value.trim();
+            // Si no hay nombre, mostrar un cartel para escribirlo (salvo reposición)
+            if (!name && state.orderType !== 'reposicion') {
+                const inp = $('ticketNameInput');
+                if (inp) inp.value = '';
+                $('ticketNameModal').classList.add('show');
+                setTimeout(() => { if (inp) inp.focus(); }, 60);
+                return;
+            }
+            if (!validateForm()) return;
+            downloadTicketPreparados('print');
+        }
+        function closeTicketNameModal() { $('ticketNameModal').classList.remove('show'); }
+        function confirmTicketName() {
+            const val = $('ticketNameInput').value.trim();
+            if (!val) { $('ticketNameInput').focus(); return; }
+            $('clientName').value = val;
+            syncClientName(val);
+            closeTicketNameModal();
+            if (!validateForm()) return;
             downloadTicketPreparados('print');
         }
         
@@ -5193,7 +5229,10 @@
                 if (!articles[artName]) articles[artName] = {};
                 if (!articles[artName][color]) articles[artName][color] = {};
                 const talle = p.talle || '-';
-                articles[artName][color][talle] = (articles[artName][color][talle] || 0) + p.qty;
+                const cell = articles[artName][color][talle] || { qty: 0, stock: null };
+                cell.qty += p.qty;
+                if (p.stock != null && !isNaN(p.stock)) cell.stock = p.stock;
+                articles[artName][color][talle] = cell;
             });
             
             const sortedArticles = Object.keys(articles).sort((a, b) => a.localeCompare(b, 'es'));
@@ -5210,13 +5249,16 @@
                 '.subtitle{font-size:15px;font-weight:900;margin-bottom:2px}' +
                 '.line{border-top:2px dashed #000;margin:6px 0}' +
                 '.line-thick{border-top:3px solid #000;margin:8px 0}' +
-                '.art-name{font-size:14px;font-weight:900;text-transform:uppercase;background:#000;color:#fff;text-align:center;margin:0 -4mm;padding:5px 4mm;word-wrap:break-word;line-height:1.3}' +
+                '.art-name{font-weight:900;text-transform:uppercase;background:#000;color:#fff;margin:0 -4mm;padding:5px 4mm;line-height:1.3;display:flex;align-items:center;gap:6px}' +
+                '.art-name .an-name{flex:1;text-align:center;word-wrap:break-word;overflow-wrap:break-word;min-width:0}' +
+                '.art-name .an-tot{flex-shrink:0;border:2px solid #fff;border-radius:4px;padding:0 6px;font-size:16px}' +
                 '.color-block{padding:4px 0}' +
-                '.color-name{font-size:14px;font-weight:900;margin-bottom:3px}' +
+                '.color-name{font-size:19px;font-weight:900;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:2px}' +
                 '.sizes-row{display:flex;gap:0}' +
-                '.size-cell{flex:1;text-align:center;border:2px solid #000;border-radius:3px;margin:0 1px;padding:1px 0}' +
-                '.size-cell .lbl{font-size:10px;font-weight:900;border-bottom:1px solid #000;padding-bottom:1px;margin-bottom:1px}' +
-                '.size-cell .qty{font-size:20px;font-weight:900;line-height:1.2}' +
+                '.size-cell{flex:1;text-align:center;border:2px solid #000;border-radius:3px;margin:0 1px;padding:2px 0}' +
+                '.size-cell .lbl{font-size:18px;font-weight:900;border-bottom:2px solid #000;padding-bottom:2px;margin-bottom:2px;line-height:1.1}' +
+                '.size-cell .qty{font-size:20px;font-weight:900;line-height:1.3;background:#000;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+                '.size-cell .stk{font-size:9px;font-weight:700;line-height:1;margin-top:1px}' +
                 '.size-cell.empty{border-color:#ccc}' +
                 '.size-cell.tot{max-width:30px;border:none;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}' +
                 '.sep{border-top:1px dashed #999;margin:3px 0}' +
@@ -5265,8 +5307,19 @@
                 
                 // Dynamic font size for long names
                 const nameLen = artName.length;
-                const nameFontSize = nameLen <= 18 ? '14px' : nameLen <= 24 ? '12px' : nameLen <= 32 ? '10px' : '9px';
-                html += '<div class="art-name" style="font-size:' + nameFontSize + '">' + artName + '</div>';
+                // Mantener la letra grande y dejar que el nombre baje de renglón si es largo
+                const nameFontSize = nameLen <= 20 ? '18px' : nameLen <= 30 ? '16px' : '14px';
+
+                // Total de unidades de este artículo (suma de todos los colores/talles)
+                let artTotal = 0;
+                Object.values(colors).forEach(sizeMap => Object.values(sizeMap).forEach(c => artTotal += c.qty));
+
+                html += '<div class="art-name" style="font-size:' + nameFontSize + '"><span class="an-name">' + artName + '</span><span class="an-tot">' + artTotal + '</span></div>';
+
+                // Talle (lbl) y cantidad (qty) grandes; se achican solos si hay muchos talles en la fila
+                const nSizes = allSizes.length;
+                const lblFont = nSizes <= 5 ? '18px' : nSizes <= 6 ? '16px' : nSizes <= 8 ? '13px' : '11px';
+                const qtyFont = nSizes <= 5 ? '20px' : nSizes <= 6 ? '18px' : nSizes <= 8 ? '15px' : '13px';
                 
                 const sortedColors = Object.keys(colors).sort((a, b) => a.localeCompare(b, 'es'));
                 
@@ -5274,7 +5327,7 @@
                     const sizeMap = colors[color];
                     
                     let colorTotal = 0;
-                    Object.values(sizeMap).forEach(q => colorTotal += q);
+                    Object.values(sizeMap).forEach(c => colorTotal += c.qty);
                     grandTotal += colorTotal;
                     
                     html += '<div class="color-block">';
@@ -5282,7 +5335,9 @@
                     html += '<div class="sizes-row">';
                     allSizes.forEach(s => {
                         if (sizeMap[s]) {
-                            html += '<div class="size-cell"><div class="lbl">' + s + '</div><div class="qty">' + sizeMap[s] + '</div></div>';
+                            const stk = sizeMap[s].stock;
+                            const stkHtml = (stk != null) ? '<div class="stk">(' + stk + ')</div>' : '';
+                            html += '<div class="size-cell"><div class="lbl" style="font-size:' + lblFont + '">' + s + '</div><div class="qty" style="font-size:' + qtyFont + '">' + sizeMap[s].qty + '</div>' + stkHtml + '</div>';
                         } else {
                             html += '<div class="size-cell empty"></div>';
                         }

@@ -2632,7 +2632,7 @@
         }
         
         // ===== DATA — CACHE-FIRST LOADING =====
-        const CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 min — inventario mayorista no cambia cada minuto
+        const CACHE_MAX_AGE_MS = 60 * 60 * 1000; // 1 hora
 
         // Escribe el JSON pesado de productos de forma diferida (no bloquea el hilo principal)
         let _productsSaveTimer = null;
@@ -2778,6 +2778,17 @@
                 const data = await prodResp.json();
                 if (!data.success || !data.products || !data.products.length) throw new Error('Sin productos');
 
+                // Si la versión de Cloudflare es la misma que tenemos, no reprocesar
+                const savedLM = localStorage.getItem('mikra_cfLastModified');
+                if (isBackground && savedLM && data.lastModified && data.lastModified === savedLM && PRODUCTS.length) {
+                    _stopSyncProgress(true);
+                    $('syncDot').classList.remove('loading', 'error');
+                    $('syncStatus').textContent = 'Listo';
+                    $('syncTime').textContent = '• Al día';
+                    localStorage.setItem('mikra_lastSync', new Date().toISOString());
+                    return;
+                }
+
                 PRODUCTS = filterOutCombos(data.products);
 
                 // Imágenes
@@ -2865,13 +2876,21 @@
             } catch(e) { /* silencioso */ }
         }
 
-        async function loadData() {
+        async function loadData(forceRefresh) {
             const hasCache = loadFromCache();
             if (hasCache) {
                 $('loadingScreen').classList.add('hidden');
                 $('syncDot').classList.remove('loading', 'error');
-                $('syncStatus').textContent = 'Caché';
-                syncFromAPI(true); // siempre verifica si hay datos nuevos en Cloudflare
+                if (!forceRefresh && isCacheFresh()) {
+                    $('syncStatus').textContent = 'Listo';
+                    const lastSync = localStorage.getItem('mikra_lastSync');
+                    if (lastSync) {
+                        $('syncTime').textContent = '• ' + new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    }
+                } else {
+                    $('syncStatus').textContent = 'Caché';
+                    syncFromAPI(forceRefresh ? false : true);
+                }
             } else {
                 $('loadingText').textContent = 'Cargando inventario...';
                 $('loadingError').style.display = 'none';
@@ -2922,7 +2941,7 @@
         function showAutocomplete(query) {
             if (!query || query.length < 2) { $('autocomplete').classList.remove('show'); return; }
             const q = query.toLowerCase();
-            const matches = UNIQUE_ARTICLES.filter(a => a.name.toLowerCase().includes(q)).slice(0, 10);
+            const matches = UNIQUE_ARTICLES.filter(a => a._nameLower.includes(q)).slice(0, 10);
             if (!matches.length) { $('autocomplete').classList.remove('show'); return; }
             $('autocomplete').innerHTML = matches.map(a => 
                 '<div class="autocomplete-item" data-name="' + a.name.replace(/"/g, '&quot;') + '">' +
@@ -3019,11 +3038,14 @@
                 const loc = state.location.toLowerCase();
                 r = r.filter(p => (p.ubicacion || '').toLowerCase().includes(loc));
             }
-            updateDynamicFilters(r);
+            // Solo reconstruir filtros de color/talle cuando es búsqueda exacta o no hay búsqueda
+            if (state.searchExact || !state.search) {
+                updateDynamicFilters(r);
+            }
             if (state.color) r = r.filter(p => p.color === state.color);
             if (state.size)  r = r.filter(p => p.talle === state.size);
-            // Sólo ordenar si r es un subconjunto filtrado — PRODUCTS ya está pre-ordenado
-            if (r !== PRODUCTS) r = sortProducts(r);
+            // Solo ordenar cuando es búsqueda exacta (artículo seleccionado)
+            if (r !== PRODUCTS && (state.searchExact || !state.search)) r = sortProducts(r);
             state.filtered = r; state.page = 1;
             render(); updateActiveFilterTags();
         }
@@ -3143,8 +3165,10 @@
             const url = IMAGES_MAP[codigo] || IMAGES_MAP[String(codigo)] || '';
             return url ? url.replace(/-O\.jpg$/i, '-S.jpg') : '';
         }
+        const _imgCache = {};
         function getProductImageFull(codigo, product) {
             if (!codigo) return '';
+            if (_imgCache[codigo] !== undefined) return _imgCache[codigo];
             let url = IMAGES_MAP[codigo] || IMAGES_MAP[String(codigo)] || '';
             if (!url && product) {
                 const prefix = codigo.replace(/-\d+$/, '');
@@ -3152,7 +3176,8 @@
                     if (key.startsWith(prefix)) { url = IMAGES_MAP[key]; break; }
                 }
             }
-            return url || '';
+            _imgCache[codigo] = url || '';
+            return _imgCache[codigo];
         }
         function showImgModal(codigo) {
             const url = getProductImageFull(codigo);
@@ -4410,11 +4435,32 @@
         }
         
         // ===== RENDER =====
+        let _renderRAF = null;
         function render() {
-            if (isArticleDetailMode()) { hideHomeScreen(); renderArticleDetail(); updateBadge(); return; }
+            if (_renderRAF) cancelAnimationFrame(_renderRAF);
+            _renderRAF = requestAnimationFrame(_renderNow);
+        }
+        function _renderNow() {
+            _renderRAF = null;
+            if (isArticleDetailMode()) {
+                // Durante búsqueda libre (no exacta), solo mostrar conteo sin reconstruir todo el DOM
+                if (!state.searchExact && _inputFocused) {
+                    hideHomeScreen();
+                    $('articleDetailView').classList.add('active');
+                    $('productList').style.display = 'none'; $('pagination').style.display = 'none';
+                    $('articleStickyName').textContent = state.search.toUpperCase();
+                    $('showingCount').textContent = state.filtered.length;
+                    $('totalCount').textContent = state.filtered.length;
+                    if (!state.filtered.length) {
+                        $('articleDetailContent').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>No hay variantes</div></div>';
+                    }
+                    updateBadge();
+                    return;
+                }
+                hideHomeScreen(); renderArticleDetail(); updateBadge(); return;
+            }
             hideArticleDetail();
             if (isHomeState()) { renderHomeScreen(); return; }
-            // Caso borde (búsqueda vacía, input enfocado o filtros sin texto) → home tiles
             renderHomeScreen();
         }
         
@@ -5811,15 +5857,18 @@
         // ===== EVENT LISTENERS =====
         const debouncedFilter = debounce(() => {
             applyFilters();
-        }, 80); // 80ms — suficiente para evitar renders en cada tecla rápida
+        }, 200);
 
         $('searchInput').addEventListener('focus', () => {
             _inputFocused = true;
             refreshSuggestions();
         });
         $('searchInput').addEventListener('blur', () => {
-            // Delay para que el click en autocomplete pueda procesarse antes
-            setTimeout(() => { _inputFocused = false; }, 200);
+            setTimeout(() => {
+                _inputFocused = false;
+                // Render completo ahora que dejó de escribir
+                if (state.search && !state.searchExact) applyFilters();
+            }, 200);
         });
         $('searchInput').addEventListener('input', e => {
             const val = e.target.value.trim();
@@ -5827,17 +5876,17 @@
             forceListView = false;
             $('searchClear').classList.toggle('show', val.length > 0);
 
-            if (val === state.search) return; // sin cambio real (p.ej. sólo espacios)
+            if (val === state.search) return;
             state.search = val;
 
             if (val === '') {
-                // Búsqueda vaciada: cancelar debounce pendiente y renderizar inmediatamente
                 debouncedFilter.cancel && debouncedFilter.cancel();
                 showRecentSearches();
                 _inputFocused = true;
                 applyFilters();
                 return;
             }
+            // Solo mostrar autocomplete rápido; el render pesado espera
             refreshSuggestions();
             debouncedFilter();
         });

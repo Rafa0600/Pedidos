@@ -1538,17 +1538,20 @@
     </div>
     <div class="clear-modal-overlay" id="ivaModal">
         <div class="clear-modal">
-            <div class="clear-modal-title">🧾 IVA en el presupuesto</div>
-            <div class="clear-modal-msg">¿Agregar IVA al presupuesto detallado?</div>
+            <div class="clear-modal-title">🧾 Ajuste en el presupuesto</div>
+            <div class="clear-modal-msg">Concepto y porcentaje a aplicar:</div>
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;">
-                <span style="font-size:0.95em;font-weight:600;">IVA</span>
-                <input type="number" id="ivaPercent" value="21" min="0" max="100" step="0.5" inputmode="decimal"
-                    style="width:90px;padding:10px;font-size:16px;text-align:center;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-weight:700;">
+                <input type="text" id="ivaLabel" value="IVA" maxlength="20"
+                    style="width:110px;padding:10px;font-size:15px;text-align:center;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-weight:700;"
+                    oninput="updateIvaBtn()">
+                <input type="number" id="ivaPercent" value="21" min="-100" max="100" step="0.5" inputmode="decimal"
+                    style="width:90px;padding:10px;font-size:16px;text-align:center;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-weight:700;"
+                    oninput="updateIvaBtn()">
                 <span style="font-size:0.95em;font-weight:600;">%</span>
             </div>
             <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
-                <button class="clear-modal-btn" style="background:#dc2626;color:white;font-weight:800;" onclick="confirmarIvaPDF()">📋 Generar con IVA</button>
-                <button class="clear-modal-btn no" onclick="cerrarIvaModal();downloadPDF(0)">Sin IVA</button>
+                <button class="clear-modal-btn" id="ivaGenBtn" style="background:#dc2626;color:white;font-weight:800;" onclick="confirmarIvaPDF()">📋 Generar con IVA</button>
+                <button class="clear-modal-btn no" onclick="cerrarIvaModal();downloadPDF(0,'')">Sin ajuste</button>
                 <button class="clear-modal-btn no" onclick="cerrarIvaModal()">Cancelar</button>
             </div>
         </div>
@@ -4631,24 +4634,25 @@
                 if ($('paymentAmount'))   $('paymentAmount').value   = payAmt;
             }
 
-            // Construir texto WA
+            // Construir texto WA (carrito ordenado: artículo → color → talle)
+            const cart = getSortedCart();
             let text = '';
             if (state.orderType === 'reposicion') {
                 const repoTitle = _devolucionMode ? 'Local - Devolución' : 'Local - Reposición';
                 const repoSign  = _devolucionMode ? '+' : '-';
                 text = repoTitle + '\n─────────────────\n\n';
-                state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
-                text += '\n─────────────────\nTOTAL: ' + state.cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
-                text += '\nCODIGOS:\n'; state.cart.forEach(p => { text += p.codigo + '\t' + repoSign + p.qty + '\n'; });
+                cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
+                text += '\n─────────────────\nTOTAL: ' + cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
+                text += '\nCODIGOS:\n'; cart.forEach(p => { text += p.codigo + '\t' + repoSign + p.qty + '\n'; });
             } else if (isPres) {
                 let total = 0;
                 const grouped = {};
-                state.cart.forEach(p => { const n=p.titulo||p.articulo; if(!grouped[n]) grouped[n]={qty:0,price:articlePrices[n]||0}; grouped[n].qty+=p.qty; });
+                cart.forEach(p => { const n=p.titulo||p.articulo; if(!grouped[n]) grouped[n]={qty:0,price:articlePrices[n]||0}; grouped[n].qty+=p.qty; });
                 text = 'PRESUPUESTO MIKRA\n─────────────────\n' + name + '\n─────────────────\n\n';
                 Object.entries(grouped).forEach(([n,d]) => { if(d.price>0) { text+=n+' x'+d.qty+' = $'+(d.qty*d.price).toLocaleString()+'\n'; total+=d.qty*d.price; } });
                 const shipping = getBudgetShipping();
                 text += shipping > 0 ? '\nEnvio: $'+shipping.toLocaleString()+'\nTOTAL: $'+(total+shipping).toLocaleString()+'\n' : '\nTOTAL: $'+total.toLocaleString()+'\n';
-                text += '\nCODIGOS:\n'; state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+                text += '\nCODIGOS:\n'; cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             } else {
                 const canal      = document.querySelector('input[name="canal"]:checked')?.value || 'local';
                 const canalLabel = canal === 'tn' ? 'TN' : 'Local';
@@ -4657,9 +4661,9 @@
                 text = 'PEDIDO MIKRA\n─────────────────\n' + canalLabel + ' - ' + name + '\n' + delivLabel + '\n';
                 if (_wacDelivery === 'envio' && address) text += address + '\n';
                 text += payLabel + '\n─────────────────\n\n';
-                state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo||p.articulo) + ', ' + (p.color||'-') + ', T:' + (p.talle||'-') + '\n'; });
-                text += '\n─────────────────\nTOTAL: ' + state.cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
-                text += '\nCODIGOS:\n'; state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+                cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo||p.articulo) + ', ' + (p.color||'-') + ', T:' + (p.talle||'-') + '\n'; });
+                text += '\n─────────────────\nTOTAL: ' + cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
+                text += '\nCODIGOS:\n'; cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             }
 
             closeWaConfirm();
@@ -4669,20 +4673,21 @@
         function shareWhatsApp() {
             if (!state.cart.length) return;
             if (!validateForm()) return;
+            const cart = getSortedCart();
             let text = '';
             if (state.orderType === 'reposicion') {
                 const repoTitle = _devolucionMode ? 'Local - Devolución' : 'Local - Reposición';
                 const repoSign  = _devolucionMode ? '+' : '-';
                 text = repoTitle + '\n─────────────────\n\n';
-                state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
-                const total = state.cart.reduce((a, p) => a + p.qty, 0);
+                cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
+                const total = cart.reduce((a, p) => a + p.qty, 0);
                 text += '\n─────────────────\nTOTAL: ' + total + ' uds\n';
                 text += '\nCODIGOS:\n';
-                state.cart.forEach(p => { text += p.codigo + '\t' + repoSign + p.qty + '\n'; });
+                cart.forEach(p => { text += p.codigo + '\t' + repoSign + p.qty + '\n'; });
             } else if (state.orderType === 'presupuesto') {
                 let total = 0;
                 const grouped = {};
-                state.cart.forEach(p => { const n = p.titulo || p.articulo; if (!grouped[n]) grouped[n] = { qty: 0, price: articlePrices[n] || 0 }; grouped[n].qty += p.qty; });
+                cart.forEach(p => { const n = p.titulo || p.articulo; if (!grouped[n]) grouped[n] = { qty: 0, price: articlePrices[n] || 0 }; grouped[n].qty += p.qty; });
                 const clientPres = $('clientName').value.trim() || 'Sin nombre';
                 text = 'PRESUPUESTO MIKRA\n─────────────────\n';
                 text += clientPres + '\n─────────────────\n\n';
@@ -4695,18 +4700,18 @@
                     text += '\nTOTAL: $' + total.toLocaleString() + '\n';
                 }
                 text += '\nCODIGOS:\n';
-                state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+                cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             } else {
                 const order = getOrderInfo();
                 text = 'PEDIDO MIKRA\n─────────────────\n';
                 text += order.clientDisplayName + '\n' + order.deliveryText + '\n';
                 if (order.deliveryType === 'envio' && order.shippingAddress) text += order.shippingAddress + '\n';
                 text += order.paymentText + '\n─────────────────\n\n';
-                state.cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
-                const totalUnits = state.cart.reduce((a, p) => a + p.qty, 0);
+                cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
+                const totalUnits = cart.reduce((a, p) => a + p.qty, 0);
                 text += '\n─────────────────\nTOTAL: ' + totalUnits + ' uds\n';
                 text += '\nCODIGOS:\n';
-                state.cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+                cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             }
             window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
         }
@@ -4717,43 +4722,62 @@
         }
         function closePdfTypeModal() { $('pdfTypeModal').classList.remove('show'); }
 
-        // Presupuesto detallado → primero pregunta IVA (predeterminado 21%). Otros tipos: directo.
         function detallesPDF() {
             if (state.orderType === 'presupuesto') {
+                $('ivaLabel').value = 'IVA';
                 $('ivaPercent').value = '21';
+                updateIvaBtn();
                 $('ivaModal').classList.add('show');
             } else {
-                downloadPDF(0);
+                downloadPDF(0, '');
             }
         }
         function cerrarIvaModal() { $('ivaModal').classList.remove('show'); }
+        function updateIvaBtn() {
+            const label = ($('ivaLabel').value.trim()) || 'IVA';
+            $('ivaGenBtn').textContent = '📋 Generar con ' + label;
+        }
         function confirmarIvaPDF() {
             let pct = parseFloat($('ivaPercent').value);
-            if (isNaN(pct) || pct < 0) pct = 21;   // si lo dejan vacío/inválido → 21% por defecto
+            if (isNaN(pct)) pct = 21;
+            const label = ($('ivaLabel').value.trim()) || 'IVA';
             cerrarIvaModal();
-            downloadPDF(pct);
+            downloadPDF(pct, label);
         }
         
-        function downloadPDF(ivaPct) {
-            ivaPct = Number(ivaPct) || 0;   // 0 = sin IVA
-            if (!state.cart.length || !validateForm()) return;
-            const date = new Date().toLocaleDateString('es-AR');
-            const total = state.cart.reduce((a, p) => a + p.qty, 0);
-            let title = state.orderType === 'reposicion' ? 'Reposición Galería' : state.orderType === 'presupuesto' ? 'Presupuesto Mikra' : 'Pedido Mikra';
-            
-            // Sort cart items by article name (titulo) alphabetically
-            const sortedCart = [...state.cart].sort((a, b) => {
+        // Orden global reutilizable: artículo → color → talle (S,M,L,XL,2XL… y numéricos por valor)
+        function _sizeRank(s) {
+            const u = (s || '').toUpperCase().trim();
+            const i = SIZE_ORDER.indexOf(u);
+            if (i > -1) return i;
+            const n = parseFloat(s);
+            if (!isNaN(n)) return 1000 + n;
+            return 9999;
+        }
+        function getSortedCart() {
+            return [...state.cart].sort((a, b) => {
                 const na = (a.titulo || a.articulo || '').toLowerCase();
                 const nb = (b.titulo || b.articulo || '').toLowerCase();
                 if (na !== nb) return na.localeCompare(nb, 'es');
                 const ca = (a.color || '').toLowerCase();
                 const cb = (b.color || '').toLowerCase();
                 if (ca !== cb) return ca.localeCompare(cb, 'es');
-                const sa = a.talle || '', sb = b.talle || '';
-                const nna = parseFloat(sa), nnb = parseFloat(sb);
-                if (!isNaN(nna) && !isNaN(nnb)) return nna - nnb;
-                return sa.localeCompare(sb);
+                const ra = _sizeRank(a.talle), rb = _sizeRank(b.talle);
+                if (ra !== rb) return ra - rb;
+                return (a.talle || '').localeCompare(b.talle || '');
             });
+        }
+
+        function downloadPDF(ivaPct, ivaLabel) {
+            ivaPct = Number(ivaPct) || 0;
+            ivaLabel = ivaLabel || 'IVA';
+            if (!state.cart.length || !validateForm()) return;
+            const date = new Date().toLocaleDateString('es-AR');
+            const total = state.cart.reduce((a, p) => a + p.qty, 0);
+            let title = state.orderType === 'reposicion' ? 'Reposición Galería' : state.orderType === 'presupuesto' ? 'Presupuesto Mikra' : 'Pedido Mikra';
+            
+            // Orden: artículo → color → talle (S, M, L, XL, 2XL... y numéricos por valor)
+            const sortedCart = getSortedCart();
             
             let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + title + '</title>' +
                 '<style>body{font-family:Arial,sans-serif;padding:20px}h1{color:#1a2744;font-size:18px;margin-bottom:5px;font-weight:bold}' +
@@ -4790,19 +4814,21 @@
             }
             if (state.orderType === 'presupuesto') {
                 const shipping = getBudgetShipping();
-                const neto = grandTotal + shipping;
-                if (shipping > 0) html += '<br>Envio: $' + shipping.toLocaleString();
-                if (ivaPct > 0) {
-                    const iva = Math.round(neto * ivaPct / 100);
-                    const totalConIva = neto + iva;
-                    const pctTxt = Number.isInteger(ivaPct) ? ivaPct : ivaPct.toFixed(1);
+                if (ivaPct !== 0) {
+                    // El ajuste (IVA/descuento) se aplica SOLO sobre los artículos, no sobre el envío
+                    const ajuste = Math.round(grandTotal * ivaPct / 100);
+                    const subConAjuste = grandTotal + ajuste;
+                    const totalFinal = subConAjuste + shipping;
+                    const pctTxt = (ivaPct > 0 ? '+' : '') + (Number.isInteger(ivaPct) ? ivaPct : ivaPct.toFixed(1));
                     html += '<div style="margin-top:10px;border-top:1px solid #ccc;padding-top:8px">' +
-                            'Total Neto: $' + neto.toLocaleString() +
-                            '<br>IVA ' + pctTxt + '%: $' + iva.toLocaleString() +
-                            '<br><strong style="font-size:16px">TOTAL: $' + totalConIva.toLocaleString() + '</strong>' +
+                            'Subtotal: $' + grandTotal.toLocaleString() +
+                            '<br>' + ivaLabel + ' ' + pctTxt + '%: ' + (ajuste < 0 ? '-' : '') + '$' + Math.abs(ajuste).toLocaleString() +
+                            (shipping > 0 ? '<br>Envio: $' + shipping.toLocaleString() : '') +
+                            '<br><strong style="font-size:16px">TOTAL: $' + totalFinal.toLocaleString() + '</strong>' +
                             '</div>';
                 } else {
-                    html += '<br><strong>TOTAL: $' + neto.toLocaleString() + '</strong>';
+                    if (shipping > 0) html += '<br>Envio: $' + shipping.toLocaleString();
+                    html += '<br><strong>TOTAL: $' + (grandTotal + shipping).toLocaleString() + '</strong>';
                 }
             }
             html += '</div></body></html>';

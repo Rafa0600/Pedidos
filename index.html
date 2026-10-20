@@ -1023,7 +1023,7 @@
             </div>
         </div>
         <div class="loading-error" id="loadingError" style="display:none;">
-            <button onclick="loadData(true)">🔄 Reintentar</button>
+            <button onclick="loadData()">🔄 Reintentar</button>
         </div>
     </div>
 
@@ -1034,8 +1034,8 @@
             <div class="modal-title" id="modalTitle">Atención</div>
             <div class="modal-text" id="modalText">Mensaje</div>
             <div class="modal-buttons">
-                <button class="modal-btn cancel" onclick="closeModal()">Cancelar</button>
-                <button class="modal-btn confirm" id="modalConfirm" onclick="closeModal()">Aceptar</button>
+                <button class="modal-btn cancel" onclick="closeModal(false)">Cancelar</button>
+                <button class="modal-btn confirm" id="modalConfirm" onclick="closeModal(true)">Aceptar</button>
             </div>
         </div>
     </div>
@@ -1101,7 +1101,7 @@
                 </div>
             </div>
             <div class="header-right">
-                <button class="icon-btn" onclick="loadData(true)" title="Sync">🔄</button>
+                <button class="icon-btn" onclick="manualSync()" title="Sync">🔄</button>
                 <button class="icon-btn" onclick="openSettings()" title="Ajustes">⚙️</button>
             </div>
         </div>
@@ -1573,14 +1573,26 @@
 
         // URL del GAS de mayorista (desplegar aparte — ver instrucciones)
         const MAYORISTA_URL = 'https://script.google.com/macros/s/AKfycbxz25g5BrFsriaetrgWli8j_wAAhU32z65Stn78zSIg5E4tI5sr82mky8h0wP9zAwScoQ/exec';
+        // Mayorista y minorista vienen en la misma respuesta del GAS: se descarga una sola vez
+        let _gasPreciosPromise = null;
+        function _fetchGasPrecios() {
+            if (!_gasPreciosPromise) {
+                _gasPreciosPromise = fetch(MAYORISTA_URL)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (!d.success || !d.data) throw new Error('Sin datos de precios');
+                        return d.data;
+                    })
+                    .catch(e => { _gasPreciosPromise = null; throw e; });
+            }
+            return _gasPreciosPromise;
+        }
         async function fetchMayoristaPrecios() {
             if (mayoristaCacheData) return mayoristaCacheData;
-            const r = await fetch(MAYORISTA_URL);
-            const d = await r.json();
-            if (!d.success || !d.data) throw new Error('Sin datos mayorista');
+            const rows = await _fetchGasPrecios();
             // Construir mapa: título normalizado → precio
             const map = {};
-            d.data.forEach(row => {
+            rows.forEach(row => {
                 if (row.articulo) map[row.articulo.trim().toLowerCase()] = parseFloat(String(row.precio).replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
             });
             mayoristaCacheData = map;
@@ -1634,11 +1646,9 @@
         // El GAS debe devolver precioMinorista por fila (col C "Precio Minorista")
         async function fetchMinoristaPrecios() {
             if (minoristaCache) return minoristaCache;
-            const r = await fetch(MAYORISTA_URL);
-            const d = await r.json();
-            if (!d.success || !d.data) throw new Error('Sin datos minorista');
+            const rows = await _fetchGasPrecios();
             const map = {};
-            d.data.forEach(row => {
+            rows.forEach(row => {
                 // Intentar distintos nombres de campo según cómo el GAS mapee la col C
                 const precio = row.precioMinorista ?? row['Precio Minorista'] ?? row.precio_minorista ?? null;
                 if (row.articulo && precio != null) {
@@ -1944,24 +1954,26 @@
             const prodCount = PRODUCTS.length;
             const lastSync = localStorage.getItem('mikra_lastSync');
             const lastDate = lastSync ? new Date(lastSync).toLocaleString() : 'Nunca';
-            const cacheSize = ((localStorage.getItem('mikra_products') || '').length + (localStorage.getItem('mikra_images') || '').length) / 1024;
-            $('cacheInfo').innerHTML = 
-                '📦 Productos: <strong>' + prodCount + '</strong> · ' +
+            const base = '📦 Productos: <strong>' + prodCount + '</strong> · ' +
                 '📷 Imágenes: <strong>' + imgCount + '</strong><br>' +
-                '🕐 Última sync: ' + lastDate + '<br>' +
-                '💾 Tamaño caché: ' + cacheSize.toFixed(0) + ' KB';
+                '🕐 Último chequeo: ' + lastDate;
+            $('cacheInfo').innerHTML = base;
+            if (navigator.storage && navigator.storage.estimate) {
+                navigator.storage.estimate().then(est => {
+                    $('cacheInfo').innerHTML = base + '<br>💾 Guardado en el dispositivo: ' + (est.usage / 1048576).toFixed(1) + ' MB';
+                }).catch(() => {});
+            }
         }
         function closeSettings() { $('settingsOverlay').classList.remove('show'); }
         
         function clearAllCache() {
             showModal('🗑️', 'Borrar caché', '¿Borrar todo el caché y recargar? Se perderán los datos offline.', 'Sí, borrar', () => {
-                localStorage.removeItem('mikra_products');
-                localStorage.removeItem('mikra_images');
-                localStorage.removeItem('mikra_lastSync');
-                PRODUCTS = []; IMAGES_MAP = {}; SEARCH_INDEX = [];
+                ['mikra_products', 'mikra_images', 'mikra_lastSync', 'mikra_cfLastModified'].forEach(k => localStorage.removeItem(k));
+                PRODUCTS = []; setImagesMap({});
                 toast('🗑️ Caché borrado. Recargando...');
                 closeSettings();
-                setTimeout(() => location.reload(), 500);
+                Promise.all([idbDel('products'), idbDel('images')])
+                    .finally(() => setTimeout(() => location.reload(), 300));
             });
         }
         function updateSettingsUI() {
@@ -1988,10 +2000,12 @@
             modalCallback = callback;
             $('modal').classList.add('show');
         }
-        function closeModal() {
+        // confirmed = true solo con "Aceptar"; "Cancelar" cierra sin ejecutar la acción
+        function closeModal(confirmed) {
             $('modal').classList.remove('show');
-            if (modalCallback) modalCallback();
+            const cb = modalCallback;
             modalCallback = null;
+            if (confirmed && cb) cb();
         }
         
         // ===== CART =====
@@ -2072,8 +2086,13 @@
         }
 
         function saveSlots() {
-            localStorage.setItem('mikra_slots', JSON.stringify(_slots));
-            localStorage.setItem('mikra_activeSlot', _activeSlotId);
+            try {
+                localStorage.setItem('mikra_slots', JSON.stringify(_slots));
+                localStorage.setItem('mikra_activeSlot', _activeSlotId);
+            } catch (e) {
+                console.error('No se pudo guardar el pedido', e);
+                toast('⚠️ No se pudo guardar el pedido (memoria llena)', 'error');
+            }
         }
 
         // Guarda el slot activo y persiste (con debounce)
@@ -2362,7 +2381,7 @@
                     tallesSorted.forEach(tal => {
                         const ci = talMap[tal];
                         const p = state.cart[ci];
-                        const prod = PRODUCTS.find(x => String(x.codigo) === String(p.codigo));
+                        const prod = productByCodigo(p.codigo);
                         const restante = prod ? prod.stock - p.qty : null;
                         let chipClass = '';
                         let qClass = '';
@@ -2414,7 +2433,7 @@
 
             chipEl.classList.add('active');
             const p = state.cart[ci];
-            const prod = PRODUCTS.find(x => String(x.codigo) === String(p.codigo));
+            const prod = productByCodigo(p.codigo);
             const stockTotal = prod ? (prod.stock || 0) : null;
 
             // Info de stock para mostrar
@@ -2499,7 +2518,7 @@
                 if (qDisp) qDisp.textContent = p.qty;
 
                 // Actualizar stock info en el editor
-                const prod = PRODUCTS.find(x => String(x.codigo) === String(p.codigo));
+                const prod = productByCodigo(p.codigo);
                 if (prod) {
                     const restante = prod.stock - p.qty;
                     const infoEl = chipEl.querySelector('.ci-chip-editor span[style*="color"]');
@@ -2618,66 +2637,130 @@
         let _searchStr = new Map();   // id → string concatenada lowercase para búsqueda libre
         let _tituloStr = new Map();   // id → titulo.toLowerCase()
         let _articuloStr = new Map(); // id → articulo.toLowerCase()
-        // Mantener SEARCH_INDEX como array vacío para compatibilidad (no se usa más)
-        let SEARCH_INDEX = [];
-        
-        function buildSearchIndex() {
+        // Índices de acceso directo (evitan recorrer los ~17K productos con .find)
+        let _byId = new Map();        // id → producto
+        let _byCodigo = new Map();    // codigo (string) → producto
+        let _byArticle = new Map();   // nombre de artículo lowercase → [productos]
+        function productById(id) { return _byId.get(id); }
+        function productByCodigo(codigo) { return _byCodigo.get(String(codigo).trim()); }
+
+        // skipSort: el catálogo guardado en el dispositivo ya viene ordenado
+        function buildSearchIndex(skipSort) {
             // Pre-ordenar PRODUCTS una sola vez → applyFilters sin filtros no re-ordena nada
-            sortProducts(PRODUCTS);
+            if (!skipSort) sortProducts(PRODUCTS);
             _searchStr.clear(); _tituloStr.clear(); _articuloStr.clear();
+            _byId.clear(); _byCodigo.clear(); _byArticle.clear();
             const n = PRODUCTS.length;
             for (let i = 0; i < n; i++) {
                 const p = PRODUCTS[i];
                 _searchStr.set(p.id, [p.codigo, p.titulo, p.articulo, p.color, p.ubicacion].filter(Boolean).join(' ').toLowerCase());
                 _tituloStr.set(p.id, (p.titulo || '').toLowerCase());
                 _articuloStr.set(p.id, (p.articulo || '').toLowerCase());
+                _byId.set(p.id, p);
+                _byCodigo.set(String(p.codigo).trim(), p);
+                const artKey = (p.titulo || p.articulo || '').toLowerCase();
+                let arr = _byArticle.get(artKey);
+                if (!arr) _byArticle.set(artKey, arr = []);
+                arr.push(p);
             }
         }
         
         // ===== DATA — CACHE-FIRST LOADING =====
-        const CACHE_MAX_AGE_MS = 60 * 60 * 1000; // 1 hora
+        // El catálogo (~17K productos, 3,7 MB) y las fotos se guardan en IndexedDB:
+        // localStorage tiene un tope de ~5 MB que el catálogo llenaba, y entonces
+        // no se guardaba la caché ni los pedidos en curso.
+        const _IDB_NAME = 'mikra_pedidos', _IDB_STORE = 'cache';
+        let _idbPromise = null;
+        function _idb() {
+            if (!_idbPromise) {
+                _idbPromise = new Promise((resolve, reject) => {
+                    const req = indexedDB.open(_IDB_NAME, 1);
+                    req.onupgradeneeded = () => req.result.createObjectStore(_IDB_STORE);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                }).catch(e => { _idbPromise = null; throw e; });
+            }
+            return _idbPromise;
+        }
+        async function idbGet(key) {
+            try {
+                const db = await _idb();
+                return await new Promise((resolve, reject) => {
+                    const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+                    r.onsuccess = () => resolve(r.result);
+                    r.onerror = () => reject(r.error);
+                });
+            } catch (e) { return undefined; }
+        }
+        async function idbSet(key, val) {
+            try {
+                const db = await _idb();
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction(_IDB_STORE, 'readwrite');
+                    tx.objectStore(_IDB_STORE).put(val, key);
+                    tx.oncomplete = resolve;
+                    tx.onerror = () => reject(tx.error);
+                });
+                return true;
+            } catch (e) { console.warn('No se pudo guardar en IndexedDB:', key, e); return false; }
+        }
+        async function idbDel(key) {
+            try {
+                const db = await _idb();
+                await new Promise(resolve => {
+                    const tx = db.transaction(_IDB_STORE, 'readwrite');
+                    tx.objectStore(_IDB_STORE).delete(key);
+                    tx.oncomplete = resolve; tx.onerror = resolve;
+                });
+            } catch (e) {}
+        }
 
-        // Escribe el JSON pesado de productos de forma diferida (no bloquea el hilo principal)
-        let _productsSaveTimer = null;
+        // Guarda en segundo plano; si sale bien, borra la copia vieja de localStorage
         function _scheduleProductsSave() {
-            clearTimeout(_productsSaveTimer);
-            _productsSaveTimer = setTimeout(() => {
-                try { localStorage.setItem('mikra_products', JSON.stringify(PRODUCTS)); } catch(e) {}
-            }, 200);
+            idbSet('products', PRODUCTS).then(ok => { if (ok) localStorage.removeItem('mikra_products'); });
         }
         function _scheduleImagesSave() {
-            setTimeout(() => {
-                try { localStorage.setItem('mikra_images', JSON.stringify(IMAGES_MAP)); } catch(e) {}
-            }, 400);
+            idbSet('images', IMAGES_MAP).then(ok => { if (ok) localStorage.removeItem('mikra_images'); });
         }
-        
-        function loadFromCache() {
-            try {
-                const cached = localStorage.getItem('mikra_products');
-                if (!cached) return false;
-                PRODUCTS = filterOutCombos(JSON.parse(cached));
-                try { IMAGES_MAP = JSON.parse(localStorage.getItem('mikra_images') || '{}'); } catch(e) {}
-                buildSearchIndex();
-                updateUniqueArticles();
-                applyFilters();
-                const lastSync = localStorage.getItem('mikra_lastSync');
-                if (lastSync) {
-                    const ago = Date.now() - new Date(lastSync).getTime();
-                    const mins = Math.floor(ago / 60000);
-                    $('syncTime').textContent = mins < 1 ? '• Reciente' : '• Hace ' + mins + ' min';
-                } else {
-                    $('syncTime').textContent = '• Caché';
-                }
-                return true;
-            } catch(e) { return false; }
+
+        // Lee el catálogo guardado. Si todavía está en localStorage (versión vieja), lo migra.
+        async function _readCachedCatalog() {
+            let prods = await idbGet('products');
+            let imgs = await idbGet('images');
+            let migrated = false;
+            if (!prods || !prods.length) {
+                try {
+                    const raw = localStorage.getItem('mikra_products');
+                    if (raw) { prods = filterOutCombos(JSON.parse(raw)); migrated = true; }
+                } catch (e) { prods = null; }
+            }
+            if (!imgs) {
+                try {
+                    const raw = localStorage.getItem('mikra_images');
+                    if (raw) { imgs = JSON.parse(raw); migrated = true; }
+                } catch (e) { imgs = null; }
+            }
+            return { prods, imgs, migrated };
         }
-        
-        function isCacheFresh() {
-            try {
-                const lastSync = localStorage.getItem('mikra_lastSync');
-                if (!lastSync) return false;
-                return (Date.now() - new Date(lastSync).getTime()) < CACHE_MAX_AGE_MS;
-            } catch(e) { return false; }
+
+        // Carga el catálogo guardado en memoria y dibuja. Devuelve false si no hay caché.
+        async function applyCachedCatalog() {
+            const { prods, imgs, migrated } = await _readCachedCatalog();
+            if (!prods || !prods.length) return false;
+            PRODUCTS = prods;
+            setImagesMap(imgs || {});
+            buildSearchIndex(!migrated);
+            updateUniqueArticles();
+            applyFilters();
+            if (migrated) { _scheduleProductsSave(); _scheduleImagesSave(); }
+            const lastSync = localStorage.getItem('mikra_lastSync');
+            if (lastSync) {
+                const mins = Math.floor((Date.now() - new Date(lastSync).getTime()) / 60000);
+                $('syncTime').textContent = mins < 1 ? '• Reciente' : '• Hace ' + mins + ' min';
+            } else {
+                $('syncTime').textContent = '• Caché';
+            }
+            return true;
         }
         
         let _syncController = null;
@@ -2698,17 +2781,15 @@
                 $('loadingScreen').classList.add('hidden');
                 toast('Sincronización cancelada', 'warning');
             } else {
-                const cached = localStorage.getItem('mikra_products');
-                if (cached) {
-                    PRODUCTS = filterOutCombos(JSON.parse(cached));
-                    try { IMAGES_MAP = JSON.parse(localStorage.getItem('mikra_images') || '{}'); } catch(e) {}
-                    buildSearchIndex(); updateUniqueArticles(); applyFilters();
-                    $('loadingScreen').classList.add('hidden');
-                    toast('⚠️ Usando caché guardada', 'warning');
-                } else {
-                    $('loadingError').style.display = 'block';
-                    $('loadingText').textContent = 'Sincronización cancelada';
-                }
+                applyCachedCatalog().then(ok => {
+                    if (ok) {
+                        $('loadingScreen').classList.add('hidden');
+                        toast('⚠️ Usando caché guardada', 'warning');
+                    } else {
+                        $('loadingError').style.display = 'block';
+                        $('loadingText').textContent = 'Sincronización cancelada';
+                    }
+                });
             }
         }
 
@@ -2759,51 +2840,68 @@
             }
         }
 
-        async function syncFromAPI(isBackground) {
+        // isBackground: ya hay catálogo en pantalla (no muestra la pantalla de carga)
+        // manual: lo pidió el usuario con 🔄 (avisa aunque no haya cambios)
+        async function syncFromAPI(isBackground, manual) {
             if (_syncController) { _syncController.abort(); }
-            _syncController = new AbortController();
+            const ctrl = new AbortController();
+            _syncController = ctrl;
+            let timedOut = false;
             $('syncDot').classList.add('loading');
             $('syncDot').classList.remove('error');
             $('syncStatus').textContent = 'Sincronizando...';
             _startSyncProgress(isBackground);
 
-            // Timeout de 15s
-            const _timeout = setTimeout(() => _syncController.abort(), 15000);
+            // Timeout de 15s hasta que Cloudflare empiece a responder
+            const _timeout = setTimeout(() => { timedOut = true; ctrl.abort(); }, 15000);
 
             try {
-                // Productos e imágenes en paralelo desde Cloudflare
+                // 1) Chequeo liviano (~80 bytes): si Cloudflare no cambió desde lo que
+                //    tenemos guardado, no se baja nada y se deja todo igual.
+                const savedLM = localStorage.getItem('mikra_cfLastModified');
+                if (savedLM && PRODUCTS.length) {
+                    let meta = null;
+                    try {
+                        meta = await fetch(CLOUDFLARE_URL + '?mode=meta', { signal: ctrl.signal, cache: 'no-store' }).then(r => r.json());
+                    } catch (e) {
+                        if (e.name === 'AbortError') throw e;
+                        // si falla el chequeo, sigue con la descarga completa
+                    }
+                    if (meta && meta.lastModified && meta.lastModified === savedLM) {
+                        clearTimeout(_timeout);
+                        _stopSyncProgress(true);
+                        $('syncDot').classList.remove('loading', 'error');
+                        $('syncStatus').textContent = 'Listo';
+                        $('syncTime').textContent = '• Al día';
+                        localStorage.setItem('mikra_lastSync', new Date().toISOString());
+                        if (manual) toast('✓ Ya estaba al día', 'success');
+                        return;
+                    }
+                }
+
+                // 2) Hubo cambios (o no hay caché): productos e imágenes en paralelo
                 const [prodResp, imgResp] = await Promise.all([
-                    fetch(CLOUDFLARE_URL,                    { signal: _syncController.signal, cache: 'no-store' }),
-                    fetch(CLOUDFLARE_URL + '?mode=images',   { signal: _syncController.signal, cache: 'no-store' }),
+                    fetch(CLOUDFLARE_URL,                    { signal: ctrl.signal, cache: 'no-store' }),
+                    fetch(CLOUDFLARE_URL + '?mode=images',   { signal: ctrl.signal, cache: 'no-store' }),
                 ]);
                 clearTimeout(_timeout);
 
                 const data = await prodResp.json();
                 if (!data.success || !data.products || !data.products.length) throw new Error('Sin productos');
 
-                // Si la versión de Cloudflare es la misma que tenemos, no reprocesar
-                const savedLM = localStorage.getItem('mikra_cfLastModified');
-                if (isBackground && savedLM && data.lastModified && data.lastModified === savedLM && PRODUCTS.length) {
-                    _stopSyncProgress(true);
-                    $('syncDot').classList.remove('loading', 'error');
-                    $('syncStatus').textContent = 'Listo';
-                    $('syncTime').textContent = '• Al día';
-                    localStorage.setItem('mikra_lastSync', new Date().toISOString());
-                    return;
-                }
-
                 PRODUCTS = filterOutCombos(data.products);
 
                 // Imágenes
+                let imagesChanged = false;
                 try {
                     const imgData = await imgResp.json();
                     if (imgData && imgData.images && Object.keys(imgData.images).length) {
-                        IMAGES_MAP = imgData.images;
-                        _scheduleImagesSave();
+                        setImagesMap(imgData.images);
+                        imagesChanged = true;
                     }
                 } catch(e) { /* sin imágenes nuevas — usa las que ya estaban */ }
 
-                // UI inmediata, localStorage en background
+                // UI inmediata, guardado en el dispositivo en segundo plano
                 buildSearchIndex();
                 updateUniqueArticles();
                 applyFilters();
@@ -2819,34 +2917,40 @@
                 else toast('✓ ' + (data.count || PRODUCTS.length) + ' productos', 'success');
 
                 _scheduleProductsSave();
+                if (imagesChanged) _scheduleImagesSave();
                 localStorage.setItem('mikra_lastSync', new Date().toISOString());
 
             } catch (error) {
                 clearTimeout(_timeout);
-                if (error.name === 'AbortError') return; // cancelado por el usuario — ya manejado en cancelSync
+                // Cancelado por el usuario o reemplazado por otra sync: cancelSync ya manejó la UI
+                if (error.name === 'AbortError' && !timedOut) return;
                 _stopSyncProgress(false);
                 $('syncDot').classList.remove('loading');
                 $('syncDot').classList.add('error');
-                $('syncStatus').textContent = 'Error';
+                $('syncStatus').textContent = timedOut ? 'Sin respuesta' : 'Error';
                 if (!PRODUCTS.length) {
-                    const cached = localStorage.getItem('mikra_products');
-                    if (cached) {
-                        PRODUCTS = filterOutCombos(JSON.parse(cached));
-                        try { IMAGES_MAP = JSON.parse(localStorage.getItem('mikra_images') || '{}'); } catch(e) {}
-                        buildSearchIndex();
-                        updateUniqueArticles();
-                        applyFilters();
+                    if (await applyCachedCatalog()) {
                         $('loadingScreen').classList.add('hidden');
                         $('syncTime').textContent = '• Caché';
                         toast('⚠️ Usando caché', 'warning');
                     } else {
-                        $('loadingText').textContent = '❌ No se pudo cargar (Cloudflare)';
+                        $('loadingText').textContent = timedOut
+                            ? '❌ Cloudflare no respondió (15s)'
+                            : '❌ No se pudo cargar (Cloudflare)';
                         $('loadingError').style.display = 'block';
                     }
                 } else {
-                    if (isBackground) toast('⚠️ No se pudo sincronizar', 'warning');
+                    toast(timedOut ? '⚠️ Cloudflare no respondió — sigue la versión guardada' : '⚠️ No se pudo sincronizar', 'warning');
                 }
+            } finally {
+                if (_syncController === ctrl) _syncController = null;
             }
+        }
+
+        // Botón 🔄: chequea si hay cambios (y si no hay caché, carga todo)
+        function manualSync() {
+            if (!PRODUCTS.length) { loadData(); return; }
+            syncFromAPI(true, true);
         }
         
         const PRICES_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
@@ -2879,21 +2983,15 @@
             } catch(e) { /* silencioso */ }
         }
 
-        async function loadData(forceRefresh) {
-            const hasCache = loadFromCache();
+        // Cache-first: muestra lo guardado al instante y en segundo plano hace el
+        // chequeo liviano contra Cloudflare (solo descarga si hubo cambios).
+        async function loadData() {
+            const hasCache = await applyCachedCatalog();
             if (hasCache) {
                 $('loadingScreen').classList.add('hidden');
                 $('syncDot').classList.remove('loading', 'error');
-                if (!forceRefresh && isCacheFresh()) {
-                    $('syncStatus').textContent = 'Listo';
-                    const lastSync = localStorage.getItem('mikra_lastSync');
-                    if (lastSync) {
-                        $('syncTime').textContent = '• ' + new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    }
-                } else {
-                    $('syncStatus').textContent = 'Caché';
-                    syncFromAPI(forceRefresh ? false : true);
-                }
+                $('syncStatus').textContent = 'Caché';
+                syncFromAPI(true);
             } else {
                 $('loadingText').textContent = 'Cargando inventario...';
                 $('loadingError').style.display = 'none';
@@ -2902,6 +3000,14 @@
             // Precios: actualizar en 2do plano una vez por día (sin bloquear carga)
             setTimeout(syncPricesBackground, 3000);
         }
+
+        // La app suele quedar abierta horas: al volver a ella, re-chequear si pasaron +10 min
+        const RECHECK_MS = 10 * 60 * 1000;
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible' || !PRODUCTS.length || _syncController) return;
+            const last = new Date(localStorage.getItem('mikra_lastSync') || 0).getTime();
+            if (Date.now() - last > RECHECK_MS) syncFromAPI(true);
+        });
         
         function updateUniqueArticles() {
             ARTICLE_IMG_CACHE = {};
@@ -2916,7 +3022,10 @@
                 else map.set(name, { name, _nameLower: name.toLowerCase(), totalStock: p.stock || 0 });
             }
             UNIQUE_ARTICLES = [...map.values()].sort((a, b) => b.totalStock - a.totalStock);
+            _articleStock = new Map();
+            for (const a of UNIQUE_ARTICLES) if (!_articleStock.has(a._nameLower)) _articleStock.set(a._nameLower, a.totalStock);
         }
+        let _articleStock = new Map(); // nombre lowercase → stock total
         
         function sortProducts(products) {
             // Schwartzian transform: calcular la sort key UNA sola vez por elemento
@@ -3004,7 +3113,7 @@
         function addToCart(id, noStock, callback) {
             if (noStock) {
                 showModal('⚠️', 'Sin stock', '¿Agregar igual al pedido?', 'Sí, agregar', () => {
-                    const p = PRODUCTS.find(x => x.id === id);
+                    const p = productById(id);
                     if (!p) return;
                     const existing = state.cart.find(c => c.id === id);
                     if (existing) { existing.qty += 1; } else { state.cart.push({ ...p, qty: 1 }); }
@@ -3014,7 +3123,7 @@
                 });
                 return null;
             }
-            const p = PRODUCTS.find(x => x.id === id);
+            const p = productById(id);
             if (!p) return null;
             const existing = state.cart.find(c => c.id === id);
             if (existing) { existing.qty += 1; } else { state.cart.push({ ...p, qty: 1 }); }
@@ -3041,8 +3150,9 @@
                 const loc = state.location.toLowerCase();
                 r = r.filter(p => (p.ubicacion || '').toLowerCase().includes(loc));
             }
-            // Solo reconstruir filtros de color/talle cuando es búsqueda exacta o no hay búsqueda
-            if (state.searchExact || !state.search) {
+            // Solo reconstruir filtros de color/talle cuando es búsqueda exacta o no hay búsqueda,
+            // y nunca en el home (ahí no se ven y recorrería el catálogo entero)
+            if ((state.searchExact || !state.search) && !isHomeState()) {
                 updateDynamicFilters(r);
             }
             if (state.color) r = r.filter(p => p.color === state.color);
@@ -3168,16 +3278,28 @@
             const url = IMAGES_MAP[codigo] || IMAGES_MAP[String(codigo)] || '';
             return url ? url.replace(/-O\.jpg$/i, '-S.jpg') : '';
         }
-        const _imgCache = {};
+        let _imgCache = {};
+        let _imgKeysSorted = null; // claves de IMAGES_MAP ordenadas, una vez por versión
+        // Único punto para reemplazar el mapa de fotos: invalida las cachés derivadas
+        function setImagesMap(map) {
+            IMAGES_MAP = map || {};
+            _imgCache = {};
+            _imgKeysSorted = null;
+            ARTICLE_IMG_CACHE = {};
+        }
         function getProductImageFull(codigo, product) {
             if (!codigo) return '';
             if (_imgCache[codigo] !== undefined) return _imgCache[codigo];
             let url = IMAGES_MAP[codigo] || IMAGES_MAP[String(codigo)] || '';
             if (!url && product) {
-                const prefix = codigo.replace(/-\d+$/, '');
-                for (const key of Object.keys(IMAGES_MAP)) {
-                    if (key.startsWith(prefix)) { url = IMAGES_MAP[key]; break; }
-                }
+                // Foto de un código "hermano" (misma base): búsqueda binaria sobre las
+                // claves ordenadas en vez de recorrer las ~10K fotos por cada producto
+                const prefix = String(codigo).replace(/-\d+$/, '');
+                if (!_imgKeysSorted) _imgKeysSorted = Object.keys(IMAGES_MAP).sort();
+                let lo = 0, hi = _imgKeysSorted.length;
+                while (lo < hi) { const mid = (lo + hi) >> 1; if (_imgKeysSorted[mid] < prefix) lo = mid + 1; else hi = mid; }
+                const k = _imgKeysSorted[lo];
+                if (k && k.startsWith(prefix)) url = IMAGES_MAP[k];
             }
             _imgCache[codigo] = url || '';
             return _imgCache[codigo];
@@ -3194,6 +3316,7 @@
             return state.search.length > 0;
         }
         
+        let _detailScrollKey = ''; // artículo dibujado la última vez (para conservar el scroll)
         function renderArticleDetail() {
             const products = state.filtered;
             if (!products.length) {
@@ -3357,10 +3480,24 @@
             
             $('showingCount').textContent = allProducts.length;
             $('totalCount').textContent = allProducts.length;
+
+            // Guardar la posición de scroll antes de redibujar: al tocar "+ Curva" o un
+            // talle se rearma todo y las filas volvían al principio (el botón quedaba oculto)
+            const detailKey = state.search + '|' + state.size;
+            const sameArticle = detailKey === _detailScrollKey;
+            const prevGrid = $('articleDetailContent').querySelector('.article-sizes-grid');
+            const prevScrollLeft = sameArticle && prevGrid ? prevGrid.scrollLeft : 0;
+            const prevScrollY = window.scrollY;
+            _detailScrollKey = detailKey;
+
             $('articleDetailContent').innerHTML = html;
-            
+
             // Sincronizar scroll horizontal entre todos los grids de talles
             const grids = $('articleDetailContent').querySelectorAll('.article-sizes-grid');
+            if (sameArticle) {
+                grids.forEach(g => { g.scrollLeft = prevScrollLeft; });
+                if (window.scrollY !== prevScrollY) window.scrollTo(0, prevScrollY);
+            }
             grids.forEach(grid => {
                 grid.addEventListener('scroll', function() {
                     grids.forEach(g => { if (g !== this) g.scrollLeft = this.scrollLeft; });
@@ -3407,7 +3544,7 @@
         
         // Tap size cell = add 1 to cart + select
         function articleTapSize(productId) {
-            const p = PRODUCTS.find(x => x.id === productId);
+            const p = productById(productId);
             if (!p) return;
             
             const currentQty = getCartQty(productId);
@@ -3470,7 +3607,7 @@
         
         function articleUpdateEditBar() {
             if (!articleSelectedId) { $('articleEditBar').classList.remove('show'); return; }
-            const product = PRODUCTS.find(p => p.id === articleSelectedId);
+            const product = productById(articleSelectedId);
             if (!product) return;
             const qty = getCartQty(articleSelectedId);
             const avail = product.stock - qty;
@@ -3491,7 +3628,7 @@
         
         function articleChangeQty(delta) {
             if (!articleSelectedId) return;
-            const p = PRODUCTS.find(x => x.id === articleSelectedId);
+            const p = productById(articleSelectedId);
             if (!p) return;
             const currentQty = getCartQty(articleSelectedId);
             const newQty = currentQty + delta;
@@ -3535,7 +3672,7 @@
         
         function articleSetManual() {
             if (!articleSelectedId) return;
-            const p = PRODUCTS.find(x => x.id === articleSelectedId);
+            const p = productById(articleSelectedId);
             if (!p) return;
             const value = parseInt($('articleManualInput').value);
             if (isNaN(value) || value < 0) { toast('⚠️ Cantidad inválida', 'warning'); return; }
@@ -3576,18 +3713,8 @@
         }
 
         function getArticleStock(name) {
-            if (!UNIQUE_ARTICLES.length) return null;
-            const found = UNIQUE_ARTICLES.find(a => a.name.toLowerCase() === name.toLowerCase());
-            return found ? found.totalStock : null;
-        }
-
-        // Busca la primera imagen disponible para un nombre de artículo
-        function getArticleImage(artName) {
-            const lower = artName.toLowerCase();
-            const match = PRODUCTS.find(p =>
-                ((p.titulo || p.articulo || '').toLowerCase() === lower) && getProductImageFull(p.codigo, p)
-            );
-            return match ? getProductImageFull(match.codigo, match) : '';
+            const v = _articleStock.get(name.toLowerCase());
+            return v === undefined ? null : v;
         }
 
         function imgRetryOrFallback(img, placeholderClass, placeholderIcon) {
@@ -3612,20 +3739,26 @@
             t.src = 'https://http2.mlstatic.com/resources/frontend/statics/img-not-available/1.1.0/R.gif';
         })();
 
+        // Resultado por URL: true = es la imagen "no disponible" de ML. Evita volver a
+        // descargar cada foto cada vez que se redibuja el home.
+        const _naChecked = new Map();
         function imgHideIfNotAvailable(img) {
+            const src = img.src;
+            if (_naChecked.has(src)) { if (_naChecked.get(src)) img.style.display = 'none'; return; }
+            const hide = () => { _naChecked.set(src, true); img.style.display = 'none'; };
             const w = img.naturalWidth, h = img.naturalHeight;
             // 1. currentSrc check (works only if browser exposes redirect target)
-            if (img.currentSrc && img.currentSrc.includes('not-available')) { img.style.display = 'none'; return; }
+            if (img.currentSrc && img.currentSrc.includes('not-available')) { hide(); return; }
             // 2. Tiny/transparent spacer images
-            if (w < 20 || h < 20) { img.style.display = 'none'; return; }
+            if (w < 20 || h < 20) { hide(); return; }
             // 3. Exact dimension match with preloaded R.gif (reliable if R.gif has unique size)
-            if (_mlRGifW > 0 && w === _mlRGifW && h === _mlRGifH) { img.style.display = 'none'; return; }
+            if (_mlRGifW > 0 && w === _mlRGifW && h === _mlRGifH) { hide(); return; }
             // 4. Async fetch to read actual response.url after redirects (most reliable)
-            const src = img.src;
             if (!src || !src.startsWith('http')) return;
+            _naChecked.set(src, false);
             fetch(src, { referrerPolicy: 'no-referrer' })
                 .then(function(r) {
-                    if (r.url && r.url.includes('not-available')) img.style.display = 'none';
+                    if (r.url && r.url.includes('not-available')) hide();
                 })
                 .catch(function() {
                     // CORS blocked — rely on dimension match already done above
@@ -3635,10 +3768,8 @@
         let ARTICLE_IMG_CACHE = {};
         function getArticleImageCandidates(name) {
             if (!(name in ARTICLE_IMG_CACHE)) {
-                const lower = name.toLowerCase();
                 const seen = new Set(), urls = [];
-                for (const p of PRODUCTS) {
-                    if ((p.titulo || p.articulo || '').toLowerCase() !== lower) continue;
+                for (const p of (_byArticle.get(name.toLowerCase()) || [])) {
                     const u = getProductImageFull(p.codigo, p);
                     if (u && !seen.has(u)) { seen.add(u); urls.push(u); }
                 }
@@ -4454,9 +4585,10 @@
                     $('articleStickyName').textContent = state.search.toUpperCase();
                     $('showingCount').textContent = state.filtered.length;
                     $('totalCount').textContent = state.filtered.length;
-                    if (!state.filtered.length) {
-                        $('articleDetailContent').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>No hay variantes</div></div>';
-                    }
+                    // Aviso liviano en vez de dejar visible el artículo anterior
+                    $('articleDetailContent').innerHTML = state.filtered.length
+                        ? '<div class="empty"><div class="empty-icon">🔍</div><div>' + state.filtered.length + ' variantes · elegí un artículo de la lista</div></div>'
+                        : '<div class="empty"><div class="empty-icon">🔍</div><div>No hay variantes</div></div>';
                     updateBadge();
                     return;
                 }
@@ -5686,7 +5818,7 @@
             let found = 0, notFound = [];
             
             entries.forEach(entry => {
-                const product = PRODUCTS.find(p => String(p.codigo).trim() === String(entry.codigo).trim());
+                const product = productByCodigo(entry.codigo);
                 if (product) {
                     // Check if already in cart (same codigo might appear if duplicate lines)
                     const existing = state.cart.find(c => c.id === product.id);
@@ -5760,7 +5892,7 @@
                     let qty = parseInt((parts[1] || '1').replace(/^-/, ''), 10);
                     if (isNaN(qty) || qty <= 0) qty = 1;
 
-                    const product = PRODUCTS.find(p => String(p.codigo).trim() === codigo);
+                    const product = productByCodigo(codigo);
                     if (product) {
                         const existing = state.cart.find(c => c.id === product.id);
                         if (existing) existing.qty += qty;
@@ -5803,10 +5935,13 @@
             }
         }
 
+        let _toastTimer = null;
         function toast(msg, type = '') {
             const t = $('toast'); t.textContent = msg; t.className = 'toast show';
             if (type) t.classList.add(type);
-            setTimeout(() => t.className = 'toast', 2000);
+            // Un aviso nuevo reinicia el tiempo (antes el timer del anterior lo cortaba antes)
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => t.className = 'toast', 2000);
         }
         
         let _savedStockState = null;
@@ -6262,6 +6397,7 @@
         }
         function cerrarPin() { $('pinModal').classList.remove('show'); $('pinInput').value = ''; $('pinError').textContent = ''; }
         function confirmarPin() {
+            if (_ventaEnCurso) return;
             if ($('pinInput').value.trim() !== PIN_CORRECTO) {
                 $('pinError').textContent = '❌ PIN incorrecto';
                 $('pinInput').value = ''; $('pinInput').focus(); return;
@@ -6270,7 +6406,15 @@
         }
 
         // ─── REGISTRAR VENTA (paralelo + ordenado + progreso) ─────────────────
+        // Candado: un doble toque no puede descontar el stock dos veces
+        let _ventaEnCurso = false;
         async function registrarVenta() {
+            if (_ventaEnCurso) return;
+            _ventaEnCurso = true;
+            try { await _registrarVenta(); }
+            finally { _ventaEnCurso = false; }
+        }
+        async function _registrarVenta() {
             const snap = sortCart(state.cart.filter(p => p.codigo));
             if (!snap.length) return;
 
@@ -6497,19 +6641,32 @@
             }
         });
 
+    // Versión nueva de la app: en vez de recargar sola (podía cortar un pedido a
+    // mitad de carga) muestra un aviso y recarga recién cuando el usuario lo toca.
+    function _showUpdateBanner() {
+        if (document.getElementById('_updBanner')) return;
+        const b = document.createElement('div');
+        b.id = '_updBanner';
+        b.textContent = '🔄 Hay una versión nueva — tocá para actualizar';
+        b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:80px;z-index:9999;background:#2563eb;color:#fff;' +
+            'padding:12px 14px;border-radius:12px;font-weight:700;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer;';
+        b.onclick = () => { _snapshotActive(); saveSlots(); location.reload(); };
+        document.body.appendChild(b);
+    }
     if ('serviceWorker' in navigator) {
+        // Si no había SW controlando, es la primera instalación: no hace falta avisar
+        const hadController = !!navigator.serviceWorker.controller;
         navigator.serviceWorker.register('./sw.js')
             .then(reg => {
                 console.log('✅ SW registrado');
                 // Chequear actualizaciones cada 5 minutos
                 setInterval(() => reg.update(), 5 * 60 * 1000);
-                // Cuando detecte un SW nuevo, recargar automáticamente
                 reg.addEventListener('updatefound', () => {
                     const newWorker = reg.installing;
                     newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'activated') {
-                            console.log('🔄 Nueva versión detectada, recargando...');
-                            window.location.reload();
+                        if (newWorker.state === 'activated' && hadController) {
+                            console.log('🔄 Nueva versión disponible');
+                            _showUpdateBanner();
                         }
                     });
                 });

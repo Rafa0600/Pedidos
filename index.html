@@ -320,7 +320,7 @@
         }
         .color-photo-card:hover { border-color: var(--primary); }
         .color-photo-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79,172,254,0.4); }
-        .color-photo-card.zero-stock { opacity: 0.35; }
+        /* Sin stock: la foto se ve normal, solo dice "Sin stock" abajo en rojo */
         .color-photo-card .cp-img {
             width: 100%; aspect-ratio: 3/4; object-fit: cover; background: var(--bg-input);
             display: block;
@@ -333,11 +333,10 @@
         .color-photo-card .cp-name {
             padding: 6px 4px 2px; font-size: 0.72em; font-weight: 700; color: var(--text);
         }
-        .color-photo-card.zero-stock .cp-name { text-decoration: line-through; }
         .color-photo-card .cp-stock {
             padding: 0 4px 6px; font-size: 0.62em; color: var(--text-secondary);
         }
-        .color-photo-card.zero-stock .cp-stock { color: var(--danger); }
+        .color-photo-card.zero-stock .cp-stock { color: var(--danger); font-weight: 800; }
         
         /* STRIKETHROUGH ZERO-STOCK FILTER OPTS */
         .filter-opt.zero-stock { opacity: 0.4; text-decoration: line-through; }
@@ -3231,22 +3230,27 @@
         
         // ===== COLOR PHOTO OVERLAY =====
         function openColorPhotoOverlay() {
-            const colors = Object.keys(colorStockMap).sort();
+            // Con stock primero; los sin stock al final (solo se ven con 🚫 "mostrar ocultos")
+            const colors = Object.keys(colorStockMap).sort((a, b) => {
+                const za = colorStockMap[a].avail <= 0, zb = colorStockMap[b].avail <= 0;
+                return za !== zb ? (za ? 1 : -1) : a.localeCompare(b);
+            });
             if (!colors.length) { toast('No hay colores disponibles', 'warning'); return; }
-            
+
             const articleName = state.searchExact ? state.search : '';
             $('colorPhotoTitle').textContent = articleName ? articleName : 'Colores';
-            
+
             let html = '';
             colors.forEach(c => {
                 const cm = colorStockMap[c];
                 const isZero = cm.avail <= 0;
-                if (isZero && state.color !== c) return; // ocultar sin stock salvo si está seleccionado
+                // ocultar sin stock, salvo que esté seleccionado o activado 🚫 "mostrar ocultos"
+                if (isZero && state.color !== c && !showZeroStock) return;
                 const isActive = state.color === c;
                 const imgUrl = cm.imgUrl;
                 const thumbUrl = imgUrl || '';
 
-                html += '<div class="color-photo-card' + (isActive ? ' active' : '') + '" onclick="selectColorFromOverlay(\'' + c.replace(/'/g, "\\'") + '\')">';
+                html += '<div class="color-photo-card' + (isActive ? ' active' : '') + (isZero ? ' zero-stock' : '') + '" onclick="selectColorFromOverlay(\'' + c.replace(/'/g, "\\'") + '\')">';
                 if (thumbUrl) {
                     html += '<img class="cp-img" src="' + thumbUrl + '" loading="lazy" onerror="this.outerHTML=\'<div class=cp-placeholder>📦</div>\'">';
                 } else {

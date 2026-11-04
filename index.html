@@ -1050,7 +1050,37 @@
                    onkeydown="if(event.key==='Enter')confirmTicketName()">
             <div class="modal-buttons">
                 <button class="modal-btn cancel" onclick="closeTicketNameModal()">Cancelar</button>
-                <button class="modal-btn confirm" onclick="confirmTicketName()">🖨️ Imprimir</button>
+                <button class="modal-btn confirm" onclick="confirmTicketName()">Siguiente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DÓNDE IMPRIMIR EL TICKET -->
+    <div class="modal" id="printChoiceModal" onclick="if(event.target===this)closePrintChoice()">
+        <div class="modal-content">
+            <div class="modal-icon">🎫</div>
+            <div class="modal-title">¿Dónde lo imprimo?</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin:14px 0 8px;">
+                <button class="modal-btn confirm" style="width:100%;padding:14px;font-size:1em;" onclick="printChoiceLocal('deposito')">📦 Mandar al depósito</button>
+                <button class="modal-btn cancel" style="width:100%;padding:12px;font-size:0.95em;" onclick="printChoiceLocal('oficina')">🏢 Mandar a la oficina</button>
+                <button class="modal-btn cancel" style="width:100%;padding:12px;font-size:0.95em;" onclick="printChoiceHere()">🖨️ Imprimir acá</button>
+            </div>
+            <div id="printLocalStatus" style="font-size:0.78em;min-height:1.2em;"></div>
+            <div class="modal-buttons" style="margin-top:10px;">
+                <button class="modal-btn cancel" onclick="closePrintChoice()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LA IMPRESORA ELEGIDA NO ESTÁ EN LÍNEA -->
+    <div class="modal" id="printOfflineModal">
+        <div class="modal-content">
+            <div class="modal-icon">📴</div>
+            <div class="modal-title" id="printOfflineTitle">El depósito no está en línea</div>
+            <div class="modal-text">La impresora no responde. ¿Qué hago con el ticket?</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin:14px 0 4px;">
+                <button class="modal-btn confirm" id="printOfflineOtherBtn" style="width:100%;padding:14px;font-size:1em;" onclick="printOfflineOther()">🏢 Mandar a la oficina</button>
+                <button class="modal-btn cancel" style="width:100%;padding:12px;font-size:0.95em;" onclick="printOfflineDiscard()">🗑️ Descartar</button>
             </div>
         </div>
     </div>
@@ -1263,6 +1293,7 @@
                                     <span class="delivery-radio" style="display:none;"></span>
                                     <span class="delivery-label">📦 Depósito</span>
                                 </label>
+                                <input type="radio" name="delivery" value="envio" id="deliveryEnvioHidden" hidden>
                             </div>
                         </div>
                     </div>
@@ -2214,6 +2245,7 @@
                 o.classList.toggle('selected', match);
                 if (match) o.querySelector('input').checked = true;
             });
+            if (delVal === 'envio' && $('deliveryEnvioHidden')) $('deliveryEnvioHidden').checked = true;
             $('shippingDetails')?.classList.toggle('show', delVal === 'envio');
 
             // Payment
@@ -2281,7 +2313,8 @@
             state.orderType = type;
             document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('[data-type="' + type + '"]').classList.add('active');
-            $('pedidoForm').style.display = type === 'pedido' ? 'block' : 'none';
+            // Presupuesto también usa Estado (abonó/pendiente) y Entrega, para que salgan en el ticket
+            $('pedidoForm').style.display = (type === 'pedido' || type === 'presupuesto') ? 'block' : 'none';
             $('reposicionForm').style.display = type === 'reposicion' ? 'block' : 'none';
             $('budgetSection').classList.toggle('show', type === 'presupuesto');
             if (type === 'presupuesto') renderBudget();
@@ -4665,6 +4698,28 @@
             let paymentText = paymentStatus === 'abonado' ? 'Ya abono' : 'Falta abonar: ' + (paymentAmount || 'Sin especificar');
             return { clientName, clientDisplayName, canal, canalPrefix, deliveryType, deliveryText, shippingAddress, paymentStatus, paymentText, paymentAmount };
         }
+
+        // Total $ del presupuesto (artículos con precio + envío)
+        function getPresupuestoTotal() {
+            let total = 0;
+            state.cart.forEach(p => { total += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
+            return total + getBudgetShipping();
+        }
+
+        // Datos de cabecera para los tickets (pedido y presupuesto): entrega y pago
+        function getTicketStatus() {
+            const delivery = document.querySelector('input[name="delivery"]:checked')?.value || '';
+            const payment  = document.querySelector('input[name="payment"]:checked')?.value || 'abonado';
+            let amount = ($('paymentAmount').value || '').trim().replace(/^\$\s*/, '');
+            // Presupuesto pendiente sin monto escrito → se usa el total del presupuesto
+            if (payment === 'pendiente' && !amount && state.orderType === 'presupuesto') {
+                const t = getPresupuestoTotal();
+                if (t > 0) amount = t.toLocaleString('es-AR');
+            }
+            const deliveryText = delivery === 'local' ? 'Retira Galería' : delivery === 'deposito' ? 'Retira Depósito' : delivery === 'envio' ? 'Envío' : '';
+            const address = delivery === 'envio' ? ($('shippingAddress').value || '').trim() : '';
+            return { delivery, deliveryText, address, payment, amount };
+        }
         
         // ===== WA CONFIRM SHEET =====
         let _wacDelivery = 'local', _wacPayment = 'abonado', _wacTicket = false, _devolucionMode = false;
@@ -4683,9 +4738,12 @@
                 selectWacOption('delivery', info.deliveryType || 'local');
                 selectWacOption('payment',  info.paymentStatus || 'abonado');
             } else if (isPres) {
+                const st = getTicketStatus();
                 $('wacNamePres').value = $('clientName').value.trim();
-                selectWacPresOption('delivery', 'local');
-                selectWacPresOption('payment', 'abonado');
+                $('wacPresAddress').value = $('shippingAddress').value.trim();
+                $('wacPresPaymentAmount').value = $('paymentAmount').value.trim();
+                selectWacPresOption('delivery', st.delivery || 'local');
+                selectWacPresOption('payment', st.payment || 'abonado');
             }
             // Mostrar botón ticket solo para pedido y presupuesto
             const ticketBtn = $('wacTicketBtn');
@@ -4700,19 +4758,29 @@
             const name = isPres ? ($('wacNamePres')?.value.trim() || '') : ($('wacName')?.value.trim() || '');
             if ($('clientName')) $('clientName').value = name;
             if ($('clientNamePres')) $('clientNamePres').value = name;
-            // Sync delivery/payment for pedido
-            if (!isPres) {
-                const delVal  = _wacDelivery;
-                const payVal  = _wacPayment;
-                const delOpt  = document.querySelector('.delivery-option[data-delivery="' + delVal + '"]');
-                if (delOpt) delOpt.click();
-                const payOpt  = document.querySelector('.delivery-option[data-payment="' + payVal + '"]');
-                if (payOpt) payOpt.click();
-                if ($('shippingAddress')) $('shippingAddress').value = $('wacAddress')?.value.trim() || '';
-                if ($('paymentAmount'))   $('paymentAmount').value   = $('wacPaymentAmount')?.value.trim() || '';
-            }
+            syncClientName(name);
+            // Pasar entrega/pago del cartel al formulario (pedido y presupuesto)
+            _syncSheetToForm(isPres);
             closeWaConfirm();
             sharePrepTicketPDF();
+        }
+
+        // Copia entrega, dirección, pago y monto del cartel de WhatsApp al formulario principal
+        function _syncSheetToForm(isPres) {
+            const delVal = isPres ? _wacPresDelivery : _wacDelivery;
+            const payVal = isPres ? _wacPresPayment  : _wacPayment;
+            const delOpt = document.querySelector('.delivery-option[data-delivery="' + delVal + '"]');
+            if (delOpt) delOpt.click();
+            else if (delVal === 'envio') {
+                // "Envío" solo existe en el cartel: radio oculto en el formulario
+                document.querySelectorAll('.delivery-option[data-delivery]').forEach(o => o.classList.remove('selected'));
+                $('deliveryEnvioHidden').checked = true;
+                $('shippingDetails').classList.add('show');
+            }
+            const payOpt = document.querySelector('.delivery-option[data-payment="' + payVal + '"]');
+            if (payOpt) payOpt.click();
+            $('shippingAddress').value = ($(isPres ? 'wacPresAddress' : 'wacAddress')?.value || '').trim();
+            $('paymentAmount').value   = ($(isPres ? 'wacPresPaymentAmount' : 'wacPaymentAmount')?.value || '').trim();
         }
 
         let _wacPresDelivery = 'local', _wacPresPayment = 'abonado';
@@ -4760,15 +4828,7 @@
             // Sincronizar de vuelta al form principal
             if ($('clientName')) $('clientName').value = name;
             if ($('clientNamePres')) $('clientNamePres').value = name;
-            if (isPedido) {
-                // Sync radio buttons
-                const delRadio = document.querySelector('input[name="delivery"][value="' + _wacDelivery + '"]');
-                if (delRadio) { delRadio.checked = true; delRadio.closest('.delivery-option')?.click(); }
-                const payRadio = document.querySelector('input[name="payment"][value="' + _wacPayment + '"]');
-                if (payRadio) { payRadio.checked = true; payRadio.closest('.delivery-option')?.click(); }
-                if ($('shippingAddress')) $('shippingAddress').value = address;
-                if ($('paymentAmount'))   $('paymentAmount').value   = payAmt;
-            }
+            if (isPedido || isPres) { syncClientName(name); _syncSheetToForm(isPres); }
 
             // Construir texto WA (carrito ordenado: artículo → color → talle)
             const cart = getSortedCart();
@@ -4784,7 +4844,11 @@
                 let total = 0;
                 const grouped = {};
                 cart.forEach(p => { const n=p.titulo||p.articulo; if(!grouped[n]) grouped[n]={qty:0,price:articlePrices[n]||0}; grouped[n].qty+=p.qty; });
-                text = 'PRESUPUESTO MIKRA\n─────────────────\n' + name + '\n─────────────────\n\n';
+                const st = getTicketStatus();
+                text = 'PRESUPUESTO MIKRA\n─────────────────\n' + name + '\n';
+                if (st.deliveryText) text += st.deliveryText + '\n';
+                if (st.address) text += st.address + '\n';
+                text += (st.payment === 'pendiente' ? 'Falta abonar' + (st.amount ? ': $' + st.amount : '') : 'Ya abono') + '\n─────────────────\n\n';
                 Object.entries(grouped).forEach(([n,d]) => { if(d.price>0) { text+=n+' x'+d.qty+' = $'+(d.qty*d.price).toLocaleString()+'\n'; total+=d.qty*d.price; } });
                 const shipping = getBudgetShipping();
                 text += shipping > 0 ? '\nEnvio: $'+shipping.toLocaleString()+'\nTOTAL: $'+(total+shipping).toLocaleString()+'\n' : '\nTOTAL: $'+total.toLocaleString()+'\n';
@@ -4990,7 +5054,7 @@
                 return;
             }
             if (!validateForm()) return;
-            downloadTicketPreparados('print');
+            openPrintChoice();
         }
         function closeTicketNameModal() { $('ticketNameModal').classList.remove('show'); }
         function confirmTicketName() {
@@ -5000,7 +5064,7 @@
             syncClientName(val);
             closeTicketNameModal();
             if (!validateForm()) return;
-            downloadTicketPreparados('print');
+            openPrintChoice();
         }
         
         // Share a real PDF file (ticket preparados format) for WhatsApp sharing
@@ -5127,16 +5191,18 @@
                 if (estW(9) <= maxW || estW(6.5) <= maxW) return 6; // fits in one line
                 return 10; // needs 2 lines
             }
-            var delivVal  = (document.querySelector('input[name="delivery"]:checked') || {}).value || '';
-            var payVal    = (document.querySelector('input[name="payment"]:checked') || {}).value || '';
-            var addrVal   = ($('shippingAddress') || {}).value || '';
-            var payAmtVal = ($('paymentAmount') || {}).value || '';
+            // Pedido y presupuesto llevan nombre, entrega y pago (reposición no)
+            var conDatos  = state.orderType === 'pedido' || state.orderType === 'presupuesto';
+            var st        = getTicketStatus();
+            var delivVal  = conDatos ? st.delivery : '';
+            var addrVal   = conDatos ? st.address : '';
+            // MiniPDF usa Courier estándar: sin acentos
             var delivTxt  = delivVal === 'local' ? 'Retira Galeria' : delivVal === 'deposito' ? 'Retira Deposito' : delivVal === 'envio' ? 'Envio' : '';
-            var payTxt    = payVal === 'abonado' ? 'Ya abono' : payVal === 'pendiente' ? 'Falta abonar' + (payAmtVal ? ' $' + payAmtVal : '') : '';
+            var payTxt    = !conDatos ? '' : st.payment === 'pendiente' ? 'FALTA ABONAR' + (st.amount ? ' $' + st.amount : '') : 'YA ABONO';
 
             function calcHeight() {
                 var y = 6 + 6 + 5 + 4; // header
-                if (state.orderType === 'pedido' && $('clientName').value.trim()) y += 5;
+                if (conDatos && $('clientName').value.trim()) y += 6;
                 if (delivTxt) y += 5;
                 if (delivVal === 'envio' && addrVal) y += 5;
                 if (payTxt) y += 5;
@@ -5167,17 +5233,18 @@
             pdf.text('MIKRA', pw / 2, y, 'center');
             y += 6;
             pdf.setFontSize(13);
-            pdf.text('PREPARADOS', pw / 2, y, 'center');
+            pdf.text(state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PREPARADOS', pw / 2, y, 'center');
             y += 5;
             pdf.setFontSize(10);
             pdf.text(date + '  ' + time, pw / 2, y, 'center');
             y += 4;
 
-            if (state.orderType === 'pedido') {
+            if (conDatos) {
                 var cn = $('clientName').value.trim();
                 if (cn) {
-                    pdf.setFontSize(11);
-                    pdf.text(cn, pw / 2, y, 'center');
+                    y += 1;
+                    pdf.setFontSize(cn.length <= 18 ? 13 : 11);
+                    pdf.text(cn.toUpperCase(), pw / 2, y, 'center');
                     y += 5;
                 }
             }
@@ -5331,7 +5398,7 @@
             pdf.text(grandTotal + ' uds', pw - mx, y, 'right');
 
             // Generate and share
-            var clientNameVal = (state.orderType === 'pedido' ? $('clientName').value.trim() : '') || 'Pedido';
+            var clientNameVal = (conDatos ? $('clientName').value.trim() : '') || 'Pedido';
             var fileName = 'Ticket_' + clientNameVal.replace(/\s+/g, '_') + '_' + date.replace(/\//g, '-') + '.pdf';
             var blob = pdf.toBlob();
             var file = new File([blob], fileName, { type: 'application/pdf' });
@@ -5474,10 +5541,10 @@
                 '</style></head><body>';
             
             html += '<div class="center"><div class="title">MIKRA</div></div>';
-            html += '<div class="center subtitle">PREPARADOS</div>';
+            html += '<div class="center subtitle">' + (state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PREPARADOS') + '</div>';
             html += '<div style="text-align:center;font-size:12px;font-weight:900">' + date + ' ' + time + '</div>';
-            
-            if (state.orderType === 'pedido') {
+
+            if (state.orderType === 'pedido' || state.orderType === 'presupuesto') {
                 const cn = $('clientName').value.trim();
                 // Si viene de "Pegar TN" el nombre queda como "333 - Flex - Laura Buznego":
                 // separamos número de pedido (grande, en bloque), método de envío
@@ -5491,13 +5558,21 @@
                     html += '<div style="text-align:center;background:#000;color:#fff;font-size:24px;font-weight:900;margin-top:2px;padding:5px 0;letter-spacing:2px;">' + shipIcon + ' ' + tnMatch[2].toUpperCase() + ' ' + shipIcon + '</div>';
                     if (customer) html += '<div style="text-align:center;font-size:14px;font-weight:900;margin-top:3px">' + customer + '</div>';
                 } else if (cn) {
-                    html += '<div style="text-align:center;font-size:13px;font-weight:900;margin-top:3px">' + cn + '</div>';
+                    // Nombre del cliente bien grande y en recuadro: para saber de quién es el pedido
+                    const cnSafe = cn.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+                    const cnFont = cn.length <= 14 ? '22px' : cn.length <= 22 ? '19px' : '16px';
+                    html += '<div style="text-align:center;border:3px solid #000;border-radius:4px;font-size:' + cnFont + ';font-weight:900;margin-top:5px;padding:4px 3px;text-transform:uppercase;line-height:1.2;overflow-wrap:break-word">' + cnSafe + '</div>';
                 }
 
-                const paymentStatus = document.querySelector('input[name="payment"]:checked')?.value || 'abonado';
-                if (paymentStatus === 'pendiente') {
-                    const amount = $('paymentAmount').value.trim();
-                    html += '<div style="text-align:center;background:#000;color:#fff;font-size:13px;font-weight:900;margin-top:4px;padding:4px 0;">⚠ PENDIENTE' + (amount ? ': $' + amount : '') + '</div>';
+                const st = getTicketStatus();
+                if (st.deliveryText) {
+                    html += '<div style="text-align:center;font-size:14px;font-weight:900;margin-top:4px">' + st.deliveryText + '</div>';
+                    if (st.address) html += '<div style="text-align:center;font-size:11px;font-weight:700">' + st.address.replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</div>';
+                }
+                if (st.payment === 'pendiente') {
+                    html += '<div style="text-align:center;background:#000;color:#fff;font-size:16px;font-weight:900;margin-top:4px;padding:5px 0;">⚠ FALTA ABONAR' + (st.amount ? ': $' + st.amount : '') + '</div>';
+                } else {
+                    html += '<div style="text-align:center;border:2px solid #000;font-size:16px;font-weight:900;margin-top:4px;padding:3px 0;">✔ ABONADO</div>';
                 }
             }
 
@@ -5561,14 +5636,114 @@
             
             html += '<div class="line-thick"></div>';
             html += '<div class="grand"><span>TOTAL:</span><span>' + grandTotal + ' uds</span></div>';
+            if (state.orderType === 'presupuesto') {
+                const totalPesos = getPresupuestoTotal();
+                if (totalPesos > 0) html += '<div class="grand" style="margin-top:2px"><span>$</span><span>' + totalPesos.toLocaleString('es-AR') + '</span></div>';
+            }
             html += '</body></html>';
-            
+            if (mode === 'html') return html;   // para mandarlo a la impresora del local
+
             const win = window.open('', '_blank');
             win.document.write(html);
             win.document.close();
             if (mode === 'print') {
                 win.print();
             }
+        }
+
+        // ===== IMPRESIÓN REMOTA (PC del local, vía Worker mikra-print) =====
+        const PRINT_URL = 'https://mikra-print.rafaelassir.workers.dev';
+        const PRINT_KEY = 'AG4LFDaR5Yhl8QccEtwltnvH';
+
+        function openPrintChoice() {
+            $('printChoiceModal').classList.add('show');
+            const st = $('printLocalStatus');
+            st.textContent = '⏳ Viendo si la PC de la oficina está conectada…';
+            st.style.color = 'var(--text-secondary)';
+            fetch(PRINT_URL + '/status', { headers: { 'X-Key': PRINT_KEY }, cache: 'no-store' })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.agentOnline) { st.textContent = '🟢 PC de la oficina conectada'; st.style.color = 'var(--success)'; }
+                    else { st.textContent = '🔴 PC de la oficina desconectada — se imprime cuando se conecte'; st.style.color = 'var(--danger)'; }
+                })
+                .catch(() => { st.textContent = '⚠️ Sin conexión con la nube'; st.style.color = 'var(--danger)'; });
+        }
+        function closePrintChoice() { $('printChoiceModal').classList.remove('show'); }
+        function printChoiceHere() { closePrintChoice(); downloadTicketPreparados('print'); }
+
+        const PRINT_TARGETS = {
+            deposito: { nombre: 'el depósito', a: 'al depósito', icon: '📦' },
+            oficina:  { nombre: 'la oficina',  a: 'a la oficina', icon: '🏢' }
+        };
+        let _printOfflineJob = null;   // { id, target } del ticket que no se pudo imprimir
+
+        async function _printApi(path, body) {
+            const r = await fetch(PRINT_URL + path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Key': PRINT_KEY },
+                body: JSON.stringify(body)
+            });
+            const res = await r.json();
+            if (!r.ok) throw new Error(res.error || ('HTTP ' + r.status));
+            return res;
+        }
+
+        // target: 'deposito' (principal) u 'oficina'
+        async function printChoiceLocal(target) {
+            closePrintChoice();
+            const html = downloadTicketPreparados('html');
+            if (!html) return;
+            const title = $('clientName').value.trim() || (state.orderType === 'reposicion' ? 'Reposición' : 'Ticket');
+            toast(PRINT_TARGETS[target].icon + ' Mandando ' + PRINT_TARGETS[target].a + '…', '');
+            let res;
+            try { res = await _printApi('/job', { html, title, target }); }
+            catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
+            await _waitPrintJob(res, target);
+        }
+
+        // Espera la confirmación de la PC (hasta ~40 s)
+        async function _waitPrintJob(res, target) {
+            if (!res.agentOnline) {
+                toast('🕓 En cola — la PC de la oficina está desconectada, se imprime cuando se prenda', 'warning');
+                return;
+            }
+            for (let i = 0; i < 20; i++) {
+                await new Promise(r => setTimeout(r, 2000));
+                try {
+                    const j = await (await fetch(PRINT_URL + '/job?id=' + res.id, { headers: { 'X-Key': PRINT_KEY }, cache: 'no-store' })).json();
+                    if (j.status === 'printed') { toast('✅ Impreso en ' + PRINT_TARGETS[target].nombre, 'success'); return; }
+                    if (j.status === 'error') { toast('⚠️ La PC no pudo imprimir: ' + (j.error || ''), 'error'); return; }
+                    if (j.status === 'offline') { _showPrintOffline(res.id, target); return; }
+                } catch (e) {}
+            }
+            toast('🕓 Mandado, pero la PC todavía no confirmó', 'warning');
+        }
+
+        function _showPrintOffline(id, target) {
+            _printOfflineJob = { id, target };
+            const other = target === 'deposito' ? 'oficina' : 'deposito';
+            const t = PRINT_TARGETS[target].nombre;
+            $('printOfflineTitle').textContent = t.charAt(0).toUpperCase() + t.slice(1) + ' no está en línea';
+            $('printOfflineOtherBtn').textContent = PRINT_TARGETS[other].icon + ' Mandar ' + PRINT_TARGETS[other].a;
+            $('printOfflineModal').classList.add('show');
+        }
+        async function printOfflineOther() {
+            $('printOfflineModal').classList.remove('show');
+            const job = _printOfflineJob; _printOfflineJob = null;
+            if (!job) return;
+            const other = job.target === 'deposito' ? 'oficina' : 'deposito';
+            toast(PRINT_TARGETS[other].icon + ' Mandando ' + PRINT_TARGETS[other].a + '…', '');
+            let res;
+            try { res = await _printApi('/job/retarget', { id: job.id, target: other }); }
+            catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
+            await _waitPrintJob(res, other);
+        }
+        async function printOfflineDiscard() {
+            $('printOfflineModal').classList.remove('show');
+            const job = _printOfflineJob; _printOfflineJob = null;
+            if (!job) return;
+            try { await _printApi('/job/cancel', { id: job.id }); toast('🗑️ Ticket descartado', ''); }
+            catch (e) { toast('⚠️ No se pudo descartar: ' + e.message, 'error'); }
         }
 
         function showPreparadosOptions() { $('preparadosOptModal').classList.add('show'); }

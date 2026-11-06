@@ -532,7 +532,7 @@
         .delivery-option.selected { border-color: var(--primary); background: var(--primary); color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(79,172,254,0.35); }
         .delivery-option.selected[data-payment="pendiente"] { background: #f59e0b; border-color: #f59e0b; color: #1a2744; box-shadow: 0 2px 8px rgba(245,158,11,0.35); }
         .delivery-option:not(.selected) { opacity: 0.75; }
-        .delivery-option.pick-me { opacity: 1; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.35); animation: pickme .5s ease-in-out 3; }
+        .delivery-option.pick-me { opacity: 1; border-color: #f59e0b; color: #fcd34d; background: rgba(245,158,11,0.12); box-shadow: 0 0 0 2px rgba(245,158,11,0.45); animation: pickme .45s ease-in-out 3; }
         @keyframes pickme { 50% { transform: scale(1.04); } }
         .delivery-option input[type="radio"] { display: none; }
         .delivery-radio {
@@ -4792,25 +4792,34 @@
         }
         
         // ===== EXPORT FUNCTIONS =====
-        // ¿Eligió Abonó / Falta pagar y Retira / Envío?
+        // ¿Eligió Abonó / Falta pagar y Retira / Envío? → lista de lo que falta
         function _faltaElegir() {
-            if (!(state.orderType === 'pedido' || state.orderType === 'presupuesto')) return '';
-            if (!document.querySelector('input[name="payment"]:checked')) return 'pago';
-            if (!document.querySelector('input[name="delivery"]:checked')) return 'entrega';
-            return '';
+            if (!(state.orderType === 'pedido' || state.orderType === 'presupuesto')) return [];
+            const f = [];
+            if (!document.querySelector('input[name="payment"]:checked')) f.push('pago');
+            if (!document.querySelector('input[name="delivery"]:checked')) f.push('entrega');
+            return f;
         }
-        function _avisarFaltaElegir(que) {
-            const sel = que === 'pago' ? '.delivery-option[data-payment]' : '.delivery-option[data-delivery]';
-            switchPage('cart');
-            document.querySelectorAll(sel).forEach(o => { o.classList.add('pick-me'); setTimeout(() => o.classList.remove('pick-me'), 2200); });
-            document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            showModal(que === 'pago' ? '💰' : '📦', que === 'pago' ? 'Falta elegir el pago' : 'Falta elegir la entrega',
-                      que === 'pago' ? 'Marcá si ✅ Abonó o ⏳ Falta pagar.' : 'Marcá si 📦 Retira o 🚚 Envío.', 'Entendido', null);
+        // Sin carteles: se marca en naranja lo que falta elegir, hasta que lo elijas
+        function _avisarFaltaElegir(faltas) {
+            if (!$('page-cart').classList.contains('active')) switchPage('cart');
+            let primero = null;
+            faltas.forEach(que => {
+                const opts = document.querySelectorAll(que === 'pago' ? '.delivery-option[data-payment]' : '.delivery-option[data-delivery]');
+                opts.forEach(o => {
+                    o.classList.remove('pick-me'); void o.offsetWidth;   // reiniciar la animación
+                    o.classList.add('pick-me');
+                    o.addEventListener('click', () => opts.forEach(x => x.classList.remove('pick-me')), { once: true });
+                });
+                if (!primero) primero = opts[0];
+            });
+            primero?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            try { navigator.vibrate?.(60); } catch (e) {}
         }
         function validateForm() {
             if (state.orderType === 'devolucion') return true;
             const falta = _faltaElegir();
-            if (falta) { _avisarFaltaElegir(falta); return false; }
+            if (falta.length) { _avisarFaltaElegir(falta); return false; }
             if (state.orderType === 'presupuesto') {
                 const name = $('clientName').value.trim();
                 if (!name) {
@@ -4896,7 +4905,7 @@
 
         function openWaConfirm() {
             if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
-            if (_faltaElegir() === 'pago') { _avisarFaltaElegir('pago'); return; }
+            if (_faltaElegir().includes('pago')) { _avisarFaltaElegir(['pago']); return; }
             const isPedido = state.orderType === 'pedido';
             const isPres   = state.orderType === 'presupuesto';
             $('waConfirmPedido').style.display = isPedido ? 'block' : 'none';
@@ -6146,7 +6155,7 @@
             $('budgetSection')?.classList.toggle('show', show);
             const bp = $('btnPrecios');
             if (bp) {
-                bp.style.display = conForm && !pend ? '' : 'none';
+                bp.style.display = conForm && !pend && document.querySelector('input[name="payment"]:checked') ? '' : 'none';
                 bp.textContent = _showPrecios ? '✕ Ocultar precios' : '💲 Poner precios (para el recibo)';
             }
             if ($('budgetEnvioCostoRow')) $('budgetEnvioCostoRow').style.display = document.querySelector('input[name="delivery"]:checked')?.value === 'envio' ? 'block' : 'none';

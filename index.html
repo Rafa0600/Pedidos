@@ -1371,6 +1371,7 @@
                 <button class="action-more-btn" onclick="downloadPreparacion()">📦 Preparar</button>
                 <button class="action-more-btn" onclick="abrirHistorial()">📋 Historial</button>
                 <button class="action-more-btn" onclick="waTicketPDF()">📤 Ticket por WhatsApp</button>
+                <button class="action-more-btn" onclick="actualizarPreciosAhora()">🔄 Actualizar precios</button>
                 <button class="action-more-btn" onclick="setOrderType('devolucion');toggleMoreActions(document.querySelector('.action-more-toggle'))">↩️ Devolución</button>
             </div>
 
@@ -1736,18 +1737,43 @@
         // URL del GAS de mayorista (desplegar aparte — ver instrucciones)
         const MAYORISTA_URL = 'https://script.google.com/macros/s/AKfycbxz25g5BrFsriaetrgWli8j_wAAhU32z65Stn78zSIg5E4tI5sr82mky8h0wP9zAwScoQ/exec';
         // Mayorista y minorista vienen en la misma respuesta del GAS: se descarga una sola vez
+        // Copia de la planilla en Cloudflare (se actualiza sola todos los días a las 6 AM): rápida.
+        // Si Cloudflare no contesta, se va a la planilla (lenta).
+        const PRECIOS_CLOUD = 'https://mikra-print.rafaelassir.workers.dev/precios';
         let _gasPreciosPromise = null;
-        function _fetchGasPrecios() {
-            if (!_gasPreciosPromise) {
-                _gasPreciosPromise = fetch(MAYORISTA_URL)
-                    .then(r => r.json())
-                    .then(d => {
-                        if (!d.success || !d.data) throw new Error('Sin datos de precios');
-                        return d.data;
-                    })
+        async function _leerPrecios(refresh) {
+            try {
+                const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), refresh ? 40000 : 8000);
+                const r = await fetch(PRECIOS_CLOUD + (refresh ? '?refresh=1' : ''), { headers: { 'X-Key': 'AG4LFDaR5Yhl8QccEtwltnvH' }, cache: 'no-store', signal: ctrl.signal });
+                clearTimeout(tm);
+                const d = await r.json();
+                if (d.success && d.data && d.data.length) return d;
+            } catch (e) {}
+            const d = await (await fetch(MAYORISTA_URL)).json();
+            if (!d.success || !d.data) throw new Error('Sin datos de precios');
+            return d;
+        }
+        function _fetchGasPrecios(refresh) {
+            if (!_gasPreciosPromise || refresh) {
+                mayoristaCacheData = null; minoristaCache = null;
+                _gasPreciosPromise = _leerPrecios(refresh)
+                    .then(d => d.data)
                     .catch(e => { _gasPreciosPromise = null; throw e; });
             }
             return _gasPreciosPromise;
+        }
+        // ⋯ Más → 🔄 Actualizar precios: para cuando cambiaste la planilla y lo querés ya
+        async function actualizarPreciosAhora() {
+            toggleMoreActions(document.querySelector('.action-more-toggle'));
+            toast('Leyendo la planilla de precios...', '');
+            try {
+                const rows = await _fetchGasPrecios(true);
+                localStorage.removeItem('mikra_prices_lastSync');
+                await syncPricesBackground();
+                toast('✅ Precios actualizados (' + rows.length + ' artículos)', 'success');
+            } catch (e) {
+                toast('❌ No se pudo leer la planilla de precios', 'error');
+            }
         }
         async function fetchMayoristaPrecios() {
             if (mayoristaCacheData) return mayoristaCacheData;
@@ -3135,12 +3161,13 @@
             syncFromAPI(true, true);
         }
         
-        const PRICES_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+        const PRICES_MAX_AGE_MS = 60 * 60 * 1000; // 1 h (lo lee de Cloudflare: es rápido)
 
         async function syncPricesBackground() {
             if (!MAYORISTA_URL || MAYORISTA_URL.includes('REEMPLAZAR')) return;
             const last = localStorage.getItem('mikra_prices_lastSync');
             if (last && (Date.now() - new Date(last).getTime()) < PRICES_MAX_AGE_MS) return;
+            _gasPreciosPromise = null; mayoristaCacheData = null; minoristaCache = null;   // volver a leer la copia de la nube
             try {
                 // Ambas funciones fetch del mismo GAS — corren en paralelo
                 const [mapMay, mapMin] = await Promise.all([

@@ -5185,7 +5185,7 @@
                 const art = p.titulo || p.articulo || 'Artículo';
                 const key = art + '|' + (p.color || '');
                 if (!idx[key]) { idx[key] = { art, color: p.color || '', talles: [], qty: 0, precio: articlePrices[art] || 0, codigos: [] }; filas.push(idx[key]); }
-                idx[key].talles.push((p.talle || '-') + (p.qty > 1 ? ' ×' + p.qty : ''));
+                idx[key].talles.push({ t: p.talle || '-', q: p.qty });
                 idx[key].qty += p.qty;
                 if (p.codigo) idx[key].codigos.push(p.codigo);
             });
@@ -5208,7 +5208,13 @@
                 'td{padding:8px;border-bottom:1px solid #e5e7eb;vertical-align:top}' +
 
                 '.n{text-align:right;white-space:nowrap}.c{text-align:center}' +
-                '.art{font-weight:800;color:#111827}.tl{color:#4b5563;font-size:11px}.cod{color:#b0b6bf;font-size:7.5px;margin-top:2px;letter-spacing:.2px}' +
+                '.art{font-weight:800;color:#111827}' +
+                '.tz{display:flex;flex-wrap:wrap;gap:3px}' +
+                '.tz span{display:inline-flex;flex-direction:column;min-width:30px;border:1px solid #d1d5db;border-radius:4px;overflow:hidden;text-align:center}' +
+                '.tz i{font-style:normal;font-size:10px;font-weight:700;color:#6b7280;background:#f3f4f6;padding:1px 4px;border-bottom:1px solid #d1d5db}' +
+                '.tz b{font-size:12px;padding:2px 4px;color:#111827}' +
+                '.qt{font-weight:800;font-size:13px}' +
+                'tfoot td{border-top:2px solid #1a2744;border-bottom:none;font-weight:700;padding-top:9px}' +
                 'tr.gr .art{color:#c0c5cc;font-weight:600}' +
                 'tr.g1 td{border-top:2px solid #1a2744}tbody tr.g1:first-child td{border-top:none}' +
                 '.tots{margin-left:auto;width:290px;margin-top:14px}' +
@@ -5236,13 +5242,14 @@
             filas.forEach(r => {
                 const nuevo = r.art !== artPrev;   // primera fila del artículo: negrita y línea arriba
                 artPrev = r.art;
-                h += '<tr class="' + (nuevo ? 'g1' : 'gr') + '"><td><div class="art">' + esc(r.art) + '</div>' + (r.codigos.length ? '<div class="cod">' + esc(r.codigos.join(' · ')) + '</div>' : '') + '</td>' +
-                     '<td>' + esc(r.color || '—') + '</td><td class="tl">' + esc(r.talles.join(', ')) + '</td><td class="c">' + r.qty + '</td>' +
+                h += '<tr class="' + (nuevo ? 'g1' : 'gr') + '"><td><div class="art">' + esc(r.art) + '</div>' + '</td>' +
+                     '<td>' + esc(r.color || '—') + '</td><td><div class="tz">' + r.talles.map(x => '<span><i>' + esc(x.t) + '</i><b>' + x.q + '</b></span>').join('') + '</div></td><td class="c qt">' + r.qty + '</td>' +
                      (conPrecios ? '<td class="n">' + (r.precio ? $f(r.precio) : '—') + '</td><td class="n">' + (r.precio ? $f(r.precio * r.qty) : '—') + '</td>' : '') + '</tr>';
             });
-            h += '</tbody></table>';
+            h += '</tbody><tfoot><tr><td colspan="3" class="n">Total de prendas</td><td class="c qt">' + prendas + '</td>' +
+                 (conPrecios ? '<td></td><td></td>' : '') + '</tr></tfoot></table>';
 
-            h += '<div class="tots"><div class="r"><span>Prendas</span><span>' + prendas + '</span></div>';
+            h += '<div class="tots">';
             if (conPrecios) {
                 h += '<div class="r"><span>Subtotal productos</span><span>' + $f(c.bruto) + '</span></div>';
                 if (c.ajuste) h += '<div class="r' + (c.ajuste < 0 ? ' neg' : '') + '"><span>' + esc(c.ajLabel) + ' (' + c.ajPctTxt + '%)</span><span>' + (c.ajuste < 0 ? '−' : '+') + $f(Math.abs(c.ajuste)) + '</span></div>';

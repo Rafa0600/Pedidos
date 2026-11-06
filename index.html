@@ -2421,7 +2421,7 @@
                 const isActive = slot.id === _activeSlotId;
                 const units = (slot.cart || []).reduce((a, p) => a + p.qty, 0);
                 html += '<div class="slot-tab' + (isActive ? ' active' : '') + '" id="stab_' + slot.id + '" onclick="switchSlot(\'' + slot.id + '\')">';
-                html += '<span class="slot-tab-name">' + (slot.num ? '<b>#' + slot.num + '</b> ' : '') + _escHtml(slot.nombre) + '</span>';
+                html += '<span class="slot-tab-name">' + (_numVale(slot) ? '<b>#' + slot.num + '</b> ' : '') + _escHtml(slot.nombre) + '</span>';
                 if (units > 0) html += '<span class="slot-count-badge">' + units + '</span>';
                 if (_slots.length > 1) html += '<button class="slot-tab-x" onclick="deleteSlot(\'' + slot.id + '\',event)" title="Cerrar">✕</button>';
                 html += '</div>';
@@ -5386,7 +5386,7 @@
             const esPres = state.orderType === 'presupuesto';
             const esDev = state.orderType === 'devolucion';
             const sl = _activeSlot();
-            const num = sl && sl.num ? sl.num : null;
+            const num = _numActivo();
             const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
             const $f = n => '$' + Math.round(n).toLocaleString('es-AR');
             const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -5691,7 +5691,7 @@
             // HEADER
             pdf.setColor(0, 0, 0);
             var _pslot = _activeSlot();
-            var _pnum = conDatos && _pslot && _pslot.num ? ' #' + _pslot.num : '';
+            var _pnum = conDatos && _numActivo() ? ' #' + _numActivo() : '';
             pdf.setFontSize(15);
             pdf.text((state.orderType === 'presupuesto' ? 'PRESUPUESTO' : state.orderType === 'devolucion' ? 'DEVOLUCION' : 'PEDIDO') + _pnum, pw / 2, y, 'center');
             y += 6;
@@ -6487,11 +6487,30 @@
             }
             return d[b.length];
         }
+        // a = nombre con el que se guardó el pedido, b = nombre escrito ahora
         function _mismoNombre(a, b) {
             a = _normNom(a); b = _normNom(b);
             if (!a || !b || a === b) return true;
-            if (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a))) return true;
-            return _lev(a, b) <= (Math.min(a.length, b.length) < 6 ? 1 : 2);
+            if (a.startsWith(b)) return false;              // le borraron letras: ya es otro nombre
+            if (b.startsWith(a + ' ')) return true;         // le agregaron el apellido
+            return _lev(a, b) <= (Math.min(a.length, b.length) < 6 ? 1 : 2);   // error de tipeo
+        }
+        // ¿El número de la pestaña sigue valiendo con el nombre que está escrito?
+        function _numVale(sl) {
+            if (!sl || !sl.num) return false;
+            if (!sl.numNombre) return true;   // todavía no se sabe con qué nombre se guardó
+            const nom = sl.id === _activeSlotId ? getSlotNameFromForm() : sl.nombre;
+            return !!nom && _mismoNombre(sl.numNombre, nom);
+        }
+        function _numActivo() { const sl = _activeSlot(); return _numVale(sl) ? sl.num : null; }
+        // Pestañas de antes (sin el nombre guardado): pedirlo a la nube una vez
+        let _numNomPidiendo = false;
+        function _asegurarNumNombre(sl) {
+            if (!sl || !sl.num || sl.numNombre !== undefined || _numNomPidiendo) return;
+            _numNomPidiendo = true;
+            _pedApi('/pedido?num=' + sl.num, undefined, 4000)
+                .then(p => { sl.numNombre = p.nombre || ''; saveSlots(); renderSlotTabs(); })
+                .catch(() => {}).finally(() => { _numNomPidiendo = false; });
         }
         // Si la pestaña tenía número y ahora tiene OTRO nombre: es un pedido nuevo (número nuevo, ticket completo)
         async function _checkNombre() {
@@ -7382,12 +7401,13 @@
         function onClientNameInput() {
             const n = getSlotNameFromForm();
             const slot = _slots.find(s => s.id === _activeSlotId);
+            _asegurarNumNombre(slot);
             if (slot && n && slot.nombre !== n) {
                 slot.nombre = n;
-                renderSlotTabs();
                 clearTimeout(_saveTimer);
                 _saveTimer = setTimeout(saveSlots, 300);
             }
+            renderSlotTabs();   // el #número se va / vuelve según el nombre
         }
         ['clientName', 'clientNamePres'].forEach(id => {
             const el = $(id);

@@ -452,7 +452,8 @@
             border-radius: 10px; padding: 12px; margin-bottom: 10px;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .cart-count { font-size: 1em; font-weight: 700; }
+        .cart-count { font-size: 0.9em; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+        .cart-header button { white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
         .cart-count span { color: var(--primary); }
         
         .order-type-selector { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -586,6 +587,7 @@
         .ab-wa   { --ab-bg: rgba(34,197,94,0.13);  --ab-bd: rgba(34,197,94,0.40);  --ab-fg: #86efac; }
         .ab-tk   { --ab-bg: rgba(129,140,248,0.14); --ab-bd: rgba(129,140,248,0.42); --ab-fg: #c7d2fe; }
         .ab-pdf  { --ab-bg: rgba(148,163,184,0.10); --ab-bd: rgba(148,163,184,0.35); --ab-fg: #e2e8f0; }
+        .ab-rec  { --ab-bg: rgba(45,212,191,0.11);  --ab-bd: rgba(45,212,191,0.40);  --ab-fg: #99f6e4; }
         .ab-ver  { --ab-bg: rgba(56,189,248,0.10);  --ab-bd: rgba(56,189,248,0.35);  --ab-fg: #bae6fd; }
         .ab-reg  { --ab-bg: rgba(251,191,36,0.10);  --ab-bd: rgba(251,191,36,0.38);  --ab-fg: #fde68a; }
         .ab-del  { --ab-bg: transparent;            --ab-bd: rgba(248,113,113,0.40); --ab-fg: #fca5a5; }
@@ -1292,15 +1294,15 @@
             <div class="cart-header">
                 <div class="cart-count"><span id="cartItemCount">0</span> prod. (<span id="cartUnitCount">0</span> uds)</div>
                 <div style="display:flex;gap:6px;align-items:center;">
+                    <button onclick="verificarStock()" title="Verificar stock en Ecom" style="font-size:0.95em;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);cursor:pointer;line-height:1;">🔍</button>
                     <button class="action-more-toggle" onclick="toggleMoreActions(this)" style="font-size:0.78em;padding:5px 9px;border-radius:8px;line-height:1;">⋯ Más</button>
-                    <button class="cart-remove" onclick="pasteFromTiendaNube()" style="font-size:0.82em;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--success);cursor:pointer;">🛍️ TN</button>
-                    <button class="cart-remove" onclick="openManualEntry()" style="font-size:0.82em;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--primary);cursor:pointer;">📋 Manual</button>
+                    <button class="cart-remove" onclick="pasteFromTiendaNube()" style="font-size:0.82em;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--success);cursor:pointer;">🛍️ TN</button>
+                    <button class="cart-remove" onclick="openManualEntry()" style="font-size:0.82em;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--primary);cursor:pointer;">📋 Manual</button>
                 </div>
             </div>
             <div class="action-more-panel" id="moreActionsPanel" style="margin-top:6px;">
                 <button class="action-more-btn" onclick="downloadPreparacion()">📦 Preparar</button>
                 <button class="action-more-btn" onclick="abrirHistorial()">📋 Historial</button>
-                <button class="action-more-btn" onclick="startReciboPrint()">🧾 Recibo</button>
                 <button class="action-more-btn" onclick="setOrderType('devolucion');toggleMoreActions(document.querySelector('.action-more-toggle'))">↩️ Devolución</button>
             </div>
 
@@ -1407,7 +1409,7 @@
                     <button class="action-compact-btn ab-wa" onclick="openWaConfirm()"><span class="ab-ic">💬</span>WhatsApp</button>
                     <button class="action-compact-btn ab-pdf" onclick="showPdfOptions()"><span class="ab-ic">📄</span>PDF</button>
                     <button class="action-compact-btn ab-tk" onclick="downloadTicketDirectPrint()"><span class="ab-ic">🖨️</span>Ticket</button>
-                    <button class="action-compact-btn ab-ver" onclick="verificarStock()"><span class="ab-ic">🔍</span>Verificar</button>
+                    <button class="action-compact-btn ab-rec" onclick="startReciboPrint()"><span class="ab-ic">🧾</span>Recibo</button>
                     <button class="action-compact-btn ab-reg" id="btnRegistrar" onclick="pedirPinVenta()"><span class="ab-ic">📤</span>Registrar</button>
                     <button class="action-compact-btn ab-del" onclick="clearCart()"><span class="ab-ic">🗑️</span>Vaciar</button>
                 </div>
@@ -5556,9 +5558,13 @@
         
         function downloadTicketPreparados(mode) {
             if (!state.cart.length) return;
+            // Recibo para la clienta: misma estructura, sin stock y con precios/pago
+            const esRecibo = mode === 'recibo';
+            const k = esRecibo ? 0.88 : 1;            // el recibo, un poco más chico
+            const px = n => Math.round(n * k) + 'px';
             // Qué imprimir: completo, completo marcado MODIFICADO, o solo los cambios
-            const ctx = _ticketCtx || { mode: 'full', prev: null, prevAt: 0 };
-            _ticketCtx = null;
+            const ctx = esRecibo ? { mode: 'full', prev: null, prevAt: 0 } : (_ticketCtx || { mode: 'full', prev: null, prevAt: 0 });
+            if (!esRecibo) _ticketCtx = null;
             const conNum = state.orderType === 'pedido' || state.orderType === 'presupuesto';
             const slotAct = _activeSlot();
             const pedNum = conNum && slotAct && slotAct.num ? slotAct.num : null;
@@ -5594,7 +5600,7 @@
             }
 
             
-            let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preparados</title>' +
+            let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + (esRecibo ? 'Recibo' : 'Preparados') + '</title>' +
                 '<style>' +
                 '@page{size:70mm auto;margin:0}' +
                 '*{margin:0;padding:0;box-sizing:border-box}' +
@@ -5625,13 +5631,23 @@
                 '.banner{text-align:center;background:#000;color:#fff;font-size:18px;font-weight:900;margin:6px -4mm 2px;padding:5px 0}' +
                 '.sec{text-align:center;border:3px solid #000;font-size:19px;font-weight:900;margin:8px 0 4px;padding:3px 0}' +
                 '.sec.dash{border-style:dashed}' +
+                '.brand{font-size:28px;font-weight:900;letter-spacing:6px;line-height:1.1}' +
+                '.rsub{font-size:12px;font-weight:900;letter-spacing:1px;margin-bottom:5px}' +
+                '.pline{display:flex;justify-content:space-between;font-size:13px;font-weight:900;padding:3px 0 1px;border-bottom:1px solid #000}' +
+                '.pay-ok{border:3px solid #000;text-align:center;font-size:18px;font-weight:900;padding:5px 0;margin-top:8px}' +
+                '.pay-pend{background:#000;color:#fff;text-align:center;font-size:18px;font-weight:900;padding:6px 0;margin-top:8px}' +
+                '.gracias{text-align:center;font-size:14px;font-weight:900;margin-top:12px}' +
                 '.size-cell.chg{border-width:4px}' +
                 '.size-cell .stk.chgtxt{font-size:12px;font-weight:900}' +
                 '</style></head><body>';
             
             // Arriba: tipo + número a la izquierda, fecha y hora chiquitas a la derecha
             const tipoTxt = state.orderType === 'presupuesto' ? 'PRESUPUESTO' : state.orderType === 'devolucion' ? 'DEVOLUCIÓN' : 'PEDIDO';
-            const fechaCorta = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+            const fechaCorta = new Date().toLocaleDateString('es-AR', esRecibo ? { day: '2-digit', month: '2-digit', year: 'numeric' } : { day: '2-digit', month: '2-digit' });
+            if (esRecibo) {
+                html += '<div class="center brand">MIKRA</div>';
+                html += '<div class="center rsub">' + (state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'COMPROBANTE DE COMPRA') + '</div>';
+            }
             html += '<div class="topline"><span class="tipo">' + tipoTxt + (pedNum ? ' <span class="pednum">#' + pedNum + '</span>' : '') + '</span>' +
                     '<span class="fecha">' + fechaCorta + '<br>' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + '</span></div>';
 
@@ -5660,7 +5676,9 @@
                     html += '<div style="text-align:center;font-size:14px;font-weight:900;margin-top:4px">' + st.deliveryText + '</div>';
                     if (st.address) html += '<div style="text-align:center;font-size:11px;font-weight:700">' + st.address.replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</div>';
                 }
-                if (st.payment === 'pendiente') {
+                if (esRecibo) {
+                    // el pago va abajo, con el total
+                } else if (st.payment === 'pendiente') {
                     html += '<div style="text-align:center;background:#000;color:#fff;font-size:16px;font-weight:900;margin-top:4px;padding:5px 0;">⚠ FALTA ABONAR' + (st.amount ? ': $' + st.amount : '') + '</div>';
                 } else {
                     html += '<div style="text-align:center;border:2px solid #000;font-size:16px;font-weight:900;margin-top:4px;padding:3px 0;">✔ ABONADO</div>';
@@ -5686,18 +5704,20 @@
                 // Dynamic font size for long names
                 const nameLen = artName.length;
                 // Mantener la letra grande y dejar que el nombre baje de renglón si es largo
-                const nameFontSize = nameLen <= 20 ? '18px' : nameLen <= 30 ? '16px' : '14px';
+                const nameFontSize = px(nameLen <= 20 ? 18 : nameLen <= 30 ? 16 : 14);
 
                 // Total de unidades de este artículo (suma de todos los colores/talles)
                 let artTotal = 0;
                 Object.values(colors).forEach(sizeMap => Object.values(sizeMap).forEach(c => artTotal += c.qty));
 
                 html += '<div class="art-name" style="font-size:' + nameFontSize + '"><span class="an-name">' + artName + '</span><span class="an-tot">' + artTotal + '</span></div>';
+                const precioArt = esRecibo ? (articlePrices[artName] || 0) : 0;
+                if (precioArt > 0) html += '<div class="pline"><span>' + artTotal + ' x $' + precioArt.toLocaleString('es-AR') + '</span><span>$' + (artTotal * precioArt).toLocaleString('es-AR') + '</span></div>';
 
                 // Talle (lbl) y cantidad (qty) grandes; se achican solos si hay muchos talles en la fila
                 const nSizes = allSizes.length;
-                const lblFont = nSizes <= 5 ? '18px' : nSizes <= 6 ? '16px' : nSizes <= 8 ? '13px' : '11px';
-                const qtyFont = nSizes <= 5 ? '20px' : nSizes <= 6 ? '18px' : nSizes <= 8 ? '15px' : '13px';
+                const lblFont = px(nSizes <= 5 ? 18 : nSizes <= 6 ? 16 : nSizes <= 8 ? 13 : 11);
+                const qtyFont = px(nSizes <= 5 ? 20 : nSizes <= 6 ? 18 : nSizes <= 8 ? 15 : 13);
                 
                 const sortedColors = Object.keys(colors).sort((a, b) => a.localeCompare(b, 'es'));
                 
@@ -5715,7 +5735,8 @@
                         if (sizeMap[s]) {
                             const stk = sizeMap[s].stock;
                             const dl = sizeMap[s].delta;
-                            const stkHtml = dl ? '<div class="stk chgtxt">★' + (dl > 0 ? '+' : '−') + Math.abs(dl) + '</div>'
+                            const stkHtml = esRecibo ? ''   // a la clienta no se le muestra el stock
+                                          : dl ? '<div class="stk chgtxt">★' + (dl > 0 ? '+' : '−') + Math.abs(dl) + '</div>'
                                           : (stk != null) ? '<div class="stk">(' + stk + ')</div>' : '';
                             html += '<div class="size-cell' + (dl ? ' chg' : '') + '"><div class="lbl" style="font-size:' + lblFont + '">' + s + '</div><div class="qty" style="font-size:' + qtyFont + '">' + sizeMap[s].qty + '</div>' + stkHtml + '</div>';
                         } else {
@@ -5772,14 +5793,29 @@
                 const r = renderArticles(state.cart);
                 html += r.html;
                 html += '<div class="line-thick"></div>';
-                html += '<div class="grand"><span>TOTAL:</span><span>' + r.total + ' uds</span></div>';
+                html += '<div class="grand"><span>' + (esRecibo ? 'PRENDAS:' : 'TOTAL:') + '</span><span>' + r.total + ' uds</span></div>';
             }
-            if (state.orderType === 'presupuesto' && (!diff || ctx.mode !== 'diff')) {
+            if (esRecibo) {
+                // Precios, total y cuánto pagó / cuánto falta
+                let sub = 0;
+                state.cart.forEach(p => { sub += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
+                const envio = getBudgetShipping();
+                const totalPesos = sub + envio;
+                if (sub > 0 && envio > 0) {
+                    html += '<div class="grand" style="font-size:14px;margin-top:4px"><span>Subtotal:</span><span>$' + sub.toLocaleString('es-AR') + '</span></div>';
+                    html += '<div class="grand" style="font-size:14px;margin-top:0"><span>Envío:</span><span>$' + envio.toLocaleString('es-AR') + '</span></div>';
+                }
+                if (totalPesos > 0) html += '<div class="grand" style="font-size:22px;margin-top:4px"><span>TOTAL</span><span>$' + totalPesos.toLocaleString('es-AR') + '</span></div>';
+                const stR = getTicketStatus();
+                if (stR.payment === 'pendiente') html += '<div class="pay-pend">FALTA ABONAR' + (stR.amount ? ': $' + stR.amount : '') + '</div>';
+                else html += '<div class="pay-ok">✔ ABONADO' + (totalPesos > 0 ? ' $' + totalPesos.toLocaleString('es-AR') : '') + '</div>';
+                html += '<div class="gracias">¡Gracias por tu compra!</div>';
+            } else if (state.orderType === 'presupuesto' && (!diff || ctx.mode !== 'diff')) {
                 const totalPesos = getPresupuestoTotal();
                 if (totalPesos > 0) html += '<div class="grand" style="margin-top:2px"><span>$</span><span>' + totalPesos.toLocaleString('es-AR') + '</span></div>';
             }
             html += '</body></html>';
-            if (mode === 'html') return html;   // para mandarlo a la impresora del local
+            if (mode === 'html' || esRecibo) return html;   // para mandarlo a la impresora / recibo
 
             const win = window.open('', '_blank');
             win.document.write(html);
@@ -6014,85 +6050,8 @@
             catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
             await _waitPrintJob(res, target, 'recibo');
         }
-        function buildReciboHtml() {
-            const sl = _activeSlot();
-            const num = sl && sl.num ? sl.num : null;
-            const esPres = state.orderType === 'presupuesto';
-            const st = getTicketStatus();
-            const name = ($('clientName').value || '').trim();
-            const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-            const ahora = new Date();
-            const fecha = ahora.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' +
-                          ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-            const SO = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
-            const sIdx = t => { const u = (t || '').toUpperCase(); const n = parseFloat(u); if (!isNaN(n)) return 1000 + n; const i = SO.indexOf(u); return i > -1 ? i : 500; };
-            const arts = {};
-            state.cart.forEach(p => {
-                const a = p.titulo || p.articulo || 'Artículo';
-                const c = p.color || '';
-                arts[a] = arts[a] || { qty: 0, colors: {} };
-                arts[a].qty += p.qty;
-                (arts[a].colors[c] = arts[a].colors[c] || []).push({ t: p.talle || '-', q: p.qty });
-            });
-            const nombres = Object.keys(arts).sort((x, y) => x.localeCompare(y, 'es'));
-            const conPrecios = nombres.some(n => (articlePrices[n] || 0) > 0);
-            let sub = 0, uds = 0;
-            let rows = '';
-            nombres.forEach(n => {
-                const a = arts[n];
-                const pr = articlePrices[n] || 0;
-                uds += a.qty; sub += a.qty * pr;
-                rows += '<div class="it"><div class="ith"><span class="itn">' + esc(n) + '</span><span>' + a.qty + ' u' +
-                        (conPrecios ? (pr > 0 ? '  $' + (a.qty * pr).toLocaleString('es-AR') : '') : '') + '</span></div>';
-                if (conPrecios && pr > 0) rows += '<div class="itp">' + a.qty + ' x $' + pr.toLocaleString('es-AR') + '</div>';
-                Object.keys(a.colors).sort((x, y) => x.localeCompare(y, 'es')).forEach(c => {
-                    const ts = a.colors[c].sort((x, y) => sIdx(x.t) - sIdx(y.t)).map(x => 'T' + x.t + '×' + x.q).join('  ');
-                    rows += '<div class="itc">' + (c ? esc(c) + ': ' : '') + ts + '</div>';
-                });
-                rows += '</div>';
-            });
-            const envio = getBudgetShipping();
-            const total = sub + envio;
-            let h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo</title><style>' +
-                '@page{size:70mm auto;margin:0}*{margin:0;padding:0;box-sizing:border-box}' +
-                'body{font-family:"Courier New",Courier,monospace;width:62mm;margin:3mm 4mm;font-size:13px;font-weight:700;color:#000}' +
-                '.c{text-align:center}.brand{font-size:26px;font-weight:900;letter-spacing:5px;margin-top:2px}' +
-                '.sub{font-size:12px;font-weight:900;letter-spacing:1px;margin-top:1px}' +
-                '.hr{border-top:2px dashed #000;margin:7px 0}.hr2{border-top:3px solid #000;margin:7px 0}' +
-                '.row{display:flex;justify-content:space-between;gap:6px;font-size:12px;margin:2px 0}' +
-                '.cli{font-size:17px;font-weight:900;text-transform:uppercase;margin:4px 0 2px;overflow-wrap:break-word}' +
-                '.it{margin:5px 0 7px}.ith{display:flex;justify-content:space-between;gap:6px;font-weight:900;font-size:13px}' +
-                '.itn{text-transform:uppercase;flex:1;min-width:0;overflow-wrap:break-word}' +
-                '.itp{font-size:11px;padding-left:6px}.itc{font-size:12px;padding-left:6px;line-height:1.35}' +
-                '.tot{display:flex;justify-content:space-between;font-size:19px;font-weight:900;margin-top:4px}' +
-                '.ok{border:2px solid #000;text-align:center;font-size:15px;font-weight:900;padding:4px 0;margin-top:8px}' +
-                '.pend{background:#000;color:#fff;text-align:center;font-size:15px;font-weight:900;padding:5px 0;margin-top:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-                '.gr{font-size:13px;font-weight:900;margin-top:12px}' +
-                '</style></head><body>';
-            h += '<div class="c brand">MIKRA</div>';
-            h += '<div class="c sub">' + (esPres ? 'PRESUPUESTO' : 'COMPROBANTE DE COMPRA') + '</div>';
-            h += '<div class="hr"></div>';
-            h += '<div class="row"><span>' + (esPres ? 'Presupuesto' : 'Pedido') + (num ? ' Nº ' + num : '') + '</span><span>' + fecha + '</span></div>';
-            if (name) h += '<div class="cli">' + esc(name) + '</div>';
-            if (st.deliveryText) h += '<div class="row"><span>Entrega:</span><span>' + st.deliveryText + '</span></div>';
-            if (st.address) h += '<div style="font-size:11px">' + esc(st.address).replace(/\n/g, '<br>') + '</div>';
-            h += '<div class="hr2"></div>';
-            h += rows;
-            h += '<div class="hr2"></div>';
-            h += '<div class="row" style="font-size:13px"><span>Prendas:</span><span>' + uds + '</span></div>';
-            if (conPrecios) {
-                if (envio > 0) {
-                    h += '<div class="row"><span>Subtotal:</span><span>$' + sub.toLocaleString('es-AR') + '</span></div>';
-                    h += '<div class="row"><span>Envío:</span><span>$' + envio.toLocaleString('es-AR') + '</span></div>';
-                }
-                h += '<div class="tot"><span>TOTAL</span><span>$' + total.toLocaleString('es-AR') + '</span></div>';
-            }
-            if (st.payment === 'pendiente') h += '<div class="pend">FALTA ABONAR' + (st.amount ? ': $' + st.amount : '') + '</div>';
-            else h += '<div class="ok">✔ ABONADO</div>';
-            h += '<div class="c gr">¡Gracias por tu compra!</div>';
-            h += '</body></html>';
-            return h;
-        }
+        // Recibo: misma estructura que el ticket de preparar (barras, colores, cuadraditos), sin stock y con precios/pago
+        function buildReciboHtml() { return downloadTicketPreparados('recibo'); }
 
         // ===== PEDIDOS CON NÚMERO (guardados en Cloudflare, Worker mikra-print) =====
 

@@ -560,6 +560,24 @@
         .cli-item span { font-size: 0.75em; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .precios-toggle { width: 100%; margin-top: 2px; padding: 9px; border: 1px dashed var(--border); background: none; color: var(--text-secondary); border-radius: 10px; font-size: 0.8em; font-weight: 600; cursor: pointer; }
         .precio-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 700; font-size: 0.85em; cursor: pointer; }
+        /* Opciones del PDF del presupuesto */
+        .clear-modal.po-modal { max-width: 380px; width: 94%; text-align: left; }
+        .po-modal .clear-modal-title { text-align: center; }
+        .po-group { margin: 12px 0 0; }
+        .po-lbl { font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px; }
+        .po-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .po-seg button { padding: 9px 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-secondary); font-size: 0.8em; font-weight: 700; cursor: pointer; }
+        .po-seg button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .po-ajrow { display: none; gap: 6px; align-items: center; margin-top: 8px; }
+        .po-ajrow.show { display: flex; }
+        .po-ajrow input { padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-size: 15px; font-weight: 600; min-width: 0; }
+        .po-ajrow #poAjLabel { flex: 1; }
+        .po-ajrow #poAjPct { width: 64px; text-align: center; }
+        .po-prev { margin-top: 14px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 0.85em; }
+        .po-prev .r { display: flex; justify-content: space-between; padding: 2px 0; color: var(--text-secondary); }
+        .po-prev .r span:last-child { white-space: nowrap; margin-left: 10px; }
+        .po-prev .r.neg span:last-child { color: #86efac; }
+        .po-prev .r.tot { color: var(--text); font-weight: 900; font-size: 1.15em; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 7px; }
         .budget-section {
             background: var(--bg-card); border: 1px solid var(--border);
             border-radius: 10px; padding: 12px; margin-bottom: 10px; display: none;
@@ -1438,7 +1456,7 @@
                     <div class="shipping-cost-row">
                         <span class="shipping-cost-label">🚚 Costo del envío:</span>
                         <span style="color:var(--text-secondary);font-size:0.9em;">$</span>
-                        <input type="text" inputmode="numeric" class="shipping-cost-input" id="budgetShippingCost" placeholder="0" oninput="fmtMonto(this);updateBudgetTotal()">
+                        <input type="text" inputmode="numeric" class="shipping-cost-input" id="budgetShippingCost" placeholder="0" oninput="fmtMonto(this);updateBudgetTotal();saveCart()">
                     </div>
                 </div>
                 <div class="budget-total">
@@ -1662,23 +1680,34 @@
             </div>
         </div>
     </div>
-    <div class="clear-modal-overlay" id="ivaModal">
-        <div class="clear-modal">
-            <div class="clear-modal-title">🧾 Ajuste en el presupuesto</div>
-            <div class="clear-modal-msg">Concepto y porcentaje a aplicar:</div>
-            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;">
-                <input type="text" id="ivaLabel" value="IVA" maxlength="20"
-                    style="width:110px;padding:10px;font-size:15px;text-align:center;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-weight:700;"
-                    oninput="updateIvaBtn()">
-                <input type="number" id="ivaPercent" value="21" min="-100" max="100" step="0.5" inputmode="decimal"
-                    style="width:90px;padding:10px;font-size:16px;text-align:center;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-weight:700;"
-                    oninput="updateIvaBtn()">
-                <span style="font-size:0.95em;font-weight:600;">%</span>
+    <div class="clear-modal-overlay" id="presOptsModal">
+        <div class="clear-modal po-modal">
+            <div class="clear-modal-title">📄 PDF del presupuesto</div>
+            <div class="po-group">
+                <div class="po-lbl">IVA</div>
+                <div class="po-seg" id="poIva">
+                    <button data-v="no" onclick="poSet('iva','no')">Sin IVA</button>
+                    <button data-v="21" onclick="poSet('iva','21')">+ IVA 21%</button>
+                    <button data-v="10.5" onclick="poSet('iva','10.5')">+ IVA 10,5%</button>
+                </div>
             </div>
-            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;">
-                <button class="clear-modal-btn" id="ivaGenBtn" style="background:#dc2626;color:white;font-weight:800;" onclick="confirmarIvaPDF()">📋 Generar con IVA</button>
-                <button class="clear-modal-btn no" onclick="cerrarIvaModal();downloadPDF(0,'')">Sin ajuste</button>
-                <button class="clear-modal-btn no" onclick="cerrarIvaModal()">Cancelar</button>
+            <div class="po-group">
+                <div class="po-lbl">Descuento o recargo</div>
+                <div class="po-seg" id="poAj">
+                    <button data-v="no" onclick="poSet('aj','no')">Ninguno</button>
+                    <button data-v="desc" onclick="poSet('aj','desc')">Descuento</button>
+                    <button data-v="rec" onclick="poSet('aj','rec')">Recargo</button>
+                </div>
+                <div class="po-ajrow" id="poAjRow">
+                    <input type="text" id="poAjLabel" maxlength="40" oninput="poUpd()" placeholder="Concepto">
+                    <input type="text" id="poAjPct" inputmode="decimal" maxlength="5" oninput="poUpd()" placeholder="%">
+                    <span>%</span>
+                </div>
+            </div>
+            <div class="po-prev" id="poPrev"></div>
+            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;margin-top:12px;">
+                <button class="clear-modal-btn" style="background:var(--primary);color:white;font-weight:800;" onclick="poGenerar()">📄 Generar PDF</button>
+                <button class="clear-modal-btn no" onclick="$('presOptsModal').classList.remove('show')">Cancelar</button>
             </div>
         </div>
     </div>
@@ -1754,7 +1783,7 @@
                 });
                 // Guardar todos los precios del mapa para uso en home screen
                 Object.entries(map).forEach(([k, v]) => { if (v > 0) articlePricesMay[k] = v; });
-                localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
+                localStorage.setItem('mikra_prices', JSON.stringify(articlePrices)); _savePrices();
                 localStorage.setItem('mikra_prices_may', JSON.stringify(articlePricesMay));
                 renderBudget(); renderHomeScreen();
                 if (noEncontrados.length === 0) {
@@ -1813,7 +1842,7 @@
                 });
                 // Guardar todos los precios del mapa para uso en home screen
                 Object.entries(map).forEach(([k, v]) => { if (v > 0) articlePricesMin[k] = v; });
-                localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
+                localStorage.setItem('mikra_prices', JSON.stringify(articlePrices)); _savePrices();
                 localStorage.setItem('mikra_prices_min', JSON.stringify(articlePricesMin));
                 renderBudget(); renderHomeScreen();
                 if (noEncontrados.length === 0) {
@@ -2444,7 +2473,7 @@
         }
         function updatePrice(name, price) {
             articlePrices[name] = parseInt(String(price).replace(/\D/g, '')) || 0;
-            localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
+            localStorage.setItem('mikra_prices', JSON.stringify(articlePrices)); _savePrices();
             renderBudget();
         }
         function getBudgetShipping() {
@@ -4810,6 +4839,11 @@
 
         // Total $ del presupuesto (artículos con precio + envío)
         // Montos: solo números, con punto de miles mientras se escribe (10000 → 10.000)
+        // Guardar los precios en la pestaña del pedido (si no, se perdían al recargar la app)
+        function _savePrices() {
+            const sl = _slots.find(x => x.id === _activeSlotId);
+            if (sl) { sl.prices = Object.assign({}, articlePrices); clearTimeout(_saveTimer); _saveTimer = setTimeout(saveSlots, 200); }
+        }
         function _prendas(n) { return n + (n === 1 ? ' prenda' : ' prendas'); }
         function fmtMonto(el) {
             const dig = (el.value || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
@@ -5038,35 +5072,76 @@
             window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
         }
 
+        // 📄 PDF: directo (el ticket por WhatsApp sigue en el cartel de WhatsApp)
         function showPdfOptions() {
             if (!state.cart.length || !validateForm()) return;
-            $('pdfTypeModal').classList.add('show');
+            if (state.orderType === 'presupuesto') openPresOpts();
+            else downloadPDF(null);
         }
-        function closePdfTypeModal() { $('pdfTypeModal').classList.remove('show'); }
+        function closePdfTypeModal() { $('pdfTypeModal')?.classList.remove('show'); }
+        function detallesPDF() { showPdfOptions(); }
 
-        function detallesPDF() {
-            if (state.orderType === 'presupuesto') {
-                $('ivaLabel').value = 'IVA';
-                $('ivaPercent').value = '21';
-                updateIvaBtn();
-                $('ivaModal').classList.add('show');
-            } else {
-                downloadPDF(0, '');
+        // Opciones del presupuesto (se recuerdan para la próxima)
+        let _po = { iva: 'no', aj: 'no', ajPct: '10', descLabel: 'Descuento por transferencia', recLabel: 'Recargo' };
+        try { Object.assign(_po, JSON.parse(localStorage.getItem('mikra_pdf_opts') || '{}')); } catch (e) {}
+        function openPresOpts() {
+            poPaint();
+            $('presOptsModal').classList.add('show');
+        }
+        function poSet(k, v) {
+            if (k === 'aj' && v !== 'no') {
+                // al cambiar de descuento a recargo, proponer el concepto de cada uno
+                $('poAjLabel').value = v === 'desc' ? _po.descLabel : _po.recLabel;
             }
+            _po[k] = v;
+            poPaint();
         }
-        function cerrarIvaModal() { $('ivaModal').classList.remove('show'); }
-        function updateIvaBtn() {
-            const label = ($('ivaLabel').value.trim()) || 'IVA';
-            $('ivaGenBtn').textContent = '📋 Generar con ' + label;
+        function poPaint() {
+            document.querySelectorAll('#poIva button').forEach(b => b.classList.toggle('on', b.dataset.v === _po.iva));
+            document.querySelectorAll('#poAj button').forEach(b => b.classList.toggle('on', b.dataset.v === _po.aj));
+            $('poAjRow').classList.toggle('show', _po.aj !== 'no');
+            if (_po.aj !== 'no' && !$('poAjLabel').value) $('poAjLabel').value = _po.aj === 'desc' ? _po.descLabel : _po.recLabel;
+            if (!$('poAjPct').value) $('poAjPct').value = _po.ajPct;
+            poUpd();
         }
-        function confirmarIvaPDF() {
-            let pct = parseFloat($('ivaPercent').value);
-            if (isNaN(pct)) pct = 21;
-            const label = ($('ivaLabel').value.trim()) || 'IVA';
-            cerrarIvaModal();
-            downloadPDF(pct, label);
+        function poUpd() {
+            if (_po.aj !== 'no') {
+                _po.ajPct = ($('poAjPct').value || '').replace(',', '.').replace(/[^\d.]/g, '');
+                const lbl = $('poAjLabel').value.trim();
+                if (lbl) { if (_po.aj === 'desc') _po.descLabel = lbl; else _po.recLabel = lbl; }
+            }
+            const c = _calcPres(_po);
+            const $f = n => '$' + Math.round(n).toLocaleString('es-AR');
+            let h = '<div class="r"><span>Subtotal productos</span><span>' + $f(c.bruto) + '</span></div>';
+            if (c.ajuste) h += '<div class="r' + (c.ajuste < 0 ? ' neg' : '') + '"><span>' + _escHtml(c.ajLabel) + ' (' + c.ajPctTxt + '%)</span><span>' + (c.ajuste < 0 ? '−' : '+') + $f(Math.abs(c.ajuste)) + '</span></div>';
+            if (c.ajuste || c.iva) h += '<div class="r"><span>Subtotal neto</span><span>' + $f(c.neto) + '</span></div>';
+            if (c.iva) h += '<div class="r"><span>IVA ' + c.ivaPctTxt + '%</span><span>+' + $f(c.iva) + '</span></div>';
+            if (c.envio) h += '<div class="r"><span>Envío</span><span>' + $f(c.envio) + '</span></div>';
+            h += '<div class="r tot"><span>TOTAL</span><span>' + $f(c.total) + '</span></div>';
+            if (!c.bruto) h += '<div class="r" style="color:#fbbf24;margin-top:4px">⚠ Faltan los precios (Mayorista / Minorista)</div>';
+            $('poPrev').innerHTML = h;
         }
-        
+        function poGenerar() {
+            try { localStorage.setItem('mikra_pdf_opts', JSON.stringify(_po)); } catch (e) {}
+            $('presOptsModal').classList.remove('show');
+            downloadPDF(_po);
+        }
+        // Cuentas del presupuesto: productos → descuento/recargo → neto → IVA → envío → total
+        function _calcPres(o) {
+            let bruto = 0;
+            state.cart.forEach(p => { bruto += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
+            const ajPct = o && o.aj !== 'no' ? (parseFloat(o.ajPct) || 0) : 0;
+            const ajuste = Math.round(bruto * ajPct / 100) * (o && o.aj === 'desc' ? -1 : 1);
+            const neto = bruto + ajuste;
+            const ivaPct = o && o.iva !== 'no' ? parseFloat(o.iva) : 0;
+            const iva = Math.round(neto * ivaPct / 100);
+            const envio = getBudgetShipping();
+            const fmtPct = n => String(n).replace('.', ',');
+            return { bruto, ajuste, neto, iva, envio, total: neto + iva + envio,
+                     ajLabel: o && o.aj === 'desc' ? (o.descLabel || 'Descuento') : (o && o.recLabel) || 'Recargo',
+                     ajPctTxt: fmtPct(ajPct), ivaPctTxt: fmtPct(ivaPct) };
+        }
+
         // Orden global reutilizable: artículo → color → talle (S,M,L,XL,2XL… y numéricos por valor)
         function _sizeRank(s) {
             const u = (s || '').toUpperCase().trim();
@@ -5090,71 +5165,107 @@
             });
         }
 
-        function downloadPDF(ivaPct, ivaLabel) {
-            ivaPct = Number(ivaPct) || 0;
-            ivaLabel = ivaLabel || 'IVA';
+        // PDF prolijo (A4): pedido o presupuesto. opts = opciones del presupuesto (IVA, descuento/recargo) o null
+        function downloadPDF(opts) {
             if (!state.cart.length || !validateForm()) return;
-            const date = new Date().toLocaleDateString('es-AR');
-            const total = state.cart.reduce((a, p) => a + p.qty, 0);
-            let title = state.orderType === 'devolucion' ? 'Devolución' : state.orderType === 'presupuesto' ? 'Presupuesto Mikra' : 'Pedido Mikra';
-            
-            // Orden: artículo → color → talle (S, M, L, XL, 2XL... y numéricos por valor)
-            const sortedCart = getSortedCart();
-            
-            let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + title + '</title>' +
-                '<style>body{font-family:Arial,sans-serif;padding:20px}h1{color:#1a2744;font-size:18px;margin-bottom:5px;font-weight:bold}' +
-                '.info{background:#f5f5f5;padding:10px;border-radius:8px;margin:10px 0;font-weight:bold}' +
-                'table{width:100%;border-collapse:collapse;margin-top:15px;font-size:12px}' +
-                'th,td{border:1px solid #ccc;padding:8px;text-align:left;font-weight:bold}th{background:#1a2744;color:white}' +
-                '.total{margin-top:15px;font-weight:bold;font-size:14px}</style></head><body>' +
-                '<h1>' + title + '</h1><div style="color:#666;font-size:12px;font-weight:bold">Fecha: ' + date + '</div>';
-            if (state.orderType === 'pedido') {
-                const order = getOrderInfo();
-                html += '<div class="info"><strong>Cliente:</strong> ' + order.clientDisplayName + '<br>' +
-                    '<strong>Entrega:</strong> ' + order.deliveryText + '<br>';
-                if (order.deliveryType === 'envio' && order.shippingAddress) html += '<strong>Dirección:</strong><br>' + order.shippingAddress.replace(/\n/g, '<br>') + '<br>';
-                html += '<strong>Pago:</strong> ' + order.paymentText + '</div>';
-            }
-            html += '<table><thead><tr><th>Código</th><th>Cant.</th><th>Producto</th><th>Color</th><th>Talle</th>';
-            if (state.orderType === 'presupuesto') html += '<th>Precio</th><th>Subtotal</th>';
-            html += '</tr></thead><tbody>';
-            let grandTotal = 0;
-            sortedCart.forEach(p => {
-                const name = p.titulo || p.articulo;
-                const price = articlePrices[name] || 0;
-                const subtotal = p.qty * price; grandTotal += subtotal;
-                html += '<tr><td>' + p.codigo + '</td><td>' + p.qty + '</td><td>' + name + '</td><td>' + (p.color || '-') + '</td><td>' + (p.talle || '-') + '</td>';
-                if (state.orderType === 'presupuesto') html += '<td>$' + price.toLocaleString() + '</td><td>$' + subtotal.toLocaleString() + '</td>';
-                html += '</tr>';
+            const esPres = state.orderType === 'presupuesto';
+            const esDev = state.orderType === 'devolucion';
+            const sl = _activeSlot();
+            const num = sl && sl.num ? sl.num : null;
+            const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            const $f = n => '$' + Math.round(n).toLocaleString('es-AR');
+            const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const titulo = esPres ? 'Presupuesto' : esDev ? 'Devolución' : 'Pedido';
+            const conPrecios = !esDev && state.cart.some(p => (articlePrices[p.titulo || p.articulo] || 0) > 0);
+
+            // Filas: artículo + color, con los talles y cantidades
+            const filas = [];
+            const idx = {};
+            getSortedCart().forEach(p => {
+                const art = p.titulo || p.articulo || 'Artículo';
+                const key = art + '|' + (p.color || '');
+                if (!idx[key]) { idx[key] = { art, color: p.color || '', talles: [], qty: 0, precio: articlePrices[art] || 0, codigos: [] }; filas.push(idx[key]); }
+                idx[key].talles.push((p.talle || '-') + (p.qty > 1 ? ' ×' + p.qty : ''));
+                idx[key].qty += p.qty;
+                if (p.codigo) idx[key].codigos.push(p.codigo);
             });
-            html += '</tbody></table><div class="total">Total: ' + total + ' unidades';
-            if (state.orderType === 'pedido') {
-                const order = getOrderInfo();
-                if (order.deliveryType === 'envio' && order.shippingCost > 0) {
-                    html += '<br><strong>🚚 Envío: $' + order.shippingCost.toLocaleString() + '</strong>';
-                }
+            const prendas = state.cart.reduce((a, p) => a + p.qty, 0);
+            const c = esPres ? _calcPres(opts || { iva: 'no', aj: 'no' }) : _calcPres({ iva: 'no', aj: 'no' });
+
+            let h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + titulo + (num ? ' ' + num : '') + ' - Mikra</title><style>' +
+                '@page{size:A4;margin:14mm}*{box-sizing:border-box}' +
+                'body{font-family:Helvetica,Arial,sans-serif;color:#1f2937;font-size:12px;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+                '.top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1a2744;padding-bottom:10px}' +
+                '.brand{font-size:30px;font-weight:900;letter-spacing:6px;color:#1a2744;line-height:1}' +
+                '.brand small{display:block;font-size:10px;letter-spacing:2px;color:#6b7280;font-weight:600;margin-top:4px}' +
+                '.doc{text-align:right}.doc .t{font-size:20px;font-weight:800;color:#1a2744;text-transform:uppercase;letter-spacing:1px}' +
+                '.doc .m{font-size:11px;color:#6b7280;margin-top:3px}' +
+                '.cli{display:flex;gap:24px;margin:16px 0 14px;padding:12px 14px;background:#f3f4f6;border-radius:8px}' +
+                '.cli div{flex:1}.cli .l{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6b7280;font-weight:700}' +
+                '.cli .v{font-size:13px;font-weight:700;margin-top:2px}' +
+                'table{width:100%;border-collapse:collapse}' +
+                'th{background:#1a2744;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.6px;padding:8px 8px;text-align:left}' +
+                'td{padding:8px;border-bottom:1px solid #e5e7eb;vertical-align:top}' +
+
+                '.n{text-align:right;white-space:nowrap}.c{text-align:center}' +
+                '.art{font-weight:800;color:#111827}.tl{color:#4b5563;font-size:11px}.cod{color:#b0b6bf;font-size:7.5px;margin-top:2px;letter-spacing:.2px}' +
+                'tr.gr .art{color:#c0c5cc;font-weight:600}' +
+                'tr.g1 td{border-top:2px solid #1a2744}tbody tr.g1:first-child td{border-top:none}' +
+                '.tots{margin-left:auto;width:290px;margin-top:14px}' +
+                '.tots .r{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e5e7eb}' +
+                '.tots .r.neg span:last-child{color:#15803d}' +
+                '.tots .r.tot{border:none;background:#1a2744;color:#fff;padding:9px 10px;margin-top:6px;border-radius:6px;font-size:15px;font-weight:800}' +
+                '.estado{margin-top:14px;padding:9px 12px;border-radius:6px;font-weight:800;font-size:13px}' +
+                '.estado.ok{background:#dcfce7;color:#166534}.estado.pend{background:#fef3c7;color:#92400e}' +
+                '.foot{margin-top:28px;color:#6b7280;font-size:10px;text-align:center;border-top:1px solid #e5e7eb;padding-top:10px}' +
+                '</style></head><body>';
+
+            h += '<div class="top"><div class="brand">MIKRA<small>INDUMENTARIA</small></div>' +
+                 '<div class="doc"><div class="t">' + titulo + (num ? ' Nº ' + num : '') + '</div><div class="m">Fecha: ' + hoy + '</div></div></div>';
+
+            if (!esDev) {
+                const st = getTicketStatus();
+                h += '<div class="cli"><div><div class="l">Cliente</div><div class="v">' + esc($('clientName').value.trim() || '—') + '</div></div>' +
+                     '<div><div class="l">Entrega</div><div class="v">' + esc(st.deliveryText || '—') + '</div>' +
+                     (st.address ? '<div style="font-size:11px;margin-top:2px">' + esc(st.address).replace(/\n/g, '<br>') + '</div>' : '') + '</div></div>';
             }
-            if (state.orderType === 'presupuesto') {
-                const shipping = getBudgetShipping();
-                if (ivaPct !== 0) {
-                    // El ajuste (IVA/descuento) se aplica SOLO sobre los artículos, no sobre el envío
-                    const ajuste = Math.round(grandTotal * ivaPct / 100);
-                    const subConAjuste = grandTotal + ajuste;
-                    const totalFinal = subConAjuste + shipping;
-                    const pctTxt = (ivaPct > 0 ? '+' : '') + (Number.isInteger(ivaPct) ? ivaPct : ivaPct.toFixed(1));
-                    html += '<div style="margin-top:10px;border-top:1px solid #ccc;padding-top:8px">' +
-                            'Subtotal: $' + grandTotal.toLocaleString() +
-                            '<br>' + ivaLabel + ' ' + pctTxt + '%: ' + (ajuste < 0 ? '-' : '') + '$' + Math.abs(ajuste).toLocaleString() +
-                            (shipping > 0 ? '<br>Envio: $' + shipping.toLocaleString() : '') +
-                            '<br><strong style="font-size:16px">TOTAL: $' + totalFinal.toLocaleString() + '</strong>' +
-                            '</div>';
-                } else {
-                    if (shipping > 0) html += '<br>Envio: $' + shipping.toLocaleString();
-                    html += '<br><strong>TOTAL: $' + (grandTotal + shipping).toLocaleString() + '</strong>';
-                }
+
+            h += '<table><thead><tr><th>Artículo</th><th>Color</th><th>Talles</th><th class="c">Cant.</th>' +
+                 (conPrecios ? '<th class="n">Precio unit.</th><th class="n">Importe</th>' : '') + '</tr></thead><tbody>';
+            let artPrev = null;
+            filas.forEach(r => {
+                const nuevo = r.art !== artPrev;   // primera fila del artículo: negrita y línea arriba
+                artPrev = r.art;
+                h += '<tr class="' + (nuevo ? 'g1' : 'gr') + '"><td><div class="art">' + esc(r.art) + '</div>' + (r.codigos.length ? '<div class="cod">' + esc(r.codigos.join(' · ')) + '</div>' : '') + '</td>' +
+                     '<td>' + esc(r.color || '—') + '</td><td class="tl">' + esc(r.talles.join(', ')) + '</td><td class="c">' + r.qty + '</td>' +
+                     (conPrecios ? '<td class="n">' + (r.precio ? $f(r.precio) : '—') + '</td><td class="n">' + (r.precio ? $f(r.precio * r.qty) : '—') + '</td>' : '') + '</tr>';
+            });
+            h += '</tbody></table>';
+
+            h += '<div class="tots"><div class="r"><span>Prendas</span><span>' + prendas + '</span></div>';
+            if (conPrecios) {
+                h += '<div class="r"><span>Subtotal productos</span><span>' + $f(c.bruto) + '</span></div>';
+                if (c.ajuste) h += '<div class="r' + (c.ajuste < 0 ? ' neg' : '') + '"><span>' + esc(c.ajLabel) + ' (' + c.ajPctTxt + '%)</span><span>' + (c.ajuste < 0 ? '−' : '+') + $f(Math.abs(c.ajuste)) + '</span></div>';
+                if (c.ajuste || c.iva) h += '<div class="r"><span>Subtotal neto</span><span>' + $f(c.neto) + '</span></div>';
+                if (c.iva) h += '<div class="r"><span>IVA ' + c.ivaPctTxt + '%</span><span>' + $f(c.iva) + '</span></div>';
+                if (c.envio) h += '<div class="r"><span>Envío</span><span>' + $f(c.envio) + '</span></div>';
+                h += '<div class="r tot"><span>TOTAL</span><span>' + $f(c.total) + '</span></div>';
             }
-            html += '</div></body></html>';
-            const win = window.open('', '_blank'); win.document.write(html); win.document.close(); win.print();
+            h += '</div>';
+
+            if (!esDev && !esPres) {
+                const st = getTicketStatus();
+                h += st.payment === 'pendiente'
+                    ? '<div class="estado pend">Falta abonar' + (st.amount ? ': $' + esc(st.amount) : '') + '</div>'
+                    : '<div class="estado ok">✔ Abonado</div>';
+            }
+            h += '<div class="foot">' + (esPres ? 'Precios sujetos a disponibilidad de stock. ' : '') + 'Gracias por elegir Mikra.</div>';
+            h += '</body></html>';
+
+            const win = window.open('', '_blank');
+            if (!win) { toast('⚠️ El navegador bloqueó la ventana del PDF', 'error'); return; }
+            win.document.write(h); win.document.close();
+            setTimeout(() => win.print(), 300);
         }
 
         function downloadTicket() {

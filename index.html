@@ -562,16 +562,23 @@
             cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
             box-shadow: 0 4px 14px rgba(239,68,68,0.4); -webkit-tap-highlight-color: transparent;
         }
-        .action-compact-row { display: flex; gap: 5px; }
+        .action-compact-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .action-compact-btn {
-            flex: 1; min-width: 0; padding: 10px 2px; border: none; border-radius: 10px;
-            font-size: 0.76em; font-weight: 700; cursor: pointer; text-align: center;
-            -webkit-tap-highlight-color: transparent; line-height: 1.35;
+            min-width: 0; padding: 13px 4px 11px; border-radius: 14px;
+            border: 1px solid var(--ab-bd, var(--border)); background: var(--ab-bg, var(--bg-card)); color: var(--ab-fg, var(--text));
+            font-size: 0.82em; font-weight: 700; letter-spacing: 0.2px; cursor: pointer; text-align: center;
+            -webkit-tap-highlight-color: transparent; line-height: 1.2;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            transition: transform .08s, filter .15s;
         }
-        @media (max-width: 600px) {
-            .action-compact-row { flex-wrap: wrap; }
-            .action-compact-btn { flex: 0 0 calc(33.333% - 4px); }
-        }
+        .action-compact-btn .ab-ic { font-size: 1.45em; line-height: 1; }
+        .action-compact-btn:active { transform: scale(0.96); filter: brightness(1.15); }
+        .ab-wa   { --ab-bg: rgba(34,197,94,0.13);  --ab-bd: rgba(34,197,94,0.40);  --ab-fg: #86efac; }
+        .ab-tk   { --ab-bg: rgba(129,140,248,0.14); --ab-bd: rgba(129,140,248,0.42); --ab-fg: #c7d2fe; }
+        .ab-pdf  { --ab-bg: rgba(148,163,184,0.10); --ab-bd: rgba(148,163,184,0.35); --ab-fg: #e2e8f0; }
+        .ab-ver  { --ab-bg: rgba(56,189,248,0.10);  --ab-bd: rgba(56,189,248,0.35);  --ab-fg: #bae6fd; }
+        .ab-reg  { --ab-bg: rgba(251,191,36,0.10);  --ab-bd: rgba(251,191,36,0.38);  --ab-fg: #fde68a; }
+        .ab-del  { --ab-bg: transparent;            --ab-bd: rgba(248,113,113,0.40); --ab-fg: #fca5a5; }
         .action-more-toggle {
             flex: 1; min-width: 52px; padding: 9px 4px; border: 1px solid var(--border); border-radius: 10px;
             background: var(--bg-card); color: var(--text-secondary); font-size: 0.7em; font-weight: 700;
@@ -580,8 +587,8 @@
         .action-more-panel { display: none; flex-wrap: wrap; gap: 5px; }
         .action-more-panel.show { display: flex; }
         .action-more-btn {
-            flex: 1; min-width: 100px; padding: 10px 8px; border: none; border-radius: 9px;
-            font-size: 0.8em; font-weight: 700; cursor: pointer; text-align: center;
+            flex: 1; min-width: 100px; padding: 11px 8px; border: 1px solid var(--border); border-radius: 12px;
+            background: var(--bg-card); color: var(--text); font-size: 0.82em; font-weight: 700; cursor: pointer; text-align: center;
             -webkit-tap-highlight-color: transparent;
         }
         /* legacy — keep for compat */
@@ -1268,8 +1275,9 @@
                 </div>
             </div>
             <div class="action-more-panel" id="moreActionsPanel" style="margin-top:6px;">
-                <button class="action-more-btn" style="background:var(--primary);color:white;" onclick="downloadPreparacion()">📦 Preparar</button>
-                <button class="action-more-btn" style="background:#7c3aed;color:white;" onclick="abrirHistorial()">📋 Historial</button>
+                <button class="action-more-btn" onclick="downloadPreparacion()">📦 Preparar</button>
+                <button class="action-more-btn" onclick="abrirHistorial()">📋 Historial</button>
+                <button class="action-more-btn" onclick="setOrderType('devolucion');toggleMoreActions(document.querySelector('.action-more-toggle'))">↩️ Devolución</button>
             </div>
 
             <div class="unified-name-wrap">
@@ -1284,9 +1292,6 @@
                 </div>
                 <div class="order-type-btn" data-type="presupuesto" onclick="setOrderType('presupuesto')">
                     <span class="icon">💰</span>Presupuesto
-                </div>
-                <div class="order-type-btn" data-type="devolucion" onclick="setOrderType('devolucion')">
-                    <span class="icon">↩️</span>Devolución
                 </div>
             </div>
             
@@ -1340,7 +1345,8 @@
             </div>
             
             <div class="order-form" id="reposicionForm" style="display:none;">
-                <div class="order-form-title">↩️ Devolución</div>
+                <div class="order-form-title" style="display:flex;justify-content:space-between;align-items:center;">↩️ Devolución
+                    <button onclick="setOrderType('pedido')" style="background:none;border:1px solid var(--border);color:var(--text-secondary);border-radius:8px;padding:4px 10px;font-size:0.8em;cursor:pointer;">✕ Salir</button></div>
                 <p style="font-size:0.82em;color:var(--text-secondary);">Cargá lo que vuelve de las bolsas. Con 📱 WhatsApp sale la lista con los códigos en <b>+</b>. No toca el stock.</p>
             </div>
             
@@ -1381,12 +1387,12 @@
             
             <div class="action-bar">
                 <div class="action-compact-row">
-                    <button class="action-compact-btn" style="background:#25D366;color:white;" onclick="openWaConfirm()">📱<br>WhatsApp</button>
-                    <button class="action-compact-btn" style="background:#dc2626;color:white;" onclick="showPdfOptions()">📄<br>PDF</button>
-                    <button class="action-compact-btn" style="background:#8b5cf6;color:white;" onclick="downloadTicketDirectPrint()">🎫<br>Ticket</button>
-                    <button class="action-compact-btn" style="background:#0ea5e9;color:white;" onclick="verificarStock()">🔍<br>Verificar</button>
-                    <button class="action-compact-btn" id="btnRegistrar" style="background:#16a34a;color:white;" onclick="pedirPinVenta()">📤<br>Registrar</button>
-                    <button class="action-compact-btn" style="background:#ef4444;color:white;" onclick="clearCart()">🗑️<br>Vaciar</button>
+                    <button class="action-compact-btn ab-wa" onclick="openWaConfirm()"><span class="ab-ic">💬</span>WhatsApp</button>
+                    <button class="action-compact-btn ab-pdf" onclick="showPdfOptions()"><span class="ab-ic">📄</span>PDF</button>
+                    <button class="action-compact-btn ab-tk" onclick="downloadTicketDirectPrint()"><span class="ab-ic">🖨️</span>Ticket</button>
+                    <button class="action-compact-btn ab-ver" onclick="verificarStock()"><span class="ab-ic">🔍</span>Verificar</button>
+                    <button class="action-compact-btn ab-reg" id="btnRegistrar" onclick="pedirPinVenta()"><span class="ab-ic">📤</span>Registrar</button>
+                    <button class="action-compact-btn ab-del" onclick="clearCart()"><span class="ab-ic">🗑️</span>Vaciar</button>
                 </div>
             </div>
             <div class="ecom-stock-bar">
@@ -2333,7 +2339,8 @@
             if (type === 'devolucion') type = 'devolucion';   // pestañas guardadas de antes
             state.orderType = type;
             document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('[data-type="' + type + '"]').classList.add('active');
+            document.querySelector('[data-type="' + type + '"]')?.classList.add('active');
+            document.querySelector('.order-type-selector').style.display = type === 'devolucion' ? 'none' : '';
             // Presupuesto también usa Estado (abonó/pendiente) y Entrega, para que salgan en el ticket
             $('pedidoForm').style.display = (type === 'pedido' || type === 'presupuesto') ? 'block' : 'none';
             $('reposicionForm').style.display = type === 'devolucion' ? 'block' : 'none';
@@ -2657,6 +2664,7 @@
 
         function clearCartSilent() {
             state.cart = [];
+            _rebuildCartCache();   // si no, los artículos seguían mostrando lo de antes
             ecomStockMap = {};
             articlePrices = {};
             localStorage.removeItem('mikra_prices');

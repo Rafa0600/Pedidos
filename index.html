@@ -509,12 +509,22 @@
             color: var(--text); font-size: 0.85em; min-height: 70px; resize: vertical;
         }
         
+        /* Sugerencias de clientas */
+        .cli-sug { display: none; position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; background: var(--bg-card); border: 1px solid var(--primary); border-radius: 12px; z-index: 60; overflow: hidden; box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
+        .cli-sug.show { display: block; }
+        .cli-item { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+        .cli-item:last-child { border-bottom: none; }
+        .cli-item:active, .cli-item:hover { background: var(--bg-input); }
+        .cli-item b { font-size: 0.95em; }
+        .cli-item span { font-size: 0.75em; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .precios-toggle { width: 100%; margin-top: 2px; padding: 9px; border: 1px dashed var(--border); background: none; color: var(--text-secondary); border-radius: 10px; font-size: 0.8em; font-weight: 600; cursor: pointer; }
+        .precio-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 700; font-size: 0.85em; cursor: pointer; }
         .budget-section {
             background: var(--bg-card); border: 1px solid var(--border);
             border-radius: 10px; padding: 12px; margin-bottom: 10px; display: none;
         }
         .budget-section.show { display: block; }
-        .budget-title { font-size: 0.85em; font-weight: 700; margin-bottom: 10px; color: var(--warning); }
+        .budget-title { font-size: 0.85em; font-weight: 700; margin-bottom: 10px; color: var(--text); }
         .budget-item {
             display: flex; justify-content: space-between; align-items: center;
             padding: 8px 0; border-bottom: 1px solid var(--border);
@@ -1078,6 +1088,19 @@
     </div>
 
     <!-- DÓNDE IMPRIMIR EL TICKET -->
+    <!-- ¿IMPRIMIR TAMBIÉN EL RECIBO PARA LA CLIENTA? -->
+    <div class="modal" id="reciboAskModal" onclick="if(event.target===this)reciboAskNo()">
+        <div class="modal-content">
+            <div class="modal-icon">🧾</div>
+            <div class="modal-title">¿Imprimo también el recibo?</div>
+            <div id="reciboAskMsg" style="font-size:0.88em;color:var(--text-secondary);line-height:1.5;">Para que la clienta se lleve el detalle de lo que compró.</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin:14px 0 4px;">
+                <button class="modal-btn confirm" style="width:100%;padding:14px;font-size:1em;" onclick="reciboAskYes()">🧾 Sí, imprimir recibo</button>
+                <button class="modal-btn cancel" style="width:100%;padding:12px;font-size:0.95em;" onclick="reciboAskNo()">No</button>
+            </div>
+        </div>
+    </div>
+
     <!-- PEDIDO YA IMPRESO QUE CAMBIÓ: ¿qué imprimo? -->
     <div class="modal" id="ticketDiffModal" onclick="if(event.target===this)closeTicketDiff()">
         <div class="modal-content">
@@ -1277,16 +1300,18 @@
             <div class="action-more-panel" id="moreActionsPanel" style="margin-top:6px;">
                 <button class="action-more-btn" onclick="downloadPreparacion()">📦 Preparar</button>
                 <button class="action-more-btn" onclick="abrirHistorial()">📋 Historial</button>
+                <button class="action-more-btn" onclick="startReciboPrint()">🧾 Recibo</button>
                 <button class="action-more-btn" onclick="setOrderType('devolucion');toggleMoreActions(document.querySelector('.action-more-toggle'))">↩️ Devolución</button>
             </div>
 
             <div class="unified-name-wrap">
                 <span class="unified-name-icon">👤</span>
-                <input type="text" class="form-input" id="clientName" placeholder="Nombre del cliente..."
-                       oninput="syncClientName(this.value)" style="font-size:1em;font-weight:600;">
+                <input type="text" class="form-input" id="clientName" placeholder="Nombre de la clienta..." autocomplete="off"
+                       oninput="syncClientName(this.value);cliSuggest()" onfocus="cliSuggest()" onblur="setTimeout(cliHide,200)" style="font-size:1em;font-weight:600;">
+                <div class="cli-sug" id="cliSug"></div>
             </div>
 
-            <div class="order-type-selector">
+            <div class="order-type-selector" style="display:none;">
                 <div class="order-type-btn active" data-type="pedido" onclick="setOrderType('pedido')">
                     <span class="icon">📋</span>Pedido
                 </div>
@@ -1300,7 +1325,7 @@
                     <div style="display:flex;gap:6px;margin-bottom:6px;">
                         <!-- Estado del pago -->
                         <div style="flex:1;min-width:0;">
-                            <div class="form-label" style="font-size:0.68em;margin-bottom:4px;text-align:center;">Estado</div>
+                            <div class="form-label" style="font-size:0.68em;margin-bottom:4px;text-align:center;">Pago</div>
                             <div class="delivery-options" style="gap:5px;">
                                 <label class="delivery-option selected" data-payment="abonado" style="justify-content:center;padding:7px 4px;">
                                     <input type="radio" name="payment" value="abonado" checked>
@@ -1310,7 +1335,7 @@
                                 <label class="delivery-option" data-payment="pendiente" style="justify-content:center;padding:7px 4px;">
                                     <input type="radio" name="payment" value="pendiente">
                                     <span class="delivery-radio" style="display:none;"></span>
-                                    <span class="delivery-label">⏳ Pendiente</span>
+                                    <span class="delivery-label">⏳ Falta pagar</span>
                                 </label>
                             </div>
                         </div>
@@ -1338,9 +1363,11 @@
                     </div>
                     <div class="payment-details" id="paymentDetails">
                         <div style="margin-bottom:6px;">
-                            <input type="text" class="form-input" id="paymentAmount" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" placeholder="¿Cuánto falta pagar? ($)">
+                            <div class="form-label" style="font-size:0.7em;margin-bottom:4px;">Tiene que pagar ($) — se calcula con los precios de abajo</div>
+                            <input type="text" class="form-input" id="paymentAmount" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this);_montoManual=!!this.value" placeholder="Monto a pagar ($)">
                         </div>
                     </div>
+                    <button type="button" class="precios-toggle" id="btnPrecios" onclick="togglePrecios()">💲 Poner precios (para el recibo)</button>
                 </div>
             </div>
             
@@ -1351,40 +1378,30 @@
             </div>
             
             <div class="budget-section" id="budgetSection">
-                <div class="budget-title">💰 Presupuesto</div>
+                <div class="budget-title">💲 Precios</div>
                 <input type="text" id="clientNamePres" style="display:none;" placeholder="Nombre...">
-                <div class="form-group" style="margin-bottom:10px;">
-                    <div class="delivery-options">
-                        <label class="delivery-option selected" data-budgetenvio="no" id="budgetEnvioNo">
-                            <input type="radio" name="budgetEnvio" value="no" checked>
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">🏪 Sin envío</span>
-                        </label>
-                        <label class="delivery-option" data-budgetenvio="si" id="budgetEnvioSi">
-                            <input type="radio" name="budgetEnvio" value="si">
-                            <span class="delivery-radio"></span>
-                            <span class="delivery-label">🚚 Con envío</span>
-                        </label>
-                    </div>
-                    <div id="budgetEnvioCostoRow" style="display:none;margin-top:8px;">
-                        <div class="shipping-cost-row">
-                            <span class="shipping-cost-label">💰 Costo envío:</span>
-                            <span style="color:var(--text-secondary);font-size:0.9em;">$</span>
-                            <input type="number" class="shipping-cost-input" id="budgetShippingCost" placeholder="0" min="0" oninput="renderBudget()">
-                        </div>
-                    </div>
+                <div style="display:none;">
+                    <input type="radio" name="budgetEnvio" value="no" checked>
+                    <input type="radio" name="budgetEnvio" value="si">
+                </div>
+                <div style="margin:0 0 6px;display:flex;gap:6px;">
+                    <button onclick="fillMayoristaPrecios()" class="precio-btn">💲 Mayorista</button>
+                    <button onclick="fillMinoristaPrecios()" class="precio-btn">🏷️ Minorista</button>
                 </div>
                 <div id="budgetItems"></div>
-                <div style="margin:8px 0 4px;display:flex;gap:6px;">
-                    <button onclick="fillMayoristaPrecios()" style="flex:1;padding:10px;background:linear-gradient(135deg,#4ade80,#22c55e);color:#1a2744;border:none;border-radius:8px;font-weight:700;font-size:0.85em;cursor:pointer;">💲 Mayorista</button>
-                    <button onclick="fillMinoristaPrecios()" style="flex:1;padding:10px;background:linear-gradient(135deg,#4facfe,#1d8ef9);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.85em;cursor:pointer;">🏷️ Minorista</button>
+                <div id="budgetEnvioCostoRow" style="display:none;margin-top:8px;">
+                    <div class="shipping-cost-row">
+                        <span class="shipping-cost-label">🚚 Costo del envío:</span>
+                        <span style="color:var(--text-secondary);font-size:0.9em;">$</span>
+                        <input type="text" inputmode="numeric" class="shipping-cost-input" id="budgetShippingCost" placeholder="0" oninput="fmtMonto(this);updateBudgetTotal()">
+                    </div>
                 </div>
                 <div class="budget-total">
-                    <span>TOTAL:</span>
+                    <span id="budgetTotalLbl">TOTAL:</span>
                     <span class="budget-total-value" id="budgetTotal">$0</span>
                 </div>
             </div>
-            
+
             <div class="action-bar">
                 <div class="action-compact-row">
                     <button class="action-compact-btn ab-wa" onclick="openWaConfirm()"><span class="ab-ic">💬</span>WhatsApp</button>
@@ -1508,7 +1525,7 @@
                     <textarea class="form-textarea" id="wacPresAddress" placeholder="Dirección, teléfono..." style="display:none;margin-top:8px;max-height:70px;min-height:60px;"></textarea>
                 </div>
                 <div class="wac-section">
-                    <span class="wac-label">💰 Pago</span>
+                    <span class="wac-label">💰 Tiene que pagar</span>
                     <div class="wac-pills">
                         <button class="wac-pill" data-wacppayment="abonado" onclick="selectWacPresOption('payment','abonado')">✅ Abonado</button>
                         <button class="wac-pill" data-wacppayment="pendiente" onclick="selectWacPresOption('payment','pendiente')">⏳ Pendiente</button>
@@ -2085,6 +2102,13 @@
         // ===== SLOT SYSTEM =====
         // ===== SLOT SYSTEM =====
         let _slots = [];
+        // Estado de pago/precios, clientas, recibo y ticket (arriba de todo: se usan apenas abre la app)
+        let _montoManual = false;   // el monto a pagar lo escribió a mano (no pisarlo con el total)
+        let _showPrecios = false;   // precios abiertos aunque ya haya pagado (para el recibo)
+        let _clientes = null, _cliLoading = null;
+        let _printKind = 'preparado';   // qué se imprime: 'preparado' (para armar) o 'recibo'
+        let _reciboTarget = null;
+        let _ticketCtx = null;      // { mode: 'full'|'fullmod'|'diff', prev, prevAt } para el próximo ticket
         let _activeSlotId = null;
         let _saveTimer = null;
 
@@ -2260,6 +2284,7 @@
                 clientNamePres:    name,
                 budgetEnvio:       document.querySelector('input[name="budgetEnvio"]:checked')?.value || 'no',
                 budgetShippingCost: $('budgetShippingCost')?.value || '',
+                montoManual:       _montoManual,
             };
         }
 
@@ -2298,7 +2323,10 @@
                 o.classList.toggle('selected', match);
                 if (match) o.querySelector('input').checked = true;
             });
-            if ($('budgetEnvioCostoRow')) $('budgetEnvioCostoRow').style.display = benvVal === 'si' ? 'block' : 'none';
+            _montoManual = !!fd?.montoManual;
+            _showPrecios = false;
+            if (state.orderType === 'presupuesto') _setPayment('pendiente');
+            _updatePriceUI();
         }
 
         function updateBadge() {
@@ -2340,13 +2368,13 @@
             state.orderType = type;
             document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('[data-type="' + type + '"]')?.classList.add('active');
-            document.querySelector('.order-type-selector').style.display = type === 'devolucion' ? 'none' : '';
+            document.querySelector('.order-type-selector').style.display = 'none';
             // Presupuesto también usa Estado (abonó/pendiente) y Entrega, para que salgan en el ticket
             $('pedidoForm').style.display = (type === 'pedido' || type === 'presupuesto') ? 'block' : 'none';
             $('reposicionForm').style.display = type === 'devolucion' ? 'block' : 'none';
             if ($('btnRegistrar')) $('btnRegistrar').style.display = type === 'devolucion' ? 'none' : '';
-            $('budgetSection').classList.toggle('show', type === 'presupuesto');
-            if (type === 'presupuesto') renderBudget();
+            if (type === 'presupuesto') _setPayment('pendiente');
+            _updatePriceUI();
         }
         
         function renderBudget() {
@@ -2360,26 +2388,28 @@
             $('budgetItems').innerHTML = items.map(item =>
                 '<div class="budget-item"><span class="budget-item-name">' + item.name + '</span>' +
                 '<span class="budget-item-qty">x' + item.qty + '</span>' +
-                '<input type="number" class="budget-item-price" value="' + (item.price > 0 ? item.price : '') + '" ' +
+                '<input type="text" inputmode="numeric" class="budget-item-price" value="' + (item.price > 0 ? item.price.toLocaleString('es-AR') : '') + '" oninput="fmtMonto(this)" ' +
                 'onchange="updatePrice(\'' + item.name.replace(/'/g, "\\'") + '\', this.value)" placeholder="$">' +
-                '<span class="budget-item-subtotal">$' + (item.qty * item.price).toLocaleString() + '</span></div>'
+                '<span class="budget-item-subtotal">$' + (item.qty * item.price).toLocaleString('es-AR') + '</span></div>'
             ).join('');
             updateBudgetTotal();
         }
         function updatePrice(name, price) {
-            articlePrices[name] = parseFloat(price) || 0;
+            articlePrices[name] = parseInt(String(price).replace(/\D/g, '')) || 0;
             localStorage.setItem('mikra_prices', JSON.stringify(articlePrices));
             renderBudget();
         }
         function getBudgetShipping() {
-            const conEnvio = document.querySelector('input[name="budgetEnvio"]:checked')?.value === 'si';
-            return conEnvio ? (parseInt($('budgetShippingCost')?.value) || 0) : 0;
+            const conEnvio = document.querySelector('input[name="delivery"]:checked')?.value === 'envio';
+            return conEnvio ? (parseInt(($('budgetShippingCost')?.value || '').replace(/\D/g, '')) || 0) : 0;
         }
         function updateBudgetTotal() {
             let total = 0;
             state.cart.forEach(p => { total += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
             const shipping = getBudgetShipping();
-            $('budgetTotal').textContent = '$' + (total + shipping).toLocaleString();
+            $('budgetTotal').textContent = '$' + (total + shipping).toLocaleString('es-AR');
+            if ($('budgetTotalLbl')) $('budgetTotalLbl').textContent = _payVal() === 'pendiente' ? 'TOTAL A PAGAR:' : 'TOTAL:';
+            _autoMonto(total + shipping);
         }
         
         // ===== CART GROUPED VIEW =====
@@ -2665,6 +2695,7 @@
         function clearCartSilent() {
             state.cart = [];
             _rebuildCartCache();   // si no, los artículos seguían mostrando lo de antes
+            _montoManual = false; _showPrecios = false;
             ecomStockMap = {};
             articlePrices = {};
             localStorage.removeItem('mikra_prices');
@@ -4782,6 +4813,11 @@
                 selectWacPresOption('payment', st.payment || 'abonado');
             }
             // Mostrar botón ticket solo para pedido y presupuesto
+            // Pago: no se elige acá (lo define Abonó / Falta pagar del pedido)
+            document.querySelectorAll('[data-wacpayment], [data-wacppayment]').forEach(b => { b.parentElement.style.display = 'none'; });
+            if (isPres) selectWacPresOption('payment', 'pendiente');
+            const _pagoPed = $('wacPaymentAmount').closest('.wac-section');
+            if (_pagoPed) _pagoPed.style.display = (isPedido && getOrderInfo().paymentStatus !== 'pendiente') ? 'none' : '';
             const ticketBtn = $('wacTicketBtn');
             if (ticketBtn) ticketBtn.style.display = (isPedido || isPres) ? 'block' : 'none';
             $('waConfirmOverlay').classList.add('show');
@@ -5773,10 +5809,18 @@
         function closePrintChoice() { $('printChoiceModal').classList.remove('show'); }
         async function printChoiceHere() {
             closePrintChoice();
+            const kind = _printKind; _printKind = 'preparado';
             const ctx = _ticketCtx;
-            await savePedidoCloud(true);
+            await savePedidoCloud(kind === 'preparado');
             _ticketCtx = ctx;
+            if (kind === 'recibo') { _printHtmlHere(buildReciboHtml()); return; }
             downloadTicketPreparados('print');
+            _askRecibo('here');
+        }
+        function _printHtmlHere(html) {
+            const w = window.open('', '_blank');
+            if (!w) { toast('⚠️ El navegador bloqueó la ventana de impresión', 'error'); return; }
+            w.document.write(html); w.document.close(); w.print();
         }
 
         const PRINT_TARGETS = {
@@ -5799,41 +5843,44 @@
         // target: 'deposito' (principal) u 'oficina'
         async function printChoiceLocal(target) {
             closePrintChoice();
+            const kind = _printKind; _printKind = 'preparado';
             const ctx = _ticketCtx;
-            await savePedidoCloud(true);
+            await savePedidoCloud(kind === 'preparado');
             _ticketCtx = ctx;
-            const html = downloadTicketPreparados('html');
+            const html = kind === 'recibo' ? buildReciboHtml() : downloadTicketPreparados('html');
             if (!html) return;
             const _sn = _activeSlot();
-            const title = ((_sn && _sn.num && state.orderType !== 'devolucion') ? '#' + _sn.num + ' ' : '') +
+            const title = (kind === 'recibo' ? 'Recibo ' : '') + ((_sn && _sn.num && state.orderType !== 'devolucion') ? '#' + _sn.num + ' ' : '') +
                           ($('clientName').value.trim() || (state.orderType === 'devolucion' ? 'Devolución' : 'Ticket'));
             toast(PRINT_TARGETS[target].icon + ' Mandando ' + PRINT_TARGETS[target].a + '…', '');
             let res;
             try { res = await _printApi('/job', { html, title, target }); }
             catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
-            await _waitPrintJob(res, target);
+            const st = await _waitPrintJob(res, target, kind);
+            if (st === 'printed' && kind === 'preparado') _askRecibo(target);
         }
 
         // Espera la confirmación de la PC (hasta ~40 s)
-        async function _waitPrintJob(res, target) {
+        async function _waitPrintJob(res, target, kind) {
             if (!res.agentOnline) {
                 toast('🕓 En cola — la PC de la oficina está desconectada, se imprime cuando se prenda', 'warning');
-                return;
+                return 'queued';
             }
             for (let i = 0; i < 20; i++) {
                 await new Promise(r => setTimeout(r, 2000));
                 try {
                     const j = await (await fetch(PRINT_URL + '/job?id=' + res.id, { headers: { 'X-Key': PRINT_KEY }, cache: 'no-store' })).json();
-                    if (j.status === 'printed') { toast('✅ Impreso en ' + PRINT_TARGETS[target].nombre, 'success'); return; }
-                    if (j.status === 'error') { toast('⚠️ La PC no pudo imprimir: ' + (j.error || ''), 'error'); return; }
-                    if (j.status === 'offline') { _showPrintOffline(res.id, target); return; }
+                    if (j.status === 'printed') { toast('✅ Impreso en ' + PRINT_TARGETS[target].nombre, 'success'); return 'printed'; }
+                    if (j.status === 'error') { toast('⚠️ La PC no pudo imprimir: ' + (j.error || ''), 'error'); return 'error'; }
+                    if (j.status === 'offline') { _showPrintOffline(res.id, target, kind); return 'offline'; }
                 } catch (e) {}
             }
             toast('🕓 Mandado, pero la PC todavía no confirmó', 'warning');
+            return 'waiting';
         }
 
-        function _showPrintOffline(id, target) {
-            _printOfflineJob = { id, target };
+        function _showPrintOffline(id, target, kind) {
+            _printOfflineJob = { id, target, kind: kind || 'preparado' };
             const other = target === 'deposito' ? 'oficina' : 'deposito';
             const t = PRINT_TARGETS[target].nombre;
             $('printOfflineTitle').textContent = t.charAt(0).toUpperCase() + t.slice(1) + ' no está en línea';
@@ -5849,7 +5896,8 @@
             let res;
             try { res = await _printApi('/job/retarget', { id: job.id, target: other }); }
             catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
-            await _waitPrintJob(res, other);
+            const st = await _waitPrintJob(res, other, job.kind);
+            if (st === 'printed' && job.kind === 'preparado') _askRecibo(other);
         }
         async function printOfflineDiscard() {
             $('printOfflineModal').classList.remove('show');
@@ -5859,8 +5907,194 @@
             catch (e) { toast('⚠️ No se pudo descartar: ' + e.message, 'error'); }
         }
 
+        // ===== PAGO / PRECIOS (Abonó = pedido · Falta pagar = presupuesto con precios) =====
+        function _payVal() { return document.querySelector('input[name="payment"]:checked')?.value || 'abonado'; }
+        function _setPayment(val) {
+            document.querySelectorAll('.delivery-option[data-payment]').forEach(o => {
+                const m = o.dataset.payment === val;
+                o.classList.toggle('selected', m);
+                if (m) o.querySelector('input').checked = true;
+            });
+            $('paymentDetails')?.classList.toggle('show', val === 'pendiente');
+        }
+        function _updatePriceUI() {
+            const conForm = state.orderType === 'pedido' || state.orderType === 'presupuesto';
+            const pend = _payVal() === 'pendiente';
+            const show = conForm && (pend || _showPrecios);
+            $('budgetSection')?.classList.toggle('show', show);
+            const bp = $('btnPrecios');
+            if (bp) {
+                bp.style.display = conForm && !pend ? '' : 'none';
+                bp.textContent = _showPrecios ? '✕ Ocultar precios' : '💲 Poner precios (para el recibo)';
+            }
+            if ($('budgetEnvioCostoRow')) $('budgetEnvioCostoRow').style.display = document.querySelector('input[name="delivery"]:checked')?.value === 'envio' ? 'block' : 'none';
+            if (show) renderBudget();
+        }
+        function togglePrecios() { _showPrecios = !_showPrecios; _updatePriceUI(); }
+        // El monto a pagar sigue al total de los precios (salvo que lo hayan escrito a mano)
+        function _autoMonto(total) {
+            if (_payVal() !== 'pendiente' || _montoManual) return;
+            const el = $('paymentAmount');
+            if (el) el.value = total > 0 ? total.toLocaleString('es-AR') : '';
+        }
+
+        // ===== CLIENTAS (libreta en Cloudflare, se arma sola con cada pedido) =====
+        function _normTxt(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
+        function cliLoad() {
+            if (_clientes) return Promise.resolve(_clientes);
+            if (_cliLoading) return _cliLoading;
+            _cliLoading = _pedApi('/clientes', undefined, 6000)
+                .then(r => { _clientes = r.clientes || []; try { localStorage.setItem('mikra_clientes', JSON.stringify(_clientes)); } catch (e) {} return _clientes; })
+                .catch(() => { try { _clientes = JSON.parse(localStorage.getItem('mikra_clientes') || '[]'); } catch (e) { _clientes = []; } return _clientes; })
+                .finally(() => { _cliLoading = null; });
+            return _cliLoading;
+        }
+        async function cliSuggest() {
+            const box = $('cliSug');
+            const q = _normTxt($('clientName').value);
+            if (q.length < 2) { box.classList.remove('show'); return; }
+            const list = await cliLoad();
+            if (_normTxt($('clientName').value) !== q) return;   // ya siguió escribiendo
+            const words = q.split(' ');
+            const res = list.filter(c => {
+                const n = _normTxt(c.nombre);
+                return n !== q && words.every(w => n.split(' ').some(t => t.startsWith(w)));
+            }).slice(0, 6);
+            if (!res.length) { box.classList.remove('show'); return; }
+            box.innerHTML = res.map(c => {
+                const dir = c.entrega === 'envio' && c.direccion ? '🚚 ' + _escHtml(c.direccion.split('\n')[0]) : '📦 Retira';
+                const n = (c.pedidos || []).length;
+                return '<div class="cli-item" onmousedown="event.preventDefault()" onclick="cliPick(' + list.indexOf(c) + ')"><b>' + _escHtml(c.nombre) + '</b>' +
+                       '<span>' + dir + ' · ' + n + ' pedido' + (n === 1 ? '' : 's') + '</span></div>';
+            }).join('');
+            box.classList.add('show');
+        }
+        function cliHide() { $('cliSug')?.classList.remove('show'); }
+        function cliPick(i) {
+            const c = (_clientes || [])[i];
+            if (!c) return;
+            $('clientName').value = c.nombre;
+            syncClientName(c.nombre);
+            if (typeof onClientNameInput === 'function') onClientNameInput();
+            const envio = c.entrega === 'envio';
+            document.querySelector('.delivery-option[data-delivery="' + (envio ? 'envio' : 'deposito') + '"]')?.click();
+            if (envio && c.direccion && !$('shippingAddress').value.trim()) $('shippingAddress').value = c.direccion;
+            cliHide();
+            saveCart();
+        }
+
+        // ===== RECIBO para la clienta =====
+        function startReciboPrint() {
+            if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
+            if (!(state.orderType === 'pedido' || state.orderType === 'presupuesto')) { toast('El recibo es para pedidos', 'warning'); return; }
+            if (!validateForm()) return;
+            _ticketCtx = null;
+            _printKind = 'recibo';
+            openPrintChoice();
+        }
+        function _askRecibo(target) {
+            if (!(state.orderType === 'pedido' || state.orderType === 'presupuesto')) return;
+            _reciboTarget = target;
+            const t = target === 'here' ? 'acá' : PRINT_TARGETS[target].a;
+            $('reciboAskMsg').textContent = 'Para que la clienta se lleve el detalle de lo que compró. Sale ' + t + '.';
+            $('reciboAskModal').classList.add('show');
+        }
+        function reciboAskNo() { $('reciboAskModal').classList.remove('show'); _reciboTarget = null; }
+        async function reciboAskYes() {
+            $('reciboAskModal').classList.remove('show');
+            const target = _reciboTarget; _reciboTarget = null;
+            if (!target) return;
+            const html = buildReciboHtml();
+            if (target === 'here') { _printHtmlHere(html); return; }
+            const sl = _activeSlot();
+            const title = 'Recibo ' + (sl && sl.num ? '#' + sl.num + ' ' : '') + ($('clientName').value.trim() || '');
+            toast(PRINT_TARGETS[target].icon + ' Mandando el recibo ' + PRINT_TARGETS[target].a + '…', '');
+            let res;
+            try { res = await _printApi('/job', { html, title, target }); }
+            catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
+            await _waitPrintJob(res, target, 'recibo');
+        }
+        function buildReciboHtml() {
+            const sl = _activeSlot();
+            const num = sl && sl.num ? sl.num : null;
+            const esPres = state.orderType === 'presupuesto';
+            const st = getTicketStatus();
+            const name = ($('clientName').value || '').trim();
+            const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            const ahora = new Date();
+            const fecha = ahora.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' +
+                          ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const SO = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
+            const sIdx = t => { const u = (t || '').toUpperCase(); const n = parseFloat(u); if (!isNaN(n)) return 1000 + n; const i = SO.indexOf(u); return i > -1 ? i : 500; };
+            const arts = {};
+            state.cart.forEach(p => {
+                const a = p.titulo || p.articulo || 'Artículo';
+                const c = p.color || '';
+                arts[a] = arts[a] || { qty: 0, colors: {} };
+                arts[a].qty += p.qty;
+                (arts[a].colors[c] = arts[a].colors[c] || []).push({ t: p.talle || '-', q: p.qty });
+            });
+            const nombres = Object.keys(arts).sort((x, y) => x.localeCompare(y, 'es'));
+            const conPrecios = nombres.some(n => (articlePrices[n] || 0) > 0);
+            let sub = 0, uds = 0;
+            let rows = '';
+            nombres.forEach(n => {
+                const a = arts[n];
+                const pr = articlePrices[n] || 0;
+                uds += a.qty; sub += a.qty * pr;
+                rows += '<div class="it"><div class="ith"><span class="itn">' + esc(n) + '</span><span>' + a.qty + ' u' +
+                        (conPrecios ? (pr > 0 ? '  $' + (a.qty * pr).toLocaleString('es-AR') : '') : '') + '</span></div>';
+                if (conPrecios && pr > 0) rows += '<div class="itp">' + a.qty + ' x $' + pr.toLocaleString('es-AR') + '</div>';
+                Object.keys(a.colors).sort((x, y) => x.localeCompare(y, 'es')).forEach(c => {
+                    const ts = a.colors[c].sort((x, y) => sIdx(x.t) - sIdx(y.t)).map(x => 'T' + x.t + '×' + x.q).join('  ');
+                    rows += '<div class="itc">' + (c ? esc(c) + ': ' : '') + ts + '</div>';
+                });
+                rows += '</div>';
+            });
+            const envio = getBudgetShipping();
+            const total = sub + envio;
+            let h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo</title><style>' +
+                '@page{size:70mm auto;margin:0}*{margin:0;padding:0;box-sizing:border-box}' +
+                'body{font-family:"Courier New",Courier,monospace;width:62mm;margin:3mm 4mm;font-size:13px;font-weight:700;color:#000}' +
+                '.c{text-align:center}.brand{font-size:26px;font-weight:900;letter-spacing:5px;margin-top:2px}' +
+                '.sub{font-size:12px;font-weight:900;letter-spacing:1px;margin-top:1px}' +
+                '.hr{border-top:2px dashed #000;margin:7px 0}.hr2{border-top:3px solid #000;margin:7px 0}' +
+                '.row{display:flex;justify-content:space-between;gap:6px;font-size:12px;margin:2px 0}' +
+                '.cli{font-size:17px;font-weight:900;text-transform:uppercase;margin:4px 0 2px;overflow-wrap:break-word}' +
+                '.it{margin:5px 0 7px}.ith{display:flex;justify-content:space-between;gap:6px;font-weight:900;font-size:13px}' +
+                '.itn{text-transform:uppercase;flex:1;min-width:0;overflow-wrap:break-word}' +
+                '.itp{font-size:11px;padding-left:6px}.itc{font-size:12px;padding-left:6px;line-height:1.35}' +
+                '.tot{display:flex;justify-content:space-between;font-size:19px;font-weight:900;margin-top:4px}' +
+                '.ok{border:2px solid #000;text-align:center;font-size:15px;font-weight:900;padding:4px 0;margin-top:8px}' +
+                '.pend{background:#000;color:#fff;text-align:center;font-size:15px;font-weight:900;padding:5px 0;margin-top:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+                '.gr{font-size:13px;font-weight:900;margin-top:12px}' +
+                '</style></head><body>';
+            h += '<div class="c brand">MIKRA</div>';
+            h += '<div class="c sub">' + (esPres ? 'PRESUPUESTO' : 'COMPROBANTE DE COMPRA') + '</div>';
+            h += '<div class="hr"></div>';
+            h += '<div class="row"><span>' + (esPres ? 'Presupuesto' : 'Pedido') + (num ? ' Nº ' + num : '') + '</span><span>' + fecha + '</span></div>';
+            if (name) h += '<div class="cli">' + esc(name) + '</div>';
+            if (st.deliveryText) h += '<div class="row"><span>Entrega:</span><span>' + st.deliveryText + '</span></div>';
+            if (st.address) h += '<div style="font-size:11px">' + esc(st.address).replace(/\n/g, '<br>') + '</div>';
+            h += '<div class="hr2"></div>';
+            h += rows;
+            h += '<div class="hr2"></div>';
+            h += '<div class="row" style="font-size:13px"><span>Prendas:</span><span>' + uds + '</span></div>';
+            if (conPrecios) {
+                if (envio > 0) {
+                    h += '<div class="row"><span>Subtotal:</span><span>$' + sub.toLocaleString('es-AR') + '</span></div>';
+                    h += '<div class="row"><span>Envío:</span><span>$' + envio.toLocaleString('es-AR') + '</span></div>';
+                }
+                h += '<div class="tot"><span>TOTAL</span><span>$' + total.toLocaleString('es-AR') + '</span></div>';
+            }
+            if (st.payment === 'pendiente') h += '<div class="pend">FALTA ABONAR' + (st.amount ? ': $' + st.amount : '') + '</div>';
+            else h += '<div class="ok">✔ ABONADO</div>';
+            h += '<div class="c gr">¡Gracias por tu compra!</div>';
+            h += '</body></html>';
+            return h;
+        }
+
         // ===== PEDIDOS CON NÚMERO (guardados en Cloudflare, Worker mikra-print) =====
-        let _ticketCtx = null;   // { mode: 'full'|'fullmod'|'diff', prev, prevAt } para el próximo ticket
 
         function _activeSlot() { return _slots.find(s => s.id === _activeSlotId); }
         function _cartKey(p) { return String(p.codigo != null && p.codigo !== '' ? p.codigo : p.id); }
@@ -5918,6 +6152,7 @@
                 if (markPrinted) { slot.printedCart = body.printedCart; slot.printedAt = res.printedAt || Date.now(); }
                 saveSlots(); renderSlotTabs();
                 if (nuevo) toast('☁️ Pedido #' + res.num + ' guardado', 'success');
+                _clientes = null;   // la libreta se actualizó en la nube
                 return res.num;
             } catch (e) {
                 toast('⚠️ No se pudo guardar el pedido en la nube (' + e.message + ')', 'warning');
@@ -5928,6 +6163,7 @@
         // 🎫 Ticket: si el pedido ya se imprimió y cambió, preguntar qué imprimir
         function startTicketPrint() {
             _ticketCtx = null;
+            _printKind = 'preparado';
             const slot = _activeSlot();
             if (slot && slot.num && slot.printedCart && (state.orderType === 'pedido' || state.orderType === 'presupuesto')) {
                 const d = _cartDiff(slot.printedCart, state.cart);
@@ -5980,7 +6216,7 @@
                                                           : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
                     return '<div class="ped-row" onclick="openPedidoCloud(' + p.num + ')">' +
                         '<span class="ped-num">#' + p.num + '</span>' +
-                        '<span class="ped-name">' + _escHtml(p.nombre || 'Sin nombre') + (p.orderType === 'presupuesto' ? ' <small>(presup.)</small>' : '') + '</span>' +
+                        '<span class="ped-name">' + _escHtml(p.nombre || 'Sin nombre') + (p.orderType === 'presupuesto' ? ' <small>(presupuesto)</small>' : p.presupuestoAntes ? ' <small>(era presupuesto)</small>' : '') + '</span>' +
                         '<span class="ped-meta">' + p.units + ' uds · ' + when + (p.printedAt ? ' · 🖨️' : '') + '</span></div>';
                 }).join('');
             } catch (e) {
@@ -6588,6 +6824,7 @@
                 document.querySelectorAll('.delivery-option[data-delivery]').forEach(o => o.classList.remove('selected'));
                 opt.classList.add('selected'); opt.querySelector('input').checked = true;
                 $('shippingDetails').classList.toggle('show', opt.dataset.delivery === 'envio');
+                _updatePriceUI();
             });
         });
         document.querySelectorAll('.delivery-option[data-payment]').forEach(opt => {
@@ -6595,6 +6832,9 @@
                 document.querySelectorAll('.delivery-option[data-payment]').forEach(o => o.classList.remove('selected'));
                 opt.classList.add('selected'); opt.querySelector('input').checked = true;
                 $('paymentDetails').classList.toggle('show', opt.dataset.payment === 'pendiente');
+                // Falta pagar = presupuesto (con precios); Abonó = pedido
+                if (state.orderType !== 'devolucion') setOrderType(opt.dataset.payment === 'pendiente' ? 'presupuesto' : 'pedido');
+                saveCart();
             });
         });
         document.querySelectorAll('.delivery-option[data-canal]').forEach(opt => {

@@ -608,7 +608,9 @@
         
         /* ── Nombre unificado ── */
         .unified-name-wrap { margin-bottom: 10px; position: relative; }
-        .unified-name-wrap .form-input { font-size: 1em; font-weight: 600; padding-left: 38px; }
+        .unified-name-wrap .form-input { font-size: 1em; font-weight: 600; padding-left: 38px; padding-right: 112px; }
+        .presencial-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); font-size: 0.78em; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .presencial-btn:active { background: var(--primary); color: #fff; }
         .unified-name-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1.05em; pointer-events: none; }
         /* ── Detalles colapsables ── */
         .order-details-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding-bottom: 8px; user-select: none; }
@@ -837,15 +839,27 @@
         /* 📂 Pedidos guardados */
         .ped-input { background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 16px; outline: none; box-sizing: border-box; }
         .ped-input:focus { border-color: var(--primary); }
-        .ped-list { margin-top: 10px; max-height: 58vh; overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 6px; }
-        .ped-row { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; row-gap: 3px; align-items: center; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
+        #pedidosModal .ped-modal { width: calc(100% - 16px); max-width: 760px; height: calc(100dvh - 24px); max-height: none; display: flex; flex-direction: column; padding: 16px 12px 12px; box-sizing: border-box; }
+        .ped-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .ped-head .modal-title { margin: 0; }
+        .ped-x { background: var(--bg-input); border: 1px solid var(--border); color: var(--text); border-radius: 10px; width: 38px; height: 38px; font-size: 1.05em; cursor: pointer; flex: none; }
+        .ped-filtros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+        .ped-filtros button { padding: 6px 2px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-secondary); font-size: 0.72em; font-weight: 700; cursor: pointer; white-space: nowrap; line-height: 1.2; }
+        .ped-filtros button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .ped-filtros button b { display: block; font-size: 1.35em; font-weight: 800; }
+        .ped-list { margin-top: 10px; flex: 1; min-height: 0; overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+        .ped-row { display: grid; grid-template-columns: 62px 1fr 104px; column-gap: 10px; align-items: center; padding: 10px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
         .ped-row:active { border-color: var(--primary); transform: scale(0.99); }
-        .ped-num { grid-row: span 2; align-self: center; font-weight: 800; font-size: 0.85em; color: var(--primary); background: rgba(59,130,246,0.12); border-radius: 8px; padding: 6px 8px; min-width: 50px; text-align: center; }
+        .ped-num { font-weight: 800; font-size: 0.88em; color: var(--primary); background: rgba(59,130,246,0.12); border-radius: 8px; padding: 8px 0; text-align: center; }
+        .ped-mid { min-width: 0; }
         .ped-name { font-weight: 700; font-size: 1em; line-height: 1.25; overflow-wrap: anywhere; }
-        .ped-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.75em; color: var(--text-secondary); }
-        .ped-tag { font-size: 0.95em; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: rgba(148,163,184,0.15); }
-        .ped-tag.imp { background: rgba(34,197,94,0.14); color: #4ade80; }
-        .ped-tag.pres { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .ped-meta { font-size: 0.75em; color: var(--text-secondary); margin-top: 2px; }
+        .ped-side { display: flex; flex-direction: column; gap: 4px; }
+        .ped-tag { display: block; text-align: center; font-size: 0.7em; font-weight: 800; padding: 3px 0; border-radius: 999px; background: rgba(148,163,184,0.14); color: var(--text-secondary); white-space: nowrap; }
+        .ped-tag.imp { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .ped-tag.noimp { background: transparent; border: 1px dashed rgba(148,163,184,0.45); padding: 2px 0; }
+        .ped-tag.pres { background: rgba(245,158,11,0.16); color: #fbbf24; }
+        .ped-tag.ped { background: rgba(59,130,246,0.14); color: #93c5fd; }
         .ped-empty { padding: 16px; text-align: center; color: var(--text-secondary); font-size: 0.85em; }
         .clear-modal {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
@@ -1182,14 +1196,19 @@
 
     <!-- 📂 ABRIR PEDIDO GUARDADO -->
     <div class="modal" id="pedidosModal" onclick="if(event.target===this)closePedidosModal()">
-        <div class="modal-content" style="max-width:420px;width:92%;">
-            <div class="modal-title">🕘 Últimos pedidos</div>
-            <div style="font-size:0.78em;color:var(--text-secondary);margin-top:2px;">Tocá uno para abrirlo</div>
-            <input id="pedSearchInput" type="search" placeholder="🔍 Buscar nombre o número" class="ped-input" style="width:100%;margin-top:12px;" oninput="onPedSearch()" onkeydown="if(event.key==='Enter')openPedidoByNum()">
-            <div id="pedList" class="ped-list"></div>
-            <div class="modal-buttons" style="margin-top:10px;">
-                <button class="modal-btn cancel" onclick="closePedidosModal()">Cerrar</button>
+        <div class="modal-content ped-modal">
+            <div class="ped-head">
+                <div class="modal-title">🕘 Últimos pedidos</div>
+                <button class="ped-x" onclick="closePedidosModal()" title="Cerrar">✕</button>
             </div>
+            <input id="pedSearchInput" type="search" placeholder="🔍 Buscar nombre o número" class="ped-input" style="width:100%;margin-top:10px;" oninput="onPedSearch()" onkeydown="if(event.key==='Enter')openPedidoByNum()">
+            <div class="ped-filtros" id="pedFiltros">
+                <button data-f="todos" onclick="pedFiltro('todos')">Todos</button>
+                <button data-f="noimp" onclick="pedFiltro('noimp')">Sin imprimir</button>
+                <button data-f="imp" onclick="pedFiltro('imp')">Impresos</button>
+                <button data-f="pres" onclick="pedFiltro('pres')">Presupuestos</button>
+            </div>
+            <div id="pedList" class="ped-list"></div>
         </div>
     </div>
 
@@ -1377,6 +1396,7 @@
                 <span class="unified-name-icon">👤</span>
                 <input type="text" class="form-input" id="clientName" placeholder="Nombre de la clienta..." autocomplete="off"
                        oninput="syncClientName(this.value);cliSuggest()" onfocus="cliSuggest()" onblur="setTimeout(cliHide,200)" style="font-size:1em;font-weight:600;">
+                <button type="button" class="presencial-btn" onmousedown="event.preventDefault()" onclick="ponerPresencial()">🏬 Presencial</button>
                 <div class="cli-sug" id="cliSug"></div>
             </div>
 
@@ -6311,6 +6331,16 @@
             box.classList.add('show');
         }
         function cliHide() { $('cliSug')?.classList.remove('show'); }
+        // Botón al costado del nombre: clienta que vino en persona y no dio el nombre
+        function ponerPresencial() {
+            $('clientName').value = 'Presencial';
+            syncClientName('Presencial');
+            if (typeof onClientNameInput === 'function') onClientNameInput();
+            cliHide();
+            if (!document.querySelector('input[name="delivery"]:checked'))
+                document.querySelector('.delivery-option[data-delivery="deposito"]')?.click();
+            saveCart();
+        }
         function cliPick(i) {
             const c = (_clientes || [])[i];
             if (!c) return;
@@ -6455,11 +6485,14 @@
 
         // 📂 Abrir pedido guardado
         let _pedListTimer = null;
+        let _pedRows = [], _pedFiltro = 'todos';
         function openPedidosModal() {
             $('pedidosModal').classList.add('show');
             $('pedSearchInput').value = '';
+            _pedFiltro = 'todos';
             loadPedidosList('');
         }
+        function pedFiltro(f) { _pedFiltro = f; _pedPaint(); }
         function closePedidosModal() { $('pedidosModal').classList.remove('show'); }
         function onPedSearch() {
             clearTimeout(_pedListTimer);
@@ -6469,25 +6502,51 @@
             const box = $('pedList');
             box.innerHTML = '<div class="ped-empty">⏳ Cargando…</div>';
             try {
-                const res = await _pedApi('/pedidos?limit=40&q=' + encodeURIComponent(q));
-                if (!res.pedidos.length) { box.innerHTML = '<div class="ped-empty">' + (q ? 'No hay pedidos con "' + _escHtml(q) + '"' : 'Todavía no hay pedidos guardados') + '</div>'; return; }
+                const res = await _pedApi('/pedidos?limit=120&q=' + encodeURIComponent(q));
+                _pedRows = res.pedidos;
+                _pedPaint(q);
+            } catch (e) {
+                _pedRows = [];
+                box.innerHTML = '<div class="ped-empty">⚠️ ' + _escHtml(e.message) + '</div>';
+            }
+        }
+        function _pedPaint(q) {
+            const box = $('pedList');
+            const pasa = {
+                todos: () => true,
+                noimp: p => !p.printedAt,
+                imp:   p => !!p.printedAt,
+                pres:  p => p.orderType === 'presupuesto',
+            };
+            document.querySelectorAll('#pedFiltros button').forEach(b => {
+                const n = _pedRows.filter(pasa[b.dataset.f]).length;
+                b.classList.toggle('on', b.dataset.f === _pedFiltro);
+                b.innerHTML = '<b>' + n + '</b>' + (b.dataset.l || (b.dataset.l = b.textContent));
+            });
+            const lista = _pedRows.filter(pasa[_pedFiltro]);
+            if (!lista.length) {
+                q = q === undefined ? $('pedSearchInput').value.trim() : q;
+                box.innerHTML = '<div class="ped-empty">' + (q ? 'No hay pedidos con "' + _escHtml(q) + '"' : _pedRows.length ? 'No hay pedidos en este filtro' : 'Todavía no hay pedidos guardados') + '</div>';
+                return;
+            }
+            {
                 const hoy = new Date(); const ayer = new Date(Date.now() - 864e5);
-                box.innerHTML = res.pedidos.map(p => {
+                box.innerHTML = lista.map(p => {
                     const d = new Date(p.updated);
                     const hora = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
                     const when = d.toDateString() === hoy.toDateString() ? 'Hoy ' + hora
                                : d.toDateString() === ayer.toDateString() ? 'Ayer ' + hora
                                : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) + ' ' + hora;
-                    const tag = p.orderType === 'presupuesto' ? '<span class="ped-tag pres">Presupuesto</span>'
-                              : p.presupuestoAntes ? '<span class="ped-tag">Era presupuesto</span>' : '';
+                    // Columna derecha fija: arriba si está impreso, abajo si es pedido o presupuesto
+                    const tipo = p.orderType === 'presupuesto' ? '<span class="ped-tag pres">Presupuesto</span>'
+                               : '<span class="ped-tag ped">Pedido</span>';
+                    const imp = p.printedAt ? '<span class="ped-tag imp">✓ Impreso</span>' : '<span class="ped-tag noimp">Sin imprimir</span>';
                     return '<div class="ped-row" onclick="openPedidoCloud(' + p.num + ')">' +
                         '<span class="ped-num">#' + p.num + '</span>' +
-                        '<span class="ped-name">' + _escHtml(p.nombre || 'Sin nombre') + '</span>' +
-                        '<span class="ped-meta"><span>' + _prendas(p.units) + ' · ' + when + '</span>' + tag +
-                        (p.printedAt ? '<span class="ped-tag imp">🖨️ Impreso</span>' : '') + '</span></div>';
+                        '<div class="ped-mid"><div class="ped-name">' + _escHtml(p.nombre || 'Sin nombre') + '</div>' +
+                        '<div class="ped-meta">' + _prendas(p.units) + ' · ' + when + (p.presupuestoAntes && p.orderType !== 'presupuesto' ? ' · era presupuesto' : '') + '</div></div>' +
+                        '<div class="ped-side">' + imp + tipo + '</div></div>';
                 }).join('');
-            } catch (e) {
-                box.innerHTML = '<div class="ped-empty">⚠️ ' + _escHtml(e.message) + '</div>';
             }
         }
         function openPedidoByNum() {

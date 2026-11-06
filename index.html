@@ -1370,6 +1370,7 @@
             <div class="action-more-panel" id="moreActionsPanel" style="margin-top:6px;">
                 <button class="action-more-btn" onclick="downloadPreparacion()">📦 Preparar</button>
                 <button class="action-more-btn" onclick="abrirHistorial()">📋 Historial</button>
+                <button class="action-more-btn" onclick="waTicketPDF()">📤 Ticket por WhatsApp</button>
                 <button class="action-more-btn" onclick="setOrderType('devolucion');toggleMoreActions(document.querySelector('.action-more-toggle'))">↩️ Devolución</button>
             </div>
 
@@ -1688,7 +1689,7 @@
     </div>
     <div class="clear-modal-overlay" id="presOptsModal">
         <div class="clear-modal po-modal">
-            <div class="clear-modal-title">📄 PDF del presupuesto</div>
+            <div class="clear-modal-title" id="poTitle">📄 PDF del presupuesto</div>
             <div class="po-group">
                 <div class="po-lbl">IVA</div>
                 <div class="po-seg" id="poIva">
@@ -4911,9 +4912,61 @@
         // ===== WA CONFIRM SHEET =====
         let _wacDelivery = 'deposito', _wacPayment = 'abonado', _wacTicket = false, _devolucionMode = false;
 
+        // 💬 WhatsApp: directo. Solo pide el nombre si falta (con vibración)
         function openWaConfirm() {
             if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
-            if (_faltaElegir().includes('pago')) { _avisarFaltaElegir(['pago']); return; }
+            if (state.orderType === 'devolucion') { shareWhatsApp(); return; }
+            const falta = _faltaElegir();
+            if (falta.length) { _avisarFaltaElegir(falta); return; }
+            _pedirNombreY(_shareWaDirect);
+        }
+        // Ticket de preparación como PDF por WhatsApp (en ⋯ Más)
+        function waTicketPDF() {
+            toggleMoreActions(document.querySelector('.action-more-toggle'));
+            if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
+            if (!validateForm()) return;
+            savePedidoCloud(false).then(() => sharePrepTicketPDF());
+        }
+        // Si no hay nombre: cartelito para escribirlo y después sigue solo
+        let _nameNext = null;
+        function _pedirNombreY(next) {
+            if ($('clientName').value.trim()) { next(); return; }
+            _nameNext = next;
+            const inp = $('ticketNameInput');
+            if (inp) inp.value = '';
+            $('ticketNameModal').querySelector('.modal-icon').textContent = '💬';
+            $('ticketNameModal').querySelector('.modal-text').textContent = 'Escribí el nombre de la clienta:';
+            $('ticketNameModal').classList.add('show');
+            try { navigator.vibrate?.(60); } catch (e) {}
+            setTimeout(() => { if (inp) inp.focus(); }, 60);
+        }
+        async function _shareWaDirect() {
+            if (!validateForm()) return;
+            const isPres = state.orderType === 'presupuesto';
+            const name = $('clientName').value.trim();
+            const pedNum = await savePedidoCloud(false);
+            const numTxt = pedNum ? ' #' + pedNum : '';
+            const st = getTicketStatus();
+            const cart = getSortedCart();
+            let text = (isPres ? 'PRESUPUESTO MIKRA' : 'PEDIDO MIKRA') + numTxt + '\n─────────────────\n' + name + '\n';
+            if (st.deliveryText) text += st.deliveryText + '\n';
+            if (st.address) text += st.address + '\n';
+            text += (st.payment === 'pendiente' ? 'Falta abonar' + (st.amount ? ': $' + st.amount : '') : 'Ya abono') + '\n─────────────────\n\n';
+            if (isPres) {
+                let total = 0;
+                const grouped = {};
+                cart.forEach(p => { const n = p.titulo || p.articulo; if (!grouped[n]) grouped[n] = { qty: 0, price: articlePrices[n] || 0 }; grouped[n].qty += p.qty; });
+                Object.entries(grouped).forEach(([n, d]) => { if (d.price > 0) { text += n + ' x' + d.qty + ' = $' + (d.qty * d.price).toLocaleString('es-AR') + '\n'; total += d.qty * d.price; } });
+                const shipping = getBudgetShipping();
+                text += shipping > 0 ? '\nEnvio: $' + shipping.toLocaleString('es-AR') + '\nTOTAL: $' + (total + shipping).toLocaleString('es-AR') + '\n' : '\nTOTAL: $' + total.toLocaleString('es-AR') + '\n';
+            } else {
+                cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
+                text += '\n─────────────────\nTOTAL: ' + _prendas(cart.reduce((a, p) => a + p.qty, 0)) + '\n';
+            }
+            text += '\nCODIGOS:\n'; cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
+            window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+        }
+        function _openWaSheetViejo() {
             const isPedido = state.orderType === 'pedido';
             const isPres   = state.orderType === 'presupuesto';
             $('waConfirmPedido').style.display = isPedido ? 'block' : 'none';
@@ -5113,8 +5166,8 @@
         // 📄 PDF: directo (el ticket por WhatsApp sigue en el cartel de WhatsApp)
         function showPdfOptions() {
             if (!state.cart.length || !validateForm()) return;
-            if (state.orderType === 'presupuesto') openPresOpts();
-            else downloadPDF(null);
+            if (state.orderType === 'devolucion') downloadPDF(null);
+            else openPresOpts();
         }
         function closePdfTypeModal() { $('pdfTypeModal')?.classList.remove('show'); }
         function detallesPDF() { showPdfOptions(); }
@@ -5123,6 +5176,7 @@
         let _po = { iva: 'no', aj: 'no', ajPct: '10', descLabel: 'Descuento por transferencia', recLabel: 'Recargo' };
         try { Object.assign(_po, JSON.parse(localStorage.getItem('mikra_pdf_opts') || '{}')); } catch (e) {}
         function openPresOpts() {
+            $('poTitle').textContent = '📄 PDF del ' + (state.orderType === 'presupuesto' ? 'presupuesto' : 'pedido');
             poPaint();
             $('presOptsModal').classList.add('show');
         }
@@ -5228,7 +5282,7 @@
                 if (p.codigo) idx[key].codigos.push(p.codigo);
             });
             const prendas = state.cart.reduce((a, p) => a + p.qty, 0);
-            const c = esPres ? _calcPres(opts || { iva: 'no', aj: 'no' }) : _calcPres({ iva: 'no', aj: 'no' });
+            const c = _calcPres(!esDev && opts ? opts : { iva: 'no', aj: 'no' });
 
             let h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + titulo + (num ? ' ' + num : '') + ' - Mikra</title><style>' +
                 '@page{size:A4;margin:14mm}*{box-sizing:border-box}' +
@@ -5327,20 +5381,26 @@
             if (!name && state.orderType !== 'devolucion') {
                 const inp = $('ticketNameInput');
                 if (inp) inp.value = '';
+                _nameNext = null;
+                $('ticketNameModal').querySelector('.modal-icon').textContent = '🎫';
+                $('ticketNameModal').querySelector('.modal-text').textContent = 'Escribí el nombre para el ticket:';
                 $('ticketNameModal').classList.add('show');
+                try { navigator.vibrate?.(60); } catch (e) {}
                 setTimeout(() => { if (inp) inp.focus(); }, 60);
                 return;
             }
             if (!validateForm()) return;
             startTicketPrint();
         }
-        function closeTicketNameModal() { $('ticketNameModal').classList.remove('show'); }
+        function closeTicketNameModal() { $('ticketNameModal').classList.remove('show'); _nameNext = null; }
         function confirmTicketName() {
             const val = $('ticketNameInput').value.trim();
-            if (!val) { $('ticketNameInput').focus(); return; }
+            if (!val) { $('ticketNameInput').focus(); try { navigator.vibrate?.(60); } catch (e) {} return; }
             $('clientName').value = val;
             syncClientName(val);
+            const next = _nameNext;
             closeTicketNameModal();
+            if (next) { next(); return; }
             if (!validateForm()) return;
             startTicketPrint();
         }

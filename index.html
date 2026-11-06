@@ -453,7 +453,47 @@
             display: flex; justify-content: space-between; align-items: center;
         }
         .cart-count { font-size: 0.9em; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-        .cart-header button { white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+        .cart-header { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px 12px; }
+        .cart-sum { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+        .cs-big { font-size: 1.05em; font-weight: 800; }
+        .cs-big #cartUnitCount { color: var(--primary); }
+        .cs-small { font-size: 0.8em; color: var(--text-secondary); font-weight: 600; }
+        .cart-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+        .cart-tools .ct-btn { flex: initial; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+            padding: 7px 2px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-input);
+            color: var(--text-secondary); font-size: 0.72em; font-weight: 700; line-height: 1.15; cursor: pointer;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-tap-highlight-color: transparent; }
+        .cart-tools .ct-btn span { font-size: 1.3em; line-height: 1.1; }
+        .cart-tools .ct-btn:active { background: var(--bg-card); }
+        /* Verificar stock en Ecom */
+        .sc-sum { border-radius: 12px; padding: 12px; text-align: center; margin: 8px 0 10px; }
+        .sc-sum:empty { display: none; }
+        .sc-sum.ok { background: rgba(34,197,94,0.13); border: 1px solid rgba(34,197,94,0.35); }
+        .sc-sum.bad { background: rgba(239,68,68,0.13); border: 1px solid rgba(239,68,68,0.40); }
+        .sc-sum .big { font-size: 1.1em; font-weight: 900; }
+        .sc-sum.ok .big { color: #86efac; } .sc-sum.bad .big { color: #fca5a5; }
+        .sc-sum .small { font-size: 0.78em; color: var(--text-secondary); margin-top: 3px; }
+        .sc-sec { font-size: 0.7em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin: 6px 0; text-align: left; }
+        .sc-falta { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.30); margin-bottom: 5px; font-size: 0.8em; text-align: left; }
+        .sc-falta small { display: block; color: var(--text-secondary); font-weight: 600; }
+        .sc-falta span { white-space: nowrap; color: #fca5a5; font-weight: 800; text-align: right; }
+        .sc-art { margin-bottom: 10px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; padding: 10px; text-align: left; }
+        .sc-art-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 800; font-size: 0.82em; text-transform: uppercase; }
+        .sc-badge { font-size: 0.85em; padding: 2px 8px; border-radius: 20px; white-space: nowrap; text-transform: none; }
+        .sc-badge.ok { background: rgba(34,197,94,0.15); color: #86efac; }
+        .sc-badge.bad { background: rgba(239,68,68,0.18); color: #fca5a5; }
+        .sc-color { font-size: 0.74em; font-weight: 700; color: var(--primary); margin: 8px 0 4px; text-transform: uppercase; }
+        .sc-cells { display: flex; flex-wrap: wrap; gap: 5px; }
+        .sc-cell { width: 54px; border-radius: 9px; border: 1.5px solid; text-align: center; padding: 4px 2px; }
+        .sc-cell .t { font-size: 0.66em; font-weight: 800; color: var(--text-secondary); }
+        .sc-cell .q { font-size: 1.1em; font-weight: 900; line-height: 1.15; }
+        .sc-cell .h { font-size: 0.62em; font-weight: 800; }
+        .sc-cell.ok { background: rgba(34,197,94,0.10); border-color: rgba(34,197,94,0.35); } .sc-cell.ok .h { color: #86efac; }
+        .sc-cell.bad { background: rgba(239,68,68,0.14); border-color: rgba(239,68,68,0.55); } .sc-cell.bad .h { color: #fca5a5; }
+        .sc-cell.nd { background: rgba(148,163,184,0.08); border-color: rgba(148,163,184,0.25); } .sc-cell.nd .h { color: #94a3b8; }
+        .sc-loading { text-align: center; padding: 28px 0; color: var(--text-secondary); font-size: 0.9em; }
+        .sc-spin { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 10px; animation: scspin .8s linear infinite; }
+        @keyframes scspin { to { transform: rotate(360deg); } }
         .cart-count span { color: var(--primary); }
         
         .order-type-selector { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -1292,12 +1332,15 @@
         <div class="container">
             <div class="slot-tabs" id="slotTabs"></div>
             <div class="cart-header">
-                <div class="cart-count"><span id="cartItemCount">0</span> prod. (<span id="cartUnitCount">0</span> uds)</div>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <button onclick="verificarStock()" title="Verificar stock en Ecom" style="font-size:0.95em;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);cursor:pointer;line-height:1;">🔍</button>
-                    <button class="action-more-toggle" onclick="toggleMoreActions(this)" style="font-size:0.78em;padding:5px 9px;border-radius:8px;line-height:1;">⋯ Más</button>
-                    <button class="cart-remove" onclick="pasteFromTiendaNube()" style="font-size:0.82em;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--success);cursor:pointer;">🛍️ TN</button>
-                    <button class="cart-remove" onclick="openManualEntry()" style="font-size:0.82em;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--primary);cursor:pointer;">📋 Manual</button>
+                <div class="cart-sum">
+                    <span class="cs-big"><span id="cartUnitCount">0</span> <span id="cartUnitLbl">prendas</span></span>
+                    <span class="cs-small"><span id="cartItemCount">0</span> <span id="cartItemLbl">artículos</span></span>
+                </div>
+                <div class="cart-tools">
+                    <button class="ct-btn" onclick="pasteFromTiendaNube()"><span>🛍️</span>Pegar TN</button>
+                    <button class="ct-btn" onclick="openManualEntry()"><span>📋</span>Códigos</button>
+                    <button class="ct-btn" onclick="verificarStock()"><span>🔍</span>Verificar</button>
+                    <button class="ct-btn action-more-toggle" onclick="toggleMoreActions(this)"><span>⋯</span>Más</button>
                 </div>
             </div>
             <div class="action-more-panel" id="moreActionsPanel" style="margin-top:6px;">
@@ -1473,10 +1516,11 @@
     <!-- MODAL VERIFICAR STOCK -->
     <div class="clear-modal-overlay" id="stockCheckModal">
         <div class="clear-modal" style="max-width:440px;width:95%;">
-            <div class="clear-modal-title">🔍 Verificación de Stock</div>
-            <div id="stockCheckContent" style="max-height:58vh;overflow-y:auto;margin:10px 0;"></div>
-            <div id="stockCheckSummary" style="font-weight:800;font-size:1em;margin-top:8px;text-align:center;padding:8px;border-radius:8px;"></div>
+            <div class="clear-modal-title">🔍 Stock en Ecom</div>
+            <div id="stockCheckSummary" class="sc-sum"></div>
+            <div id="stockCheckContent" style="max-height:56vh;overflow-y:auto;margin:4px 0 0;"></div>
             <div class="clear-modal-btns" style="margin-top:12px;">
+                <button class="clear-modal-btn no" onclick="verificarStock()">🔄 Volver a consultar</button>
                 <button class="clear-modal-btn no" onclick="$('stockCheckModal').classList.remove('show')">Cerrar</button>
             </div>
         </div>
@@ -2107,7 +2151,7 @@
         // Estado de pago/precios, clientas, recibo y ticket (arriba de todo: se usan apenas abre la app)
         let _montoManual = false;   // el monto a pagar lo escribió a mano (no pisarlo con el total)
         let _showPrecios = false;   // precios abiertos aunque ya haya pagado (para el recibo)
-        let _clientes = null, _cliLoading = null;
+        let _clientes = null, _cliLoading = null, _cliAt = 0;
         let _printKind = 'preparado';   // qué se imprime: 'preparado' (para armar) o 'recibo'
         let _reciboTarget = null;
         let _ticketCtx = null;      // { mode: 'full'|'fullmod'|'diff', prev, prevAt } para el próximo ticket
@@ -2337,6 +2381,8 @@
             $('cartBadge').style.display = units > 0 ? 'block' : 'none';
             $('cartItemCount').textContent = state.cart.length;
             $('cartUnitCount').textContent = units;
+            if ($('cartUnitLbl')) $('cartUnitLbl').textContent = units === 1 ? 'prenda' : 'prendas';
+            if ($('cartItemLbl')) $('cartItemLbl').textContent = state.cart.length === 1 ? 'artículo' : 'artículos';
         }
         
         function syncClientName(val) {
@@ -2354,7 +2400,7 @@
             const panel = $('moreActionsPanel');
             if (!panel) return;
             panel.classList.toggle('show');
-            if (btn) btn.textContent = panel.classList.contains('show') ? '✕ Cerrar' : '⋯ Más opciones';
+            if (btn) btn.innerHTML = panel.classList.contains('show') ? '<span>✕</span>Cerrar' : '<span>⋯</span>Más';
         }
         function toggleDevolucionMode() {
             _devolucionMode = !_devolucionMode;
@@ -2452,7 +2498,7 @@
                 html += '<div class="ci-card">';
                 html += '<div class="ci-header">' + imgHtml +
                     '<div class="ci-name" onclick="openArticleFromCart(\'' + _escAttr(artName) + '\')" style="cursor:pointer;" title="Ir al artículo">' + _escHtml(artName) + ' <span style="font-size:0.72em;opacity:0.55;">↗</span></div>' +
-                    '<span class="ci-uds">' + artUds + ' uds</span>' +
+                    '<span class="ci-uds">' + _prendas(artUds) + '</span>' +
                     '<button class="ci-del" onclick="ciRemoveArticle(\'' + _escAttr(artName) + '\')" title="Eliminar artículo">🗑</button>' +
                     '</div>';
 
@@ -2546,7 +2592,7 @@
                 const ecColor = ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)';
                 const ecIcon = ec <= 0 ? '🔴' : ec <= 3 ? '🟡' : '🟢';
                 ecomInfo = '<div style="text-align:center;padding:2px 2px 4px;border-bottom:1px solid var(--border);margin-bottom:2px;">' +
-                    '<span style="color:' + ecColor + ';font-size:0.8em;font-weight:800;">' + ecIcon + ' Ecom: ' + ec + ' uds</span>' +
+                    '<span style="color:' + ecColor + ';font-size:0.8em;font-weight:800;">' + ecIcon + ' Ecom: ' + ec + '</span>' +
                     '</div>';
             }
 
@@ -2594,7 +2640,7 @@
                 const ec = getEcomStock(p.codigo);
                 if (ec !== null && newQty > ec) {
                     // Mostrar advertencia pero permitir igual — solo toast rojo
-                    toast('⚠️ Superás ecom (' + ec + ' uds)', 'error');
+                    toast('⚠️ Ecom tiene solo ' + ec, 'error');
                 }
             }
 
@@ -2659,7 +2705,7 @@
                 if (!nameEl) return;
                 const name = nameEl.textContent;
                 const udsEl = card.querySelector('.ci-uds');
-                if (udsEl && artMap[name] !== undefined) udsEl.textContent = artMap[name] + ' uds';
+                if (udsEl && artMap[name] !== undefined) udsEl.textContent = _prendas(artMap[name]);
             });
         }
 
@@ -3153,7 +3199,7 @@
             $('autocomplete').innerHTML = matches.map(a => 
                 '<div class="autocomplete-item" data-name="' + a.name.replace(/"/g, '&quot;') + '">' +
                 '<span class="autocomplete-name">' + a.name + '</span>' +
-                '<span class="autocomplete-stock">' + a.totalStock + ' uds</span></div>'
+                '<span class="autocomplete-stock">' + a.totalStock + ' en stock</span></div>'
             ).join('');
             $('autocomplete').classList.add('show');
         }
@@ -3353,7 +3399,7 @@
                     html += '<div class="cp-placeholder">📦</div>';
                 }
                 html += '<div class="cp-name">' + c + '</div>';
-                html += '<div class="cp-stock">' + (isZero ? 'Sin stock' : cm.avail + ' uds') + '</div>';
+                html += '<div class="cp-stock">' + (isZero ? 'Sin stock' : cm.avail + ' en stock') + '</div>';
                 html += '</div>';
             });
             
@@ -3666,7 +3712,7 @@
                 // Validación ecom
                 const ec = getEcomStock(p.codigo);
                 if (ec !== null && newQty > ec) {
-                    showModal('⚠️', 'Superás el stock ecom', 'Ecom tiene ' + ec + ' uds. Vas a pedir ' + newQty + '. ¿Continuar igual?', 'Sí, agregar', () => {
+                    showModal('⚠️', 'Superás el stock ecom', 'Ecom tiene ' + ec + ' y vas a pedir ' + newQty + '. ¿Agregar igual?', 'Sí, agregar', () => {
                         const existing = state.cart.find(c => c.id === productId);
                         if (existing) { existing.qty += 1; } else { state.cart.push({ ...p, qty: 1 }); }
                         saveCart(); updateBadge();
@@ -3744,7 +3790,7 @@
             if (delta > 0) {
                 const ec = getEcomStock(p.codigo);
                 if (ec !== null && newQty > ec) {
-                    showModal('⚠️', 'Superás el stock ecom', 'Ecom tiene ' + ec + ' uds. Vas a pedir ' + newQty + '. ¿Continuar igual?', 'Sí, agregar', () => {
+                    showModal('⚠️', 'Superás el stock ecom', 'Ecom tiene ' + ec + ' y vas a pedir ' + newQty + '. ¿Agregar igual?', 'Sí, agregar', () => {
                         _doArticleChangeQty(p, newQty, delta, currentQty);
                     });
                     return;
@@ -4566,7 +4612,7 @@
                         ? '<div class="home-art-img-placeholder" style="position:relative;">📦<img class="home-art-img" src="' + imgUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'" onload="imgHideIfNotAvailable(this)">' + '</div>'
                         : '<div class="home-art-img-placeholder">📦</div>';
                     const stockHtml = stock !== null
-                        ? '<span class="home-art-stock' + (stock<=0?' zero':'') + '">' + stock + ' uds</span>'
+                        ? '<span class="home-art-stock' + (stock<=0?' zero':'') + '">' + (stock <= 0 ? 'Sin stock' : stock + ' en stock') + '</span>'
                         : '<span class="home-art-stock" style="color:var(--text-secondary);background:none;">sin datos</span>';
                     const artKey = artName.trim().toLowerCase();
                     const pMay = articlePricesMay[artKey] || 0;
@@ -4764,6 +4810,7 @@
 
         // Total $ del presupuesto (artículos con precio + envío)
         // Montos: solo números, con punto de miles mientras se escribe (10000 → 10.000)
+        function _prendas(n) { return n + (n === 1 ? ' prenda' : ' prendas'); }
         function fmtMonto(el) {
             const dig = (el.value || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
             el.value = dig ? Number(dig).toLocaleString('es-AR') : '';
@@ -4915,7 +4962,7 @@
                 const repoSign  = '+';
                 text = repoTitle + '\n─────────────────\n\n';
                 cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
-                text += '\n─────────────────\nTOTAL: ' + cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
+                text += '\n─────────────────\nTOTAL: ' + _prendas(cart.reduce((a,p)=>a+p.qty,0)) + '\n';
                 text += '\nCODIGOS:\n'; cart.forEach(p => { text += p.codigo + '\t' + repoSign + p.qty + '\n'; });
             } else if (isPres) {
                 let total = 0;
@@ -4937,7 +4984,7 @@
                 if (_wacDelivery === 'envio' && address) text += address + '\n';
                 text += payLabel + '\n─────────────────\n\n';
                 cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo||p.articulo) + ', ' + (p.color||'-') + ', T:' + (p.talle||'-') + '\n'; });
-                text += '\n─────────────────\nTOTAL: ' + cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
+                text += '\n─────────────────\nTOTAL: ' + _prendas(cart.reduce((a,p)=>a+p.qty,0)) + '\n';
                 text += '\nCODIGOS:\n'; cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             }
 
@@ -4956,7 +5003,7 @@
                 text = repoTitle + '\n─────────────────\n\n';
                 cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
                 const total = cart.reduce((a, p) => a + p.qty, 0);
-                text += '\n─────────────────\nTOTAL: ' + total + ' uds\n';
+                text += '\n─────────────────\nTOTAL: ' + _prendas(total) + '\n';
                 text += '\nCODIGOS:\n';
                 cart.forEach(p => { text += p.codigo + '\t' + repoSign + p.qty + '\n'; });
             } else if (state.orderType === 'presupuesto') {
@@ -4984,7 +5031,7 @@
                 text += order.paymentText + '\n─────────────────\n\n';
                 cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
                 const totalUnits = cart.reduce((a, p) => a + p.qty, 0);
-                text += '\n─────────────────\nTOTAL: ' + totalUnits + ' uds\n';
+                text += '\n─────────────────\nTOTAL: ' + _prendas(totalUnits) + '\n';
                 text += '\nCODIGOS:\n';
                 cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             }
@@ -5793,7 +5840,7 @@
                 const r = renderArticles(state.cart);
                 html += r.html;
                 html += '<div class="line-thick"></div>';
-                html += '<div class="grand"><span>' + (esRecibo ? 'PRENDAS:' : 'TOTAL:') + '</span><span>' + r.total + ' uds</span></div>';
+                html += '<div class="grand"><span>' + (esRecibo ? 'PRENDAS:' : 'TOTAL:') + '</span><span>' + r.total + (esRecibo ? '' : ' uds') + '</span></div>';
             }
             if (esRecibo) {
                 // Precios, total y cuánto pagó / cuánto falta
@@ -5977,13 +6024,13 @@
         // ===== CLIENTAS (libreta en Cloudflare, se arma sola con cada pedido) =====
         function _normTxt(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
         function cliLoad() {
-            if (_clientes) return Promise.resolve(_clientes);
-            if (_cliLoading) return _cliLoading;
-            _cliLoading = _pedApi('/clientes', undefined, 6000)
-                .then(r => { _clientes = r.clientes || []; try { localStorage.setItem('mikra_clientes', JSON.stringify(_clientes)); } catch (e) {} return _clientes; })
+            if (_clientes && Date.now() - _cliAt < 60000) return Promise.resolve(_clientes);
+            if (!_cliLoading) _cliLoading = _pedApi('/clientes', undefined, 6000)
+                .then(r => { _clientes = r.clientes || []; _cliAt = Date.now(); try { localStorage.setItem('mikra_clientes', JSON.stringify(_clientes)); } catch (e) {} return _clientes; })
                 .catch(() => { try { _clientes = JSON.parse(localStorage.getItem('mikra_clientes') || '[]'); } catch (e) { _clientes = []; } return _clientes; })
                 .finally(() => { _cliLoading = null; });
-            return _cliLoading;
+            // Si ya había una lista, se usa al toque y se actualiza por detrás
+            return _clientes ? Promise.resolve(_clientes) : _cliLoading;
         }
         async function cliSuggest() {
             const box = $('cliSug');
@@ -6176,7 +6223,7 @@
                     return '<div class="ped-row" onclick="openPedidoCloud(' + p.num + ')">' +
                         '<span class="ped-num">#' + p.num + '</span>' +
                         '<span class="ped-name">' + _escHtml(p.nombre || 'Sin nombre') + (p.orderType === 'presupuesto' ? ' <small>(presupuesto)</small>' : p.presupuestoAntes ? ' <small>(era presupuesto)</small>' : '') + '</span>' +
-                        '<span class="ped-meta">' + p.units + ' uds · ' + when + (p.printedAt ? ' · 🖨️' : '') + '</span></div>';
+                        '<span class="ped-meta">' + _prendas(p.units) + ' · ' + when + (p.printedAt ? ' · 🖨️' : '') + '</span></div>';
                 }).join('');
             } catch (e) {
                 box.innerHTML = '<div class="ped-empty">⚠️ ' + _escHtml(e.message) + '</div>';
@@ -6969,126 +7016,90 @@
 
         // ─── VERIFICAR STOCK ──────────────────────────────────────────────────
         async function verificarStock() {
-            if (!state.cart.length) { toast('El carrito está vacío', 'warning'); return; }
+            if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
             const cartOrdenado = sortCart(state.cart.filter(p => p.codigo));
-            if (!cartOrdenado.length) { toast('No hay SKUs en el carrito', 'warning'); return; }
-            const skus = [...new Set(cartOrdenado.map(p => p.codigo))];
-
-            $('stockCheckContent').innerHTML = `<div style="text-align:center;padding:24px 0;"><div style="font-size:2em;margin-bottom:8px;">⏳</div><div style="opacity:0.6;font-size:0.9em;">Consultando ${skus.length} SKUs...</div></div>`;
-            $('stockCheckSummary').innerHTML = '';
+            if (!cartOrdenado.length) { toast('No hay códigos en el pedido', 'warning'); return; }
+            const skus = [...new Set(cartOrdenado.map(p => String(p.codigo)))];
+            const sum = $('stockCheckSummary');
+            sum.className = 'sc-sum'; sum.innerHTML = ''; sum.style.border = '';
+            $('stockCheckContent').innerHTML = '<div class="sc-loading"><div class="sc-spin"></div>Consultando ' + skus.length + ' códigos en Ecom…</div>';
             $('stockCheckModal').classList.add('show');
 
-            // Reutilizar datos ya cargados del ecomStockMap si están frescos
-            const skusToFetch = skus.filter(s => ecomStockMap[String(s)] === undefined);
-            if (skusToFetch.length) {
-                const fresh = await _fetchEcomSkus(skusToFetch);
-                Object.assign(ecomStockMap, fresh);
-            }
-            const stockMap = {};
-            skus.forEach(sku => {
-                const v = ecomStockMap[String(sku)];
-                stockMap[String(sku)] = { sku, stock: v !== undefined ? v : null, ok: v !== undefined && v !== null };
-            });
-
-            let html = '', allOk = true, totalItems = 0, sinDatos = 0;
-
-            // Agrupar por artículo → color → talle
-            const grupos = {};
-            cartOrdenado.forEach(p => {
-                const art = p.titulo || p.articulo || 'Sin nombre';
-                const col = p.color || 'Sin color';
-                const tal = p.talle || '-';
-                if (!grupos[art]) grupos[art] = {};
-                if (!grupos[art][col]) grupos[art][col] = {};
-                grupos[art][col][tal] = p;
-            });
+            // Siempre datos frescos: es para saber si alcanza AHORA
+            const fresh = await _fetchEcomSkus(skus);
+            Object.assign(ecomStockMap, fresh);
+            const realDe = sku => { const v = ecomStockMap[String(sku)]; return v === undefined ? null : v; };
 
             const SO = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
-            function talSort(a, b) {
+            const talSort = (a, b) => {
                 const na = parseFloat(a), nb = parseFloat(b);
                 if (!isNaN(na) && !isNaN(nb)) return na - nb;
-                const ia = SO.indexOf(a.toUpperCase()), ib = SO.indexOf(b.toUpperCase());
+                const ia = SO.indexOf(String(a).toUpperCase()), ib = SO.indexOf(String(b).toUpperCase());
                 if (ia > -1 && ib > -1) return ia - ib;
                 if (ia > -1) return -1; if (ib > -1) return 1;
-                return a.localeCompare(b);
-            }
+                return String(a).localeCompare(String(b));
+            };
+            const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
-            Object.entries(grupos).forEach(([art, colorMap]) => {
-                // Todos los talles del artículo → cabecera de columnas
-                const tallesSet = new Set();
-                Object.values(colorMap).forEach(talMap => Object.keys(talMap).forEach(t => tallesSet.add(t)));
-                const talles = [...tallesSet].sort(talSort);
-
-                // ¿Algún problema en el artículo?
-                let artOk = true;
-                Object.values(colorMap).forEach(talMap => {
-                    Object.values(talMap).forEach(p => {
-                        const r = stockMap[String(p.codigo)];
-                        if (!r || r.stock === null || r.stock < p.qty) artOk = false;
-                    });
-                });
-
-                const thStyle = `text-align:center;font-size:0.62em;color:rgba(255,255,255,0.4);padding:0 3px 5px;font-weight:800;min-width:46px;`;
-                const tdLabel = `text-align:left;font-size:0.72em;font-weight:700;color:var(--primary);padding:3px 8px 3px 0;white-space:nowrap;vertical-align:middle;`;
-
-                html += `<div style="margin-bottom:14px;">
-                    <div style="font-size:0.78em;font-weight:800;text-transform:uppercase;letter-spacing:0.4px;
-                        color:${artOk ? 'var(--success)' : 'var(--danger)'};
-                        display:flex;align-items:center;gap:5px;margin-bottom:7px;">
-                        ${artOk ? '✅' : '⚠️'} ${art}
-                    </div>
-                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-                    <table style="border-collapse:separate;border-spacing:2px;width:100%;">
-                        <thead><tr>
-                            <th style="${tdLabel}"></th>
-                            ${talles.map(t => `<th style="${thStyle}">${t}</th>`).join('')}
-                        </tr></thead>
-                        <tbody>`;
-
-                Object.entries(colorMap).forEach(([color, talMap]) => {
-                    html += `<tr>
-                        <td style="${tdLabel}">${color}</td>`;
-                    talles.forEach(tal => {
-                        const p = talMap[tal];
-                        if (!p) {
-                            html += `<td style="text-align:center;padding:1px;"><div style="width:44px;height:52px;background:rgba(255,255,255,0.03);border-radius:6px;border:1px solid rgba(255,255,255,0.06);"></div></td>`;
-                            return;
-                        }
-                        const r = stockMap[String(p.codigo)];
-                        totalItems++;
-                        const real = r ? r.stock : null;
-                        const pedido = p.qty;
-                        const ok = real !== null && real >= pedido;
-                        if (!ok) allOk = false;
-                        if (real === null) sinDatos++;
-                        const cR = real === null ? '#6b7280' : ok ? '#22c55e' : '#ef4444';
-                        const bg = real === null ? 'rgba(107,114,128,0.1)' : ok ? 'rgba(34,197,94,0.13)' : 'rgba(239,68,68,0.18)';
-                        const bord = real === null ? 'rgba(107,114,128,0.25)' : ok ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.5)';
-                        html += `<td style="text-align:center;padding:1px;">
-                            <div style="background:${bg};border:1.5px solid ${bord};border-radius:7px;padding:4px 3px;width:44px;">
-                                <div style="font-size:0.55em;color:rgba(255,255,255,0.38);font-weight:700;line-height:1.3;">PED</div>
-                                <div style="font-size:1.05em;font-weight:900;color:rgba(255,255,255,0.78);line-height:1.1;">${pedido}</div>
-                                <div style="border-top:1px solid rgba(255,255,255,0.08);margin:2px -3px;"></div>
-                                <div style="font-size:0.55em;color:rgba(255,255,255,0.38);font-weight:700;line-height:1.3;">REAL</div>
-                                <div style="font-size:1.05em;font-weight:900;color:${cR};line-height:1.1;">${real !== null ? real : '?'}</div>
-                            </div>
-                        </td>`;
-                    });
-                    html += `</tr>`;
-                });
-
-                html += `</tbody></table></div></div>`;
+            // artículo → color → talle
+            const grupos = {};
+            cartOrdenado.forEach(p => {
+                const art = p.titulo || p.articulo || 'Sin nombre', col = p.color || 'Sin color', tal = p.talle || '-';
+                ((grupos[art] = grupos[art] || {})[col] = grupos[art][col] || {})[tal] = p;
             });
 
-            $('stockCheckContent').innerHTML = html || '<div style="opacity:0.5;text-align:center;">Sin items</div>';
-            $('stockCheckSummary').style.background = allOk ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
-            $('stockCheckSummary').style.border = allOk ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(239,68,68,0.3)';
-            $('stockCheckSummary').style.borderRadius = '10px';
-            $('stockCheckSummary').style.padding = '10px';
-            $('stockCheckSummary').innerHTML = allOk
-                ? `<span style="color:var(--success);font-size:1em;">✅ Todo OK — ${totalItems} items con stock suficiente</span>`
-                : `<div style="color:var(--danger);font-size:0.95em;font-weight:800;">⚠️ Hay items con stock insuficiente</div>
-                   ${sinDatos ? '<div style="color:var(--text-secondary);font-size:0.78em;margin-top:3px;">❓ ' + sinDatos + ' sin datos de ecom</div>' : ''}`;
+            let okN = 0, malN = 0, sinN = 0, faltanUds = 0;
+            const faltas = [];
+            let detalle = '';
+            Object.entries(grupos).forEach(([art, colorMap]) => {
+                let artMal = 0, artSin = 0, cuerpo = '';
+                Object.entries(colorMap).forEach(([color, talMap]) => {
+                    cuerpo += '<div class="sc-color">' + esc(color) + '</div><div class="sc-cells">';
+                    Object.keys(talMap).sort(talSort).forEach(tal => {
+                        const p = talMap[tal];
+                        const real = realDe(p.codigo);
+                        let cls, hay;
+                        if (real === null) { cls = 'nd'; hay = 'sin dato'; sinN++; artSin++; }
+                        else if (real >= p.qty) { cls = 'ok'; hay = 'hay ' + real; okN++; }
+                        else {
+                            cls = 'bad'; hay = 'hay ' + real; malN++; artMal++;
+                            faltanUds += p.qty - Math.max(real, 0);
+                            faltas.push({ art, color, tal, pide: p.qty, real });
+                        }
+                        cuerpo += '<div class="sc-cell ' + cls + '"><div class="t">T ' + esc(tal) + '</div><div class="q">' + p.qty + '</div><div class="h">' + hay + '</div></div>';
+                    });
+                    cuerpo += '</div>';
+                });
+                const badge = artMal ? '<span class="sc-badge bad">⚠ falta</span>' : artSin ? '<span class="sc-badge">? sin dato</span>' : '<span class="sc-badge ok">✓ OK</span>';
+                detalle += '<div class="sc-art"><div class="sc-art-h"><span>' + esc(art) + '</span>' + badge + '</div>' + cuerpo + '</div>';
+            });
+
+            const total = okN + malN + sinN;
+            if (!malN && !sinN) {
+                sum.className = 'sc-sum ok';
+                sum.innerHTML = '<div class="big">✅ Hay stock para todo</div><div class="small">' + total + ' talle' + (total === 1 ? '' : 's') + ' revisado' + (total === 1 ? '' : 's') + ' en Ecom</div>';
+            } else if (malN) {
+                sum.className = 'sc-sum bad';
+                sum.innerHTML = '<div class="big">⚠️ Faltan ' + faltanUds + ' prenda' + (faltanUds === 1 ? '' : 's') + '</div>' +
+                    '<div class="small">En ' + malN + ' talle' + (malN === 1 ? '' : 's') + ' de ' + total + (sinN ? ' · ' + sinN + ' sin dato de Ecom' : '') + '</div>';
+            } else {
+                sum.className = 'sc-sum';
+                sum.style.border = '1px solid var(--border)';
+                sum.innerHTML = '<div class="big">❓ ' + sinN + ' sin dato de Ecom</div><div class="small">El resto tiene stock</div>';
+            }
+
+            let html = '';
+            if (faltas.length) {
+                html += '<div class="sc-sec">Lo que falta</div>';
+                faltas.forEach(x => {
+                    html += '<div class="sc-falta"><div><b>' + esc(x.art) + '</b><small>' + esc(x.color) + ' · T ' + esc(x.tal) + '</small></div>' +
+                            '<span>pediste ' + x.pide + '<br>hay ' + x.real + '</span></div>';
+                });
+                html += '<div class="sc-sec" style="margin-top:12px">Detalle</div>';
+            }
+            html += detalle;
+            $('stockCheckContent').innerHTML = html || '<div class="sc-loading">Sin artículos</div>';
+            renderCart();   // el carrito también muestra el stock de Ecom actualizado
         }
 
         // ─── PIN ──────────────────────────────────────────────────────────────

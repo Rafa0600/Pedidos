@@ -843,7 +843,7 @@
         /* 📂 Pedidos guardados */
         .ped-input { background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 16px; outline: none; box-sizing: border-box; }
         .ped-input:focus { border-color: var(--primary); }
-        #pedidosModal .ped-modal { width: calc(100% - 16px); max-width: 760px; height: calc(100dvh - 24px); max-height: none; display: flex; flex-direction: column; padding: 16px 12px 12px; box-sizing: border-box; }
+        .modal .ped-modal { width: calc(100% - 16px); max-width: 760px; height: calc(100dvh - 24px); max-height: none; display: flex; flex-direction: column; padding: 16px 12px 12px; box-sizing: border-box; }
         .ped-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .ped-head .modal-title { margin: 0; }
         .ped-x { background: var(--bg-input); border: 1px solid var(--border); color: var(--text); border-radius: 10px; width: 38px; height: 38px; font-size: 1.05em; cursor: pointer; flex: none; }
@@ -864,6 +864,27 @@
         .ped-tag.noimp { background: transparent; border: 1px dashed rgba(148,163,184,0.45); padding: 2px 0; }
         .ped-tag.pres { background: rgba(245,158,11,0.16); color: #fbbf24; }
         .ped-tag.ped { background: rgba(59,130,246,0.14); color: #93c5fd; }
+        .ped-vers { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: rgba(168,85,247,0.16); color: #d8b4fe; font-weight: 800; cursor: pointer; }
+        /* 🕓 Versiones de un pedido (cada impresión) */
+        .ver-card { background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; flex: none; }
+        .ver-card.sinimp { border-color: rgba(245,158,11,0.55); }
+        .ver-head { display: grid; grid-template-columns: 46px 1fr auto; gap: 10px; align-items: center; padding: 10px; cursor: pointer; }
+        .ver-n { font-weight: 800; font-size: 0.85em; text-align: center; padding: 7px 0; border-radius: 8px; background: rgba(168,85,247,0.16); color: #d8b4fe; }
+        .ver-card.sinimp .ver-n { background: rgba(245,158,11,0.16); color: #fbbf24; }
+        .ver-t { font-weight: 700; font-size: 0.95em; line-height: 1.3; }
+        .ver-s { font-size: 0.75em; color: var(--text-secondary); margin-top: 2px; }
+        .ver-arrow { color: var(--text-secondary); transition: transform .2s; }
+        .ver-card.open .ver-arrow { transform: rotate(180deg); }
+        .ver-diff { padding: 0 10px 10px 66px; font-size: 0.8em; display: flex; flex-direction: column; gap: 3px; }
+        .ver-diff .add { color: #4ade80; } .ver-diff .del { color: #f87171; } .ver-diff .nom { color: #fbbf24; font-weight: 700; }
+        .ver-diff .igual { color: var(--text-secondary); }
+        .ver-body { display: none; border-top: 1px solid var(--border); padding: 8px 10px 10px; font-size: 0.82em; }
+        .ver-card.open .ver-body { display: block; }
+        .ver-art { font-weight: 800; margin-top: 6px; }
+        .ver-art:first-child { margin-top: 0; }
+        .ver-col { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; color: var(--text-secondary); }
+        .ver-col b { color: var(--text); font-weight: 700; margin-right: 2px; }
+        .ver-col span { border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; color: var(--text); }
         .ped-empty { padding: 16px; text-align: center; color: var(--text-secondary); font-size: 0.85em; }
         .clear-modal {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
@@ -1213,6 +1234,19 @@
                 <button data-f="pres" onclick="pedFiltro('pres')">Presupuestos</button>
             </div>
             <div id="pedList" class="ped-list"></div>
+        </div>
+    </div>
+
+    <!-- 🕓 VERSIONES DE UN PEDIDO -->
+    <div class="modal" id="versModal" onclick="if(event.target===this)closeVers()">
+        <div class="modal-content ped-modal">
+            <div class="ped-head">
+                <div class="modal-title" id="versTitle">Versiones</div>
+                <button class="ped-x" onclick="closeVers()" title="Cerrar">✕</button>
+            </div>
+            <div id="versSub" style="font-size:0.78em;color:var(--text-secondary);text-align:left;margin-top:4px;"></div>
+            <div id="versList" class="ped-list"></div>
+            <button class="modal-btn confirm" id="versOpenBtn" style="margin-top:10px;width:100%;flex:none;padding:13px;">Abrir este pedido</button>
         </div>
     </div>
 
@@ -6210,7 +6244,9 @@
             _notaPedido = ($('printNota').value || '').trim();
             saveCart();
         }
+        let _printDonde = '';
         async function printChoiceHere() {
+            _printDonde = 'aqui';
             _tomarNota();
             closePrintChoice();
             const kind = _printKind; _printKind = 'preparado';
@@ -6246,6 +6282,7 @@
 
         // target: 'deposito' (principal) u 'oficina'
         async function printChoiceLocal(target) {
+            _printDonde = target;
             _tomarNota();
             closePrintChoice();
             const kind = _printKind; _printKind = 'preparado';
@@ -6438,7 +6475,40 @@
         function _cartKey(p) { return String(p.codigo != null && p.codigo !== '' ? p.codigo : p.id); }
         function _resetSlotNum() {
             const sl = _activeSlot();
-            if (sl) { sl.num = null; sl.printedCart = null; sl.printedAt = 0; }
+            if (sl) { sl.num = null; sl.printedCart = null; sl.printedAt = 0; delete sl.numNombre; }
+        }
+        // ¿Es la misma clienta? (corregir un error de tipeo o agregar el apellido no cuenta como otra)
+        function _normNom(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
+        function _lev(a, b) {
+            const d = Array.from({ length: b.length + 1 }, (_, i) => i);
+            for (let i = 1; i <= a.length; i++) {
+                let prev = d[0]; d[0] = i;
+                for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; }
+            }
+            return d[b.length];
+        }
+        function _mismoNombre(a, b) {
+            a = _normNom(a); b = _normNom(b);
+            if (!a || !b || a === b) return true;
+            if (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a))) return true;
+            return _lev(a, b) <= (Math.min(a.length, b.length) < 6 ? 1 : 2);
+        }
+        // Si la pestaña tenía número y ahora tiene OTRO nombre: es un pedido nuevo (número nuevo, ticket completo)
+        async function _checkNombre() {
+            const sl = _activeSlot();
+            if (!sl || !sl.num) return;
+            if (sl.numNombre === undefined) {   // pestañas de antes: preguntar a la nube con qué nombre se guardó
+                try { sl.numNombre = (await _pedApi('/pedido?num=' + sl.num, undefined, 3000)).nombre || ''; }
+                catch (e) { return; }
+            }
+            const ahora = getSlotNameFromForm();
+            if (sl.numNombre && ahora && !_mismoNombre(sl.numNombre, ahora)) {
+                const viejo = sl.num;
+                _resetSlotNum();
+                _ticketCtx = null;
+                saveSlots(); renderSlotTabs();
+                toast('✨ Otro nombre → pedido nuevo (el #' + viejo + ' queda como estaba)', 'success');
+            }
         }
         // Lo mínimo para saber qué se imprimió (y poder imprimir "lo que cambió")
         function _printedSnapshot(cart) {
@@ -6478,15 +6548,21 @@
             saveCart();
             const slot = _activeSlot();
             if (!slot) return null;
+            await _checkNombre();
             const body = {
                 num: slot.num || 0, nombre: getSlotNameFromForm(), orderType: state.orderType,
                 cart: state.cart, formData: getFormData(), prices: Object.assign({}, articlePrices)
             };
-            if (markPrinted) body.printedCart = _printedSnapshot(state.cart);
+            if (markPrinted) {
+                body.printedCart = _printedSnapshot(state.cart);
+                body.printMode = (_ticketCtx && _ticketCtx.mode) || 'full';   // para las versiones
+                body.printDonde = _printDonde || '';
+            }
             try {
                 const res = await _pedApi('/pedido/save', body, 4000);
                 const nuevo = !slot.num;
                 slot.num = res.num;
+                slot.numNombre = body.nombre;
                 if (markPrinted) { slot.printedCart = body.printedCart; slot.printedAt = res.printedAt || Date.now(); }
                 saveSlots(); renderSlotTabs();
                 if (nuevo) toast('☁️ Pedido #' + res.num + ' guardado', 'success');
@@ -6499,9 +6575,10 @@
         }
 
         // 🎫 Ticket: si el pedido ya se imprimió y cambió, preguntar qué imprimir
-        function startTicketPrint() {
+        async function startTicketPrint() {
             _ticketCtx = null;
             _printKind = 'preparado';
+            await _checkNombre();
             const slot = _activeSlot();
             if (slot && slot.num && slot.printedCart && (state.orderType === 'pedido' || state.orderType === 'presupuesto')) {
                 const d = _cartDiff(slot.printedCart, state.cart);
@@ -6585,13 +6662,87 @@
                     const tipo = p.orderType === 'presupuesto' ? '<span class="ped-tag pres">Presupuesto</span>'
                                : '<span class="ped-tag ped">Pedido</span>';
                     const imp = p.printedAt ? '<span class="ped-tag imp">✓ Impreso</span>' : '<span class="ped-tag noimp">Sin imprimir</span>';
-                    return '<div class="ped-row" onclick="openPedidoCloud(' + p.num + ')">' +
+                    const nv = p.versiones || (p.printedAt ? 1 : 0);
+                    const vers = nv > 1 ? '<span class="ped-vers" onclick="event.stopPropagation();openVers(' + p.num + ')">🕓 ' + nv + ' versiones</span>' : '';
+                    return '<div class="ped-row" onclick="openPedidoCloud(' + p.num + ')" oncontextmenu="event.preventDefault();openVers(' + p.num + ')">' +
                         '<span class="ped-num">#' + p.num + '</span>' +
                         '<div class="ped-mid"><div class="ped-name">' + _escHtml(p.nombre || 'Sin nombre') + '</div>' +
-                        '<div class="ped-meta">' + _prendas(p.units) + ' · ' + when + (p.presupuestoAntes && p.orderType !== 'presupuesto' ? ' · era presupuesto' : '') + '</div></div>' +
+                        '<div class="ped-meta">' + _prendas(p.units) + ' · ' + when + (p.presupuestoAntes && p.orderType !== 'presupuesto' ? ' · era presupuesto' : '') + vers + '</div></div>' +
                         '<div class="ped-side">' + imp + tipo + '</div></div>';
                 }).join('');
             }
+        }
+        // 🕓 Versiones: cada vez que se imprimió, qué tenía y qué cambió respecto de la anterior
+        function closeVers() { $('versModal').classList.remove('show'); }
+        function _fechaCorta(ts) {
+            const d = new Date(ts), hoy = new Date(), ayer = new Date(Date.now() - 864e5);
+            const hora = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            return d.toDateString() === hoy.toDateString() ? 'Hoy ' + hora
+                 : d.toDateString() === ayer.toDateString() ? 'Ayer ' + hora
+                 : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) + ' ' + hora;
+        }
+        function _verLinea(p) { return p.qty + ' × ' + _escHtml(p.titulo || p.articulo || '') + ' · ' + _escHtml(p.color || '-') + ' · T ' + _escHtml(p.talle || '-'); }
+        function _verContenido(cart) {
+            const arts = {};
+            (cart || []).forEach(p => {
+                const a = p.titulo || p.articulo || 'Artículo', c = p.color || '-';
+                ((arts[a] = arts[a] || {})[c] = arts[a][c] || []).push(p);
+            });
+            let h = '';
+            Object.keys(arts).sort().forEach(a => {
+                h += '<div class="ver-art">' + _escHtml(a) + '</div>';
+                Object.keys(arts[a]).sort().forEach(c => {
+                    const ts = arts[a][c].slice().sort((x, y) => _sizeRank(x.talle) - _sizeRank(y.talle));
+                    h += '<div class="ver-col"><b>' + _escHtml(c) + '</b>' + ts.map(p => '<span>' + _escHtml(p.talle || '-') + ' ×' + p.qty + '</span>').join('') + '</div>';
+                });
+            });
+            return h || '<div class="ver-s">Vacío</div>';
+        }
+        function _verCambios(prev, v) {
+            if (!prev) return '<span class="igual">Primera impresión</span>';
+            let h = '';
+            if (_normNom(prev.nombre) !== _normNom(v.nombre))
+                h += '<span class="nom">✎ Nombre: ' + _escHtml(prev.nombre || '—') + ' → ' + _escHtml(v.nombre || '—') + '</span>';
+            const d = _cartDiff(prev.cart, v.cart);
+            d.added.forEach(p => { h += '<span class="add">➕ ' + _verLinea(p) + '</span>'; });
+            d.removed.forEach(p => { h += '<span class="del">➖ ' + _verLinea(p) + '</span>'; });
+            return h || '<span class="igual">Sin cambios en las prendas (se reimprimió igual)</span>';
+        }
+        async function openVers(num) {
+            let p;
+            try { p = await _pedApi('/pedido?num=' + num); }
+            catch (e) { toast('⚠️ ' + e.message, 'error'); return; }
+            const vs = (p.versiones && p.versiones.length) ? p.versiones
+                     : (p.printedCart && p.printedAt ? [{ at: p.printedAt, nombre: p.nombre, modo: 'full', cart: p.printedCart }] : []);
+            const MODO = { full: 'Completo', fullmod: 'Completo (modificado)', diff: 'Solo los cambios' };
+            const DONDE = { deposito: '📦 Depósito', oficina: '🏢 Oficina', aqui: '📱 En el celular' };
+            const u = c => (c || []).reduce((a, x) => a + (Number(x.qty) || 0), 0);
+            $('versTitle').textContent = '🕓 Pedido #' + num;
+            $('versSub').textContent = (p.nombre || 'Sin nombre') + ' · ' + (vs.length ? vs.length + (vs.length === 1 ? ' impresión' : ' impresiones') : 'todavía no se imprimió') + ' · tocá una para ver qué tenía';
+            let cards = vs.map((v, i) => '<div class="ver-card">' +
+                '<div class="ver-head" onclick="this.parentElement.classList.toggle(\'open\')">' +
+                    '<span class="ver-n">V' + (i + 1) + '</span>' +
+                    '<div><div class="ver-t">' + _fechaCorta(v.at) + ' · ' + _escHtml(v.nombre || 'Sin nombre') + '</div>' +
+                    '<div class="ver-s">' + _prendas(u(v.cart)) + ' · ' + (MODO[v.modo] || 'Completo') + (DONDE[v.donde] ? ' · ' + DONDE[v.donde] : '') + '</div></div>' +
+                    '<span class="ver-arrow">▾</span></div>' +
+                '<div class="ver-diff">' + _verCambios(vs[i - 1], v) + '</div>' +
+                '<div class="ver-body">' + _verContenido(v.cart) + '</div></div>');
+            // Lo guardado ahora, si cambió desde la última impresión
+            const ult = vs[vs.length - 1];
+            const actual = { at: p.updated, nombre: p.nombre, cart: p.cart };
+            const dif = ult ? _cartDiff(ult.cart, p.cart) : null;
+            if (!ult || dif.added.length || dif.removed.length || _normNom(ult.nombre) !== _normNom(p.nombre))
+                cards.push('<div class="ver-card sinimp">' +
+                    '<div class="ver-head" onclick="this.parentElement.classList.toggle(\'open\')">' +
+                        '<span class="ver-n">Hoy</span>' +
+                        '<div><div class="ver-t">Así está ahora · ' + _escHtml(p.nombre || 'Sin nombre') + '</div>' +
+                        '<div class="ver-s">' + _prendas(u(p.cart)) + ' · sin imprimir · guardado ' + _fechaCorta(p.updated) + '</div></div>' +
+                        '<span class="ver-arrow">▾</span></div>' +
+                    '<div class="ver-diff">' + (ult ? _verCambios(ult, actual) : '<span class="igual">Nunca se imprimió</span>') + '</div>' +
+                    '<div class="ver-body">' + _verContenido(p.cart) + '</div></div>');
+            $('versList').innerHTML = cards.reverse().join('');   // lo más nuevo arriba
+            $('versOpenBtn').onclick = () => { closeVers(); openPedidoCloud(num); };
+            $('versModal').classList.add('show');
         }
         function openPedidoByNum() {
             const v = ($('pedSearchInput').value || '').trim();
@@ -6630,6 +6781,7 @@
                 _slots.push(slot);
             }
             slot.num = p.num;
+            slot.numNombre = p.nombre || '';
             slot.printedCart = p.printedCart || null;
             slot.printedAt = p.printedAt || 0;
             _applySlot(slot.id);

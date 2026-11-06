@@ -488,7 +488,9 @@
             background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
         }
         .delivery-option:hover { border-color: var(--primary); }
-        .delivery-option.selected { border-color: var(--primary); background: rgba(79,172,254,0.15); }
+        .delivery-option.selected { border-color: var(--primary); background: var(--primary); color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(79,172,254,0.35); }
+        .delivery-option.selected[data-payment="pendiente"] { background: #f59e0b; border-color: #f59e0b; color: #1a2744; box-shadow: 0 2px 8px rgba(245,158,11,0.35); }
+        .delivery-option:not(.selected) { opacity: 0.75; }
         .delivery-option input[type="radio"] { display: none; }
         .delivery-radio {
             width: 18px; height: 18px; border: 2px solid var(--border);
@@ -965,6 +967,7 @@
         .art-photo-auto.active { border-color:var(--primary); }
         .home-config-hint { margin-top: 12px; padding: 8px 12px; background: rgba(79,172,254,0.07); border: 1px dashed var(--border); border-radius: 8px; font-size: 0.68em; color: var(--text-secondary); text-align: center; }
         /* ===== SLOT TABS ===== */
+        .nav-btn.idle { opacity: 0.32; filter: grayscale(1); }
         .slot-tabs {
             display: flex; gap: 5px; overflow-x: auto; padding: 6px 0 6px;
             -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-bottom: 4px;
@@ -1267,7 +1270,6 @@
             <div class="action-more-panel" id="moreActionsPanel" style="margin-top:6px;">
                 <button class="action-more-btn" style="background:var(--primary);color:white;" onclick="downloadPreparacion()">📦 Preparar</button>
                 <button class="action-more-btn" style="background:#7c3aed;color:white;" onclick="abrirHistorial()">📋 Historial</button>
-                <button class="action-more-btn" id="devolucionBtn" style="background:#dc2626;color:white;" onclick="toggleDevolucionMode()">📥 Devolución</button>
             </div>
 
             <div class="unified-name-wrap">
@@ -1280,33 +1282,17 @@
                 <div class="order-type-btn active" data-type="pedido" onclick="setOrderType('pedido')">
                     <span class="icon">📋</span>Pedido
                 </div>
-                <div class="order-type-btn" data-type="reposicion" onclick="setOrderType('reposicion')">
-                    <span class="icon">🔄</span>Reposición
-                </div>
                 <div class="order-type-btn" data-type="presupuesto" onclick="setOrderType('presupuesto')">
                     <span class="icon">💰</span>Presupuesto
+                </div>
+                <div class="order-type-btn" data-type="devolucion" onclick="setOrderType('devolucion')">
+                    <span class="icon">↩️</span>Devolución
                 </div>
             </div>
             
             <div class="order-form" id="pedidoForm">
                 <div id="orderDetailsBody">
                     <div style="display:flex;gap:6px;margin-bottom:6px;">
-                        <!-- Canal de venta -->
-                        <div style="flex:1;min-width:0;">
-                            <div class="form-label" style="font-size:0.68em;margin-bottom:4px;text-align:center;">Canal</div>
-                            <div class="delivery-options" style="gap:5px;">
-                                <label class="delivery-option" data-canal="tn" style="justify-content:center;padding:7px 4px;">
-                                    <input type="radio" name="canal" value="tn">
-                                    <span class="delivery-radio" style="display:none;"></span>
-                                    <span class="delivery-label">🛍️ TN</span>
-                                </label>
-                                <label class="delivery-option selected" data-canal="local" style="justify-content:center;padding:7px 4px;">
-                                    <input type="radio" name="canal" value="local" checked>
-                                    <span class="delivery-radio" style="display:none;"></span>
-                                    <span class="delivery-label">🏪 Local</span>
-                                </label>
-                            </div>
-                        </div>
                         <!-- Estado del pago -->
                         <div style="flex:1;min-width:0;">
                             <div class="form-label" style="font-size:0.68em;margin-bottom:4px;text-align:center;">Estado</div>
@@ -1327,17 +1313,16 @@
                         <div style="flex:1;min-width:0;">
                             <div class="form-label" style="font-size:0.68em;margin-bottom:4px;text-align:center;">Entrega</div>
                             <div class="delivery-options" style="gap:5px;">
-                                <label class="delivery-option selected" data-delivery="local" style="justify-content:center;padding:7px 4px;">
-                                    <input type="radio" name="delivery" value="local" checked>
+                                <label class="delivery-option selected" data-delivery="deposito" style="justify-content:center;padding:7px 4px;">
+                                    <input type="radio" name="delivery" value="deposito" checked>
                                     <span class="delivery-radio" style="display:none;"></span>
-                                    <span class="delivery-label">🏪 Local</span>
+                                    <span class="delivery-label">📦 Retira</span>
                                 </label>
-                                <label class="delivery-option" data-delivery="deposito" style="justify-content:center;padding:7px 4px;">
-                                    <input type="radio" name="delivery" value="deposito">
+                                <label class="delivery-option" data-delivery="envio" style="justify-content:center;padding:7px 4px;">
+                                    <input type="radio" name="delivery" value="envio" id="deliveryEnvioHidden">
                                     <span class="delivery-radio" style="display:none;"></span>
-                                    <span class="delivery-label">📦 Depósito</span>
+                                    <span class="delivery-label">🚚 Envío</span>
                                 </label>
-                                <input type="radio" name="delivery" value="envio" id="deliveryEnvioHidden" hidden>
                             </div>
                         </div>
                     </div>
@@ -1348,15 +1333,15 @@
                     </div>
                     <div class="payment-details" id="paymentDetails">
                         <div style="margin-bottom:6px;">
-                            <input type="text" class="form-input" id="paymentAmount" placeholder="Monto pendiente ($0)">
+                            <input type="text" class="form-input" id="paymentAmount" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" placeholder="¿Cuánto falta pagar? ($)">
                         </div>
                     </div>
                 </div>
             </div>
             
             <div class="order-form" id="reposicionForm" style="display:none;">
-                <div class="order-form-title">🔄 Reposición Galería</div>
-                <p style="font-size:0.82em;color:var(--text-secondary);">Sin datos adicionales requeridos</p>
+                <div class="order-form-title">↩️ Devolución</div>
+                <p style="font-size:0.82em;color:var(--text-secondary);">Cargá lo que vuelve de las bolsas. Con 📱 WhatsApp sale la lista con los códigos en <b>+</b>. No toca el stock.</p>
             </div>
             
             <div class="budget-section" id="budgetSection">
@@ -1400,7 +1385,7 @@
                     <button class="action-compact-btn" style="background:#dc2626;color:white;" onclick="showPdfOptions()">📄<br>PDF</button>
                     <button class="action-compact-btn" style="background:#8b5cf6;color:white;" onclick="downloadTicketDirectPrint()">🎫<br>Ticket</button>
                     <button class="action-compact-btn" style="background:#0ea5e9;color:white;" onclick="verificarStock()">🔍<br>Verificar</button>
-                    <button class="action-compact-btn" style="background:#16a34a;color:white;" onclick="pedirPinVenta()">📤<br>Registrar</button>
+                    <button class="action-compact-btn" id="btnRegistrar" style="background:#16a34a;color:white;" onclick="pedirPinVenta()">📤<br>Registrar</button>
                     <button class="action-compact-btn" style="background:#ef4444;color:white;" onclick="clearCart()">🗑️<br>Vaciar</button>
                 </div>
             </div>
@@ -1487,8 +1472,7 @@
                 <div class="wac-section">
                     <span class="wac-label">📦 Entrega</span>
                     <div class="wac-pills">
-                        <button class="wac-pill" data-wacdelivery="local" onclick="selectWacOption('delivery','local')">🏪 Local</button>
-                        <button class="wac-pill" data-wacdelivery="deposito" onclick="selectWacOption('delivery','deposito')">📦 Depósito</button>
+                        <button class="wac-pill" data-wacdelivery="deposito" onclick="selectWacOption('delivery','deposito')">📦 Retira</button>
                         <button class="wac-pill" data-wacdelivery="envio" onclick="selectWacOption('delivery','envio')">🚚 Envío</button>
                     </div>
                     <textarea class="form-textarea" id="wacAddress" placeholder="Dirección, teléfono..." style="display:none;margin-top:8px;max-height:70px;min-height:60px;"></textarea>
@@ -1499,7 +1483,7 @@
                         <button class="wac-pill" data-wacpayment="abonado" onclick="selectWacOption('payment','abonado')">✅ Abonado</button>
                         <button class="wac-pill" data-wacpayment="pendiente" onclick="selectWacOption('payment','pendiente')">⏳ Pendiente</button>
                     </div>
-                    <input type="text" class="form-input" id="wacPaymentAmount" placeholder="Monto pendiente ($)..." style="display:none;margin-top:8px;">
+                    <input type="text" class="form-input" id="wacPaymentAmount" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" placeholder="¿Cuánto falta pagar? ($)" style="display:none;margin-top:8px;">
                 </div>
             </div>
 
@@ -1512,8 +1496,7 @@
                 <div class="wac-section">
                     <span class="wac-label">📦 Entrega</span>
                     <div class="wac-pills">
-                        <button class="wac-pill" data-wacpdelivery="local" onclick="selectWacPresOption('delivery','local')">🏪 Galería</button>
-                        <button class="wac-pill" data-wacpdelivery="deposito" onclick="selectWacPresOption('delivery','deposito')">📦 Depósito</button>
+                        <button class="wac-pill" data-wacpdelivery="deposito" onclick="selectWacPresOption('delivery','deposito')">📦 Retira</button>
                         <button class="wac-pill" data-wacpdelivery="envio" onclick="selectWacPresOption('delivery','envio')">🚚 Envío</button>
                     </div>
                     <textarea class="form-textarea" id="wacPresAddress" placeholder="Dirección, teléfono..." style="display:none;margin-top:8px;max-height:70px;min-height:60px;"></textarea>
@@ -1524,7 +1507,7 @@
                         <button class="wac-pill" data-wacppayment="abonado" onclick="selectWacPresOption('payment','abonado')">✅ Abonado</button>
                         <button class="wac-pill" data-wacppayment="pendiente" onclick="selectWacPresOption('payment','pendiente')">⏳ Pendiente</button>
                     </div>
-                    <input type="text" class="form-input" id="wacPresPaymentAmount" placeholder="Monto pendiente ($)..." style="display:none;margin-top:8px;">
+                    <input type="text" class="form-input" id="wacPresPaymentAmount" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" placeholder="¿Cuánto falta pagar? ($)" style="display:none;margin-top:8px;">
                 </div>
             </div>
 
@@ -2264,8 +2247,7 @@
             const name = $('clientName')?.value || '';
             return {
                 clientName:        name,
-                canal:             document.querySelector('input[name="canal"]:checked')?.value || 'local',
-                delivery:          document.querySelector('input[name="delivery"]:checked')?.value || 'local',
+                delivery:          document.querySelector('input[name="delivery"]:checked')?.value || 'deposito',
                 shippingAddress:   $('shippingAddress')?.value || '',
                 payment:           document.querySelector('input[name="payment"]:checked')?.value || 'abonado',
                 paymentAmount:     $('paymentAmount')?.value || '',
@@ -2284,7 +2266,8 @@
             if ($('budgetShippingCost')) $('budgetShippingCost').value = fd?.budgetShippingCost || '';
 
             // Delivery
-            const delVal = fd?.delivery || 'local';
+            let delVal = fd?.delivery || 'deposito';
+            if (delVal === 'local') delVal = 'deposito';   // ya no hay local
             document.querySelectorAll('.delivery-option[data-delivery]').forEach(o => {
                 const match = o.dataset.delivery === delVal;
                 o.classList.toggle('selected', match);
@@ -2301,14 +2284,6 @@
                 if (match) o.querySelector('input').checked = true;
             });
             $('paymentDetails')?.classList.toggle('show', payVal === 'pendiente');
-
-            // Canal
-            const canalVal = fd?.canal || 'local';
-            document.querySelectorAll('.delivery-option[data-canal]').forEach(o => {
-                const match = o.dataset.canal === canalVal;
-                o.classList.toggle('selected', match);
-                if (match) o.querySelector('input').checked = true;
-            });
 
             // Envío presupuesto
             const benvVal = fd?.budgetEnvio || 'no';
@@ -2355,12 +2330,14 @@
             toast(_devolucionMode ? 'Modo: Devolución Local' : 'Modo: Reposición Local', 'info');
         }
         function setOrderType(type) {
+            if (type === 'devolucion') type = 'devolucion';   // pestañas guardadas de antes
             state.orderType = type;
             document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('[data-type="' + type + '"]').classList.add('active');
             // Presupuesto también usa Estado (abonó/pendiente) y Entrega, para que salgan en el ticket
             $('pedidoForm').style.display = (type === 'pedido' || type === 'presupuesto') ? 'block' : 'none';
-            $('reposicionForm').style.display = type === 'reposicion' ? 'block' : 'none';
+            $('reposicionForm').style.display = type === 'devolucion' ? 'block' : 'none';
+            if ($('btnRegistrar')) $('btnRegistrar').style.display = type === 'devolucion' ? 'none' : '';
             $('budgetSection').classList.toggle('show', type === 'presupuesto');
             if (type === 'presupuesto') renderBudget();
         }
@@ -4697,7 +4674,7 @@
         
         // ===== EXPORT FUNCTIONS =====
         function validateForm() {
-            if (state.orderType === 'reposicion') return true;
+            if (state.orderType === 'devolucion') return true;
             if (state.orderType === 'presupuesto') {
                 const name = $('clientName').value.trim();
                 if (!name) {
@@ -4732,19 +4709,25 @@
         
         function getOrderInfo() {
             const clientName = $('clientName').value.trim() || 'Sin nombre';
-            const canal = document.querySelector('input[name="canal"]:checked')?.value || 'local';
-            const canalPrefix = canal === 'tn' ? 'TN' : 'Local';
-            const clientDisplayName = canalPrefix + ' - ' + clientName;
-            const deliveryType = document.querySelector('input[name="delivery"]:checked')?.value || 'local';
+            const canal = 'tn', canalPrefix = '';
+            const clientDisplayName = clientName;
+            let deliveryType = document.querySelector('input[name="delivery"]:checked')?.value || 'deposito';
+            if (deliveryType === 'local') deliveryType = 'deposito';
             const shippingAddress = $('shippingAddress').value.trim();
             const paymentStatus = document.querySelector('input[name="payment"]:checked')?.value || 'abonado';
             const paymentAmount = $('paymentAmount').value.trim();
-            let deliveryText = deliveryType === 'local' ? 'Local (Galeria)' : deliveryType === 'deposito' ? 'Deposito Mikra' : 'Envio';
+            let deliveryText = deliveryType === 'envio' ? 'Envio' : 'Retira en deposito';
             let paymentText = paymentStatus === 'abonado' ? 'Ya abono' : 'Falta abonar: ' + (paymentAmount || 'Sin especificar');
             return { clientName, clientDisplayName, canal, canalPrefix, deliveryType, deliveryText, shippingAddress, paymentStatus, paymentText, paymentAmount };
         }
 
         // Total $ del presupuesto (artículos con precio + envío)
+        // Montos: solo números, con punto de miles mientras se escribe (10000 → 10.000)
+        function fmtMonto(el) {
+            const dig = (el.value || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+            el.value = dig ? Number(dig).toLocaleString('es-AR') : '';
+        }
+
         function getPresupuestoTotal() {
             let total = 0;
             state.cart.forEach(p => { total += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
@@ -4761,13 +4744,13 @@
                 const t = getPresupuestoTotal();
                 if (t > 0) amount = t.toLocaleString('es-AR');
             }
-            const deliveryText = delivery === 'local' ? 'Retira Galería' : delivery === 'deposito' ? 'Retira Depósito' : delivery === 'envio' ? 'Envío' : '';
+            const deliveryText = delivery === 'envio' ? 'Envío' : (delivery === 'deposito' || delivery === 'local') ? 'Retira en depósito' : '';
             const address = delivery === 'envio' ? ($('shippingAddress').value || '').trim() : '';
             return { delivery, deliveryText, address, payment, amount };
         }
         
         // ===== WA CONFIRM SHEET =====
-        let _wacDelivery = 'local', _wacPayment = 'abonado', _wacTicket = false, _devolucionMode = false;
+        let _wacDelivery = 'deposito', _wacPayment = 'abonado', _wacTicket = false, _devolucionMode = false;
 
         function openWaConfirm() {
             if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
@@ -4780,14 +4763,14 @@
                 $('wacName').value = info.clientName !== 'Sin nombre' ? info.clientName : '';
                 $('wacAddress').value = info.shippingAddress || '';
                 $('wacPaymentAmount').value = info.paymentAmount || '';
-                selectWacOption('delivery', info.deliveryType || 'local');
+                selectWacOption('delivery', info.deliveryType === 'envio' ? 'envio' : 'deposito');
                 selectWacOption('payment',  info.paymentStatus || 'abonado');
             } else if (isPres) {
                 const st = getTicketStatus();
                 $('wacNamePres').value = $('clientName').value.trim();
                 $('wacPresAddress').value = $('shippingAddress').value.trim();
                 $('wacPresPaymentAmount').value = $('paymentAmount').value.trim();
-                selectWacPresOption('delivery', st.delivery || 'local');
+                selectWacPresOption('delivery', st.delivery === 'envio' ? 'envio' : 'deposito');
                 selectWacPresOption('payment', st.payment || 'abonado');
             }
             // Mostrar botón ticket solo para pedido y presupuesto
@@ -4829,7 +4812,7 @@
             $('paymentAmount').value   = ($(isPres ? 'wacPresPaymentAmount' : 'wacPaymentAmount')?.value || '').trim();
         }
 
-        let _wacPresDelivery = 'local', _wacPresPayment = 'abonado';
+        let _wacPresDelivery = 'deposito', _wacPresPayment = 'abonado';
         function selectWacPresOption(type, val) {
             if (type === 'delivery') {
                 _wacPresDelivery = val;
@@ -4881,9 +4864,9 @@
             // Construir texto WA (carrito ordenado: artículo → color → talle)
             const cart = getSortedCart();
             let text = '';
-            if (state.orderType === 'reposicion') {
-                const repoTitle = _devolucionMode ? 'Local - Devolución' : 'Local - Reposición';
-                const repoSign  = _devolucionMode ? '+' : '-';
+            if (state.orderType === 'devolucion') {
+                const repoTitle = 'Devolución';
+                const repoSign  = '+';
                 text = repoTitle + '\n─────────────────\n\n';
                 cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
                 text += '\n─────────────────\nTOTAL: ' + cart.reduce((a,p)=>a+p.qty,0) + ' uds\n';
@@ -4902,11 +4885,9 @@
                 text += shipping > 0 ? '\nEnvio: $'+shipping.toLocaleString()+'\nTOTAL: $'+(total+shipping).toLocaleString()+'\n' : '\nTOTAL: $'+total.toLocaleString()+'\n';
                 text += '\nCODIGOS:\n'; cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
             } else {
-                const canal      = document.querySelector('input[name="canal"]:checked')?.value || 'local';
-                const canalLabel = canal === 'tn' ? 'TN' : 'Local';
-                const delivLabel = _wacDelivery==='local' ? 'Local (Galeria)' : _wacDelivery==='deposito' ? 'Deposito' : 'Envio';
+                const delivLabel = _wacDelivery === 'envio' ? 'Envío' : 'Retira en depósito';
                 const payLabel   = _wacPayment==='abonado' ? 'Ya abono' : 'Falta abonar' + (payAmt ? ': $'+payAmt : '');
-                text = 'PEDIDO MIKRA' + numTxt + '\n─────────────────\n' + canalLabel + ' - ' + name + '\n' + delivLabel + '\n';
+                text = 'PEDIDO MIKRA' + numTxt + '\n─────────────────\n' + name + '\n' + delivLabel + '\n';
                 if (_wacDelivery === 'envio' && address) text += address + '\n';
                 text += payLabel + '\n─────────────────\n\n';
                 cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo||p.articulo) + ', ' + (p.color||'-') + ', T:' + (p.talle||'-') + '\n'; });
@@ -4923,9 +4904,9 @@
             if (!validateForm()) return;
             const cart = getSortedCart();
             let text = '';
-            if (state.orderType === 'reposicion') {
-                const repoTitle = _devolucionMode ? 'Local - Devolución' : 'Local - Reposición';
-                const repoSign  = _devolucionMode ? '+' : '-';
+            if (state.orderType === 'devolucion') {
+                const repoTitle = 'Devolución';
+                const repoSign  = '+';
                 text = repoTitle + '\n─────────────────\n\n';
                 cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo || p.articulo) + ', ' + (p.color || '-') + ', T:' + (p.talle || '-') + '\n'; });
                 const total = cart.reduce((a, p) => a + p.qty, 0);
@@ -5022,7 +5003,7 @@
             if (!state.cart.length || !validateForm()) return;
             const date = new Date().toLocaleDateString('es-AR');
             const total = state.cart.reduce((a, p) => a + p.qty, 0);
-            let title = state.orderType === 'reposicion' ? 'Reposición Galería' : state.orderType === 'presupuesto' ? 'Presupuesto Mikra' : 'Pedido Mikra';
+            let title = state.orderType === 'devolucion' ? 'Devolución' : state.orderType === 'presupuesto' ? 'Presupuesto Mikra' : 'Pedido Mikra';
             
             // Orden: artículo → color → talle (S, M, L, XL, 2XL... y numéricos por valor)
             const sortedCart = getSortedCart();
@@ -5094,7 +5075,7 @@
             if (!state.cart.length) return;
             const name = $('clientName').value.trim();
             // Si no hay nombre, mostrar un cartel para escribirlo (salvo reposición)
-            if (!name && state.orderType !== 'reposicion') {
+            if (!name && state.orderType !== 'devolucion') {
                 const inp = $('ticketNameInput');
                 if (inp) inp.value = '';
                 $('ticketNameModal').classList.add('show');
@@ -5245,11 +5226,11 @@
             var delivVal  = conDatos ? st.delivery : '';
             var addrVal   = conDatos ? st.address : '';
             // MiniPDF usa Courier estándar: sin acentos
-            var delivTxt  = delivVal === 'local' ? 'Retira Galeria' : delivVal === 'deposito' ? 'Retira Deposito' : delivVal === 'envio' ? 'Envio' : '';
+            var delivTxt  = delivVal === 'envio' ? 'Envio' : delivVal ? 'Retira en deposito' : '';
             var payTxt    = !conDatos ? '' : st.payment === 'pendiente' ? 'FALTA ABONAR' + (st.amount ? ' $' + st.amount : '') : 'YA ABONO';
 
             function calcHeight() {
-                var y = 6 + 6 + 5 + 4; // header
+                var y = 6 + 6 + 5; // header
                 if (conDatos && $('clientName').value.trim()) y += 6;
                 if (delivTxt) y += 5;
                 if (delivVal === 'envio' && addrVal) y += 5;
@@ -5277,17 +5258,14 @@
 
             // HEADER
             pdf.setColor(0, 0, 0);
-            pdf.setFontSize(18);
-            pdf.text('MIKRA', pw / 2, y, 'center');
-            y += 6;
-            pdf.setFontSize(13);
             var _pslot = _activeSlot();
             var _pnum = conDatos && _pslot && _pslot.num ? ' #' + _pslot.num : '';
-            pdf.text((state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PREPARADOS') + _pnum, pw / 2, y, 'center');
-            y += 5;
+            pdf.setFontSize(15);
+            pdf.text((state.orderType === 'presupuesto' ? 'PRESUPUESTO' : state.orderType === 'devolucion' ? 'DEVOLUCION' : 'PEDIDO') + _pnum, pw / 2, y, 'center');
+            y += 6;
             pdf.setFontSize(10);
             pdf.text(date + '  ' + time, pw / 2, y, 'center');
-            y += 4;
+            y += 5;
 
             if (conDatos) {
                 var cn = $('clientName').value.trim();
@@ -5486,7 +5464,7 @@
             const date = new Date().toLocaleDateString('es-AR');
             const time = new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
             const total = state.cart.reduce((a, p) => a + p.qty, 0);
-            let title = state.orderType === 'reposicion' ? 'REPOSICIÓN' : state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PEDIDO';
+            let title = state.orderType === 'devolucion' ? 'DEVOLUCIÓN' : state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PEDIDO';
             let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket</title>' +
                 '<style>' +
                 '@page{size:70mm auto;margin:0}' +
@@ -5509,7 +5487,7 @@
             if (state.orderType === 'pedido') {
                 const order = getOrderInfo();
                 html += '<div class="row"><span>Cliente:</span><span>' + order.clientDisplayName + '</span></div>';
-                html += '<div class="row"><span>Entrega:</span><span>' + (order.deliveryType === 'local' ? 'Local' : order.deliveryType === 'deposito' ? 'Depósito' : 'Envío') + '</span></div>';
+                html += '<div class="row"><span>Entrega:</span><span>' + (order.deliveryType === 'envio' ? 'Envío' : 'Retira en depósito') + '</span></div>';
                 html += '<div class="row"><span>Pago:</span><span>' + (order.paymentStatus === 'abonado' ? 'Abonado' : 'Pendiente') + '</span></div>';
                 if (order.paymentStatus === 'pendiente' && order.paymentAmount) html += '<div class="row"><span>Monto:</span><span>' + order.paymentAmount + '</span></div>';
             }
@@ -5596,7 +5574,10 @@
                 '.size-cell.tot{max-width:30px;border:none;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}' +
                 '.sep{border-top:1px dashed #999;margin:3px 0}' +
                 '.grand{font-size:18px;font-weight:900;display:flex;justify-content:space-between;margin-top:8px;padding-top:4px}' +
-                '.pednum{font-size:26px;font-weight:900;letter-spacing:1px;margin-top:3px}' +
+                '.topline{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #000;padding:2px 0 4px;margin-bottom:2px}' +
+                '.topline .tipo{font-size:17px;font-weight:900;letter-spacing:1px}' +
+                '.topline .pednum{font-size:26px}' +
+                '.topline .fecha{font-size:12px;font-weight:900;text-align:right;line-height:1.15}' +
                 '.banner{text-align:center;background:#000;color:#fff;font-size:18px;font-weight:900;margin:6px -4mm 2px;padding:5px 0}' +
                 '.sec{text-align:center;border:3px solid #000;font-size:19px;font-weight:900;margin:8px 0 4px;padding:3px 0}' +
                 '.sec.dash{border-style:dashed}' +
@@ -5604,10 +5585,11 @@
                 '.size-cell .stk.chgtxt{font-size:12px;font-weight:900}' +
                 '</style></head><body>';
             
-            html += '<div class="center"><div class="title">MIKRA</div></div>';
-            html += '<div class="center subtitle">' + (state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PREPARADOS') + '</div>';
-            html += '<div style="text-align:center;font-size:12px;font-weight:900">' + date + ' ' + time + '</div>';
-            if (pedNum) html += '<div class="center pednum">' + (state.orderType === 'presupuesto' ? 'PRESUP.' : 'PEDIDO') + ' #' + pedNum + '</div>';
+            // Arriba: tipo + número a la izquierda, fecha y hora chiquitas a la derecha
+            const tipoTxt = state.orderType === 'presupuesto' ? 'PRESUPUESTO' : state.orderType === 'devolucion' ? 'DEVOLUCIÓN' : 'PEDIDO';
+            const fechaCorta = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+            html += '<div class="topline"><span class="tipo">' + tipoTxt + (pedNum ? ' <span class="pednum">#' + pedNum + '</span>' : '') + '</span>' +
+                    '<span class="fecha">' + fechaCorta + '<br>' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + '</span></div>';
 
             if (state.orderType === 'pedido' || state.orderType === 'presupuesto') {
                 const cn = $('clientName').value.trim();
@@ -5815,8 +5797,8 @@
             const html = downloadTicketPreparados('html');
             if (!html) return;
             const _sn = _activeSlot();
-            const title = ((_sn && _sn.num && state.orderType !== 'reposicion') ? '#' + _sn.num + ' ' : '') +
-                          ($('clientName').value.trim() || (state.orderType === 'reposicion' ? 'Reposición' : 'Ticket'));
+            const title = ((_sn && _sn.num && state.orderType !== 'devolucion') ? '#' + _sn.num + ' ' : '') +
+                          ($('clientName').value.trim() || (state.orderType === 'devolucion' ? 'Devolución' : 'Ticket'));
             toast(PRINT_TARGETS[target].icon + ' Mandando ' + PRINT_TARGETS[target].a + '…', '');
             let res;
             try { res = await _printApi('/job', { html, title, target }); }
@@ -6157,7 +6139,7 @@
             // Cuadro con datos del pedido (nuevo: cliente, entrega, pago)
             html += '<div class="info-box">';
             if (clientName) html += '<div class="info-row"><strong>Cliente:</strong> ' + clientName + '</div>';
-            const delivTexts = { local: '🏪 Retira Galería', deposito: '📦 Retira Depósito', envio: '🚚 Envío a domicilio' };
+            const delivTexts = { local: '📦 Retira en depósito', deposito: '📦 Retira en depósito', envio: '🚚 Envío a domicilio' };
             if (info.deliveryType && delivTexts[info.deliveryType]) {
                 html += '<div class="info-row"><strong>Entrega:</strong> ' + delivTexts[info.deliveryType];
                 if (info.deliveryType === 'envio' && info.address) html += ' &mdash; ' + info.address.replace(/\n/g, ', ');
@@ -6382,7 +6364,7 @@
                 });
 
                 setOrderType('pedido');
-                const delivery = shippingLabel === 'Retira' ? 'local' : (shippingLabel ? 'envio' : 'local');
+                const delivery = shippingLabel && shippingLabel !== 'Retira' ? 'envio' : 'deposito';
                 restoreFormData({
                     clientName: [orderNumber, shippingLabel, customerName].filter(Boolean).join(' - '),
                     canal: 'tn',
@@ -6424,7 +6406,10 @@
         
         let _savedStockState = null;
 
+        let _stockScroll = 0;   // dónde estabas en Stock al irte al Pedido
         function switchPage(page) {
+            if (page !== 'products' && $('page-products').classList.contains('active')) _stockScroll = window.scrollY;
+            let volverA = page === 'products' ? _stockScroll : 0;
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             $('navHome').classList.remove('active');
             $('navStock').classList.remove('active');
@@ -6450,18 +6435,43 @@
                     hideHomeScreen();
                     if (s.searchExact) renderArticleDetail();
                     else { applyFilters(); }
+                    volverA = s.scroll || 0;
+                } else if (_savedStockState && _savedStockState.cat) {
+                    // Volver a la categoría donde estabas antes de tocar Inicio
+                    [homeCatSelected, homeCatChild, homeCatGrandchild, homeCatSubcat] = _savedStockState.cat;
+                    volverA = _savedStockState.scroll || 0;
+                    _savedStockState = null;
+                    renderHomeScreen();
                 }
                 // Si no hay nada guardado, queda como está
             }
-            window.scrollTo({ top: 0 });
+            updateNav();
+            window.scrollTo({ top: volverA });
+        }
+
+        // Pestañas de abajo: resalta dónde estás y apaga (gris) la que no haría nada
+        function _enInicio() {
+            return isHomeState() && !homeCatSelected && !$('articleDetailView').classList.contains('active');
+        }
+        function updateNav() {
+            const enStock = $('page-products').classList.contains('active');
+            const inicio = _enInicio();
+            $('navHome').classList.toggle('active', enStock && inicio);
+            $('navStock').classList.toggle('active', enStock && !inicio);
+            $('navCart').classList.toggle('active', !enStock);
+            // Stock en gris: no hay ningún artículo/categoría/búsqueda a donde volver
+            $('navStock').classList.toggle('idle', inicio && !_savedStockState && !(enStock && !inicio));
         }
 
         function goHome() {
             closeCatEditSheet();
             if (isHomeState() && !homeCatSelected && $('page-products').classList.contains('active')) return;
 
+            const _scr = $('page-products').classList.contains('active') ? window.scrollY : _stockScroll;
             if (state.search) {
-                _savedStockState = { search: state.search, searchExact: state.searchExact, filtered: [...state.filtered] };
+                _savedStockState = { search: state.search, searchExact: state.searchExact, filtered: [...state.filtered], scroll: _scr };
+            } else if (homeCatSelected) {
+                _savedStockState = { cat: [homeCatSelected, homeCatChild, homeCatGrandchild, homeCatSubcat], scroll: _scr };
             }
 
             homeCatSelected = null; homeCatChild = null; homeCatGrandchild = null; homeCatSubcat = null;
@@ -6490,9 +6500,17 @@
             $('pagination').innerHTML = '';
             $('resultsInfo').style.display = 'none';
             renderHomeScreen();
+            updateNav();
             window.scrollTo({ top: 0 });
         }
-        
+
+        // Cada vez que cambia lo que se ve en Stock, actualizar las pestañas
+        ['render', 'renderHomeScreen', 'renderArticleDetail', 'hideHomeScreen', 'applyFilters'].forEach(n => {
+            const fn = window[n];
+            if (typeof fn !== 'function') return;
+            window[n] = function () { const r = fn.apply(this, arguments); try { updateNav(); } catch (e) {} return r; };
+        });
+
         // ===== EVENT LISTENERS =====
         const debouncedFilter = debounce(() => {
             applyFilters();

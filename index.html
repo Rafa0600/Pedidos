@@ -532,6 +532,8 @@
         .delivery-option.selected { border-color: var(--primary); background: var(--primary); color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(79,172,254,0.35); }
         .delivery-option.selected[data-payment="pendiente"] { background: #f59e0b; border-color: #f59e0b; color: #1a2744; box-shadow: 0 2px 8px rgba(245,158,11,0.35); }
         .delivery-option:not(.selected) { opacity: 0.75; }
+        .delivery-option.pick-me { opacity: 1; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.35); animation: pickme .5s ease-in-out 3; }
+        @keyframes pickme { 50% { transform: scale(1.04); } }
         .delivery-option input[type="radio"] { display: none; }
         .delivery-radio {
             width: 18px; height: 18px; border: 2px solid var(--border);
@@ -1267,7 +1269,6 @@
                 </div>
             </div>
             <div class="header-right">
-                <button class="icon-btn" onclick="manualSync()" title="Sync">🔄</button>
                 <button class="icon-btn" onclick="openSettings()" title="Ajustes">⚙️</button>
             </div>
         </div>
@@ -2352,9 +2353,9 @@
             const name = $('clientName')?.value || '';
             return {
                 clientName:        name,
-                delivery:          document.querySelector('input[name="delivery"]:checked')?.value || 'deposito',
+                delivery:          document.querySelector('input[name="delivery"]:checked')?.value || '',
                 shippingAddress:   $('shippingAddress')?.value || '',
-                payment:           document.querySelector('input[name="payment"]:checked')?.value || 'abonado',
+                payment:           document.querySelector('input[name="payment"]:checked')?.value || '',
                 paymentAmount:     $('paymentAmount')?.value || '',
                 clientNamePres:    name,
                 budgetEnvio:       document.querySelector('input[name="budgetEnvio"]:checked')?.value || 'no',
@@ -2372,22 +2373,23 @@
             if ($('budgetShippingCost')) $('budgetShippingCost').value = fd?.budgetShippingCost || '';
 
             // Delivery
-            let delVal = fd?.delivery || 'deposito';
+            // Pedido nuevo (sin datos) o sin elegir: no se marca nada
+            let delVal = fd ? (fd.delivery === undefined ? 'deposito' : fd.delivery) : '';
             if (delVal === 'local') delVal = 'deposito';   // ya no hay local
             document.querySelectorAll('.delivery-option[data-delivery]').forEach(o => {
                 const match = o.dataset.delivery === delVal;
                 o.classList.toggle('selected', match);
-                if (match) o.querySelector('input').checked = true;
+                o.querySelector('input').checked = match;
             });
             if (delVal === 'envio' && $('deliveryEnvioHidden')) $('deliveryEnvioHidden').checked = true;
             $('shippingDetails')?.classList.toggle('show', delVal === 'envio');
 
             // Payment
-            const payVal = fd?.payment || 'abonado';
+            const payVal = fd ? (fd.payment === undefined ? 'abonado' : fd.payment) : '';
             document.querySelectorAll('.delivery-option[data-payment]').forEach(o => {
                 const match = o.dataset.payment === payVal;
                 o.classList.toggle('selected', match);
-                if (match) o.querySelector('input').checked = true;
+                o.querySelector('input').checked = match;
             });
             $('paymentDetails')?.classList.toggle('show', payVal === 'pendiente');
 
@@ -2773,6 +2775,7 @@
             state.cart = [];
             _rebuildCartCache();   // si no, los artículos seguían mostrando lo de antes
             _montoManual = false; _showPrecios = false;
+            if (state.orderType === 'presupuesto') state.orderType = 'pedido';
             ecomStockMap = {};
             articlePrices = {};
             localStorage.removeItem('mikra_prices');
@@ -4789,8 +4792,25 @@
         }
         
         // ===== EXPORT FUNCTIONS =====
+        // ¿Eligió Abonó / Falta pagar y Retira / Envío?
+        function _faltaElegir() {
+            if (!(state.orderType === 'pedido' || state.orderType === 'presupuesto')) return '';
+            if (!document.querySelector('input[name="payment"]:checked')) return 'pago';
+            if (!document.querySelector('input[name="delivery"]:checked')) return 'entrega';
+            return '';
+        }
+        function _avisarFaltaElegir(que) {
+            const sel = que === 'pago' ? '.delivery-option[data-payment]' : '.delivery-option[data-delivery]';
+            switchPage('cart');
+            document.querySelectorAll(sel).forEach(o => { o.classList.add('pick-me'); setTimeout(() => o.classList.remove('pick-me'), 2200); });
+            document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showModal(que === 'pago' ? '💰' : '📦', que === 'pago' ? 'Falta elegir el pago' : 'Falta elegir la entrega',
+                      que === 'pago' ? 'Marcá si ✅ Abonó o ⏳ Falta pagar.' : 'Marcá si 📦 Retira o 🚚 Envío.', 'Entendido', null);
+        }
         function validateForm() {
             if (state.orderType === 'devolucion') return true;
+            const falta = _faltaElegir();
+            if (falta) { _avisarFaltaElegir(falta); return false; }
             if (state.orderType === 'presupuesto') {
                 const name = $('clientName').value.trim();
                 if (!name) {
@@ -4876,6 +4896,7 @@
 
         function openWaConfirm() {
             if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
+            if (_faltaElegir() === 'pago') { _avisarFaltaElegir('pago'); return; }
             const isPedido = state.orderType === 'pedido';
             const isPres   = state.orderType === 'presupuesto';
             $('waConfirmPedido').style.display = isPedido ? 'block' : 'none';

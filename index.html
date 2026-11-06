@@ -206,8 +206,12 @@
             display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
             z-index: 400; align-items: center; justify-content: center; padding: 20px;
         }
-        .img-modal-overlay.show { display: flex; }
-        .img-modal-overlay img { max-width: 90vw; max-height: 80vh; border-radius: 12px; object-fit: contain; }
+        .img-modal-overlay.show { display: flex; flex-direction: column; gap: 14px; }
+        .img-modal-overlay img { max-width: 90vw; max-height: 72vh; border-radius: 12px; object-fit: contain; }
+        .img-modal-cap { color: #fff; font-weight: 700; font-size: 0.95em; text-align: center; opacity: 0.9; }
+        .img-share-btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border: none; border-radius: 14px; background: #25d366; color: #0b3d1f; font-size: 1em; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+        .img-share-btn:active { transform: scale(0.97); }
+        .img-share-btn:disabled { opacity: 0.6; }
         .img-modal-close {
             position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2);
             border: none; color: white; font-size: 1.5em; width: 40px; height: 40px;
@@ -1555,6 +1559,11 @@
     <div class="img-modal-overlay" id="imgModal" onclick="closeImgModal()">
         <button class="img-modal-close" onclick="closeImgModal()">✕</button>
         <img id="imgModalSrc" src="" alt="Producto">
+        <div class="img-modal-cap" id="imgModalCap"></div>
+        <button class="img-share-btn" id="imgShareBtn" onclick="event.stopPropagation();shareImgWhatsApp()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.8-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.3zM12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+            Compartir por WhatsApp
+        </button>
     </div>
     
     <!-- MODAL VERIFICAR STOCK -->
@@ -3536,12 +3545,47 @@
             _imgCache[codigo] = url || '';
             return _imgCache[codigo];
         }
+        // Foto grande + compartirla como imagen (no como link) por WhatsApp
+        let _imgShare = null;   // { url, caption, file (se baja apenas se abre, así el botón responde al toque) }
         function showImgModal(codigo) {
             const url = getProductImageFull(codigo);
             if (!url) return;
+            const p = state.filtered.find(x => String(x.codigo) === String(codigo)) || state.cart.find(x => String(x.codigo) === String(codigo)) || {};
+            const art = p.titulo || p.articulo || '';
+            const caption = [art, p.color].filter(Boolean).join(' · ');
             $('imgModalSrc').src = url; $('imgModal').classList.add('show');
+            $('imgModalCap').textContent = caption;
+            $('imgShareBtn').disabled = false;
+            const big = url.replace(/-[SI]\.jpg$/i, '-O.jpg');   // la foto en tamaño grande
+            _imgShare = { url: big, caption, file: null };
+            const ctx = _imgShare;
+            fetch(big).then(r => r.ok ? r.blob() : fetch(url).then(r2 => r2.blob())).then(b => {
+                const nombre = ('Mikra ' + (caption || 'foto')).replace(/[\\/:*?"<>|·]+/g, ' ').replace(/\s+/g, ' ').trim() + '.jpg';
+                ctx.file = new File([b], nombre, { type: b.type || 'image/jpeg' });
+            }).catch(() => {});
         }
-        function closeImgModal() { $('imgModal').classList.remove('show'); $('imgModalSrc').src = ''; }
+        function closeImgModal() { $('imgModal').classList.remove('show'); $('imgModalSrc').src = ''; _imgShare = null; }
+        async function shareImgWhatsApp() {
+            const ctx = _imgShare;
+            if (!ctx) return;
+            const btn = $('imgShareBtn');
+            try {
+                if (!ctx.file) {   // todavía bajando: esperar un toque
+                    btn.disabled = true;
+                    const b = await (await fetch(ctx.url)).blob();
+                    ctx.file = new File([b], 'Mikra foto.jpg', { type: b.type || 'image/jpeg' });
+                }
+                if (navigator.canShare && navigator.canShare({ files: [ctx.file] })) {
+                    // El celular abre "Compartir": elegís WhatsApp y la clienta (va la foto, no un link)
+                    await navigator.share({ files: [ctx.file], text: ctx.caption ? ctx.caption : undefined });
+                    return;
+                }
+            } catch (e) {
+                if (e && e.name === 'AbortError') return;   // cerró el menú de compartir
+            } finally { btn.disabled = false; }
+            // Sin compartir archivos (PC): manda el link de la foto
+            window.open('https://wa.me/?text=' + encodeURIComponent((ctx.caption ? ctx.caption + '\n' : '') + ctx.url), '_blank');
+        }
         
         // ===== ARTICLE DETAIL VIEW =====
         function isArticleDetailMode() {

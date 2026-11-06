@@ -753,6 +753,18 @@
             z-index: 500; align-items: center; justify-content: center;
         }
         .clear-modal-overlay.show { display: flex; }
+        /* 📂 Pedidos guardados */
+        .ped-input { background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 16px; outline: none; box-sizing: border-box; }
+        .ped-input:focus { border-color: var(--primary); }
+        .ped-list { margin-top: 8px; max-height: 50vh; overflow-y: auto; text-align: left; border: 1px solid var(--border); border-radius: 10px; }
+        .ped-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; flex-wrap: wrap; }
+        .ped-row:last-child { border-bottom: none; }
+        .ped-row:hover, .ped-row:active { background: var(--bg-input); }
+        .ped-num { font-weight: 800; color: var(--primary); min-width: 52px; }
+        .ped-name { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ped-name small { color: var(--text-secondary); font-weight: 500; }
+        .ped-meta { font-size: 0.75em; color: var(--text-secondary); white-space: nowrap; }
+        .ped-empty { padding: 16px; text-align: center; color: var(--text-secondary); font-size: 0.85em; }
         .clear-modal {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
             padding: 20px; width: 85%; max-width: 320px; text-align: center;
@@ -1056,6 +1068,38 @@
     </div>
 
     <!-- DÓNDE IMPRIMIR EL TICKET -->
+    <!-- PEDIDO YA IMPRESO QUE CAMBIÓ: ¿qué imprimo? -->
+    <div class="modal" id="ticketDiffModal" onclick="if(event.target===this)closeTicketDiff()">
+        <div class="modal-content">
+            <div class="modal-icon">✏️</div>
+            <div class="modal-title" id="ticketDiffTitle">El pedido cambió</div>
+            <div id="ticketDiffMsg" style="font-size:0.88em;color:var(--text-secondary);line-height:1.5;"></div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin:14px 0 8px;">
+                <button class="modal-btn confirm" style="width:100%;padding:14px;font-size:1em;" onclick="chooseTicketMode('diff')">➕ Solo lo que cambió</button>
+                <button class="modal-btn cancel" style="width:100%;padding:12px;font-size:0.95em;" onclick="chooseTicketMode('fullmod')">📄 Pedido completo (marcado MODIFICADO)</button>
+            </div>
+            <div class="modal-buttons" style="margin-top:6px;">
+                <button class="modal-btn cancel" onclick="closeTicketDiff()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📂 ABRIR PEDIDO GUARDADO -->
+    <div class="modal" id="pedidosModal" onclick="if(event.target===this)closePedidosModal()">
+        <div class="modal-content" style="max-width:420px;width:92%;">
+            <div class="modal-title">📂 Abrir pedido</div>
+            <div style="display:flex;gap:8px;margin:12px 0 8px;">
+                <input id="pedNumInput" type="text" inputmode="numeric" placeholder="Nº de pedido" class="ped-input" style="flex:1;" onkeydown="if(event.key==='Enter')openPedidoByNum()">
+                <button class="modal-btn confirm" style="padding:10px 16px;" onclick="openPedidoByNum()">Abrir</button>
+            </div>
+            <input id="pedSearchInput" type="text" placeholder="🔍 Buscar por nombre o número" class="ped-input" style="width:100%;" oninput="onPedSearch()">
+            <div id="pedList" class="ped-list"></div>
+            <div class="modal-buttons" style="margin-top:10px;">
+                <button class="modal-btn cancel" onclick="closePedidosModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="printChoiceModal" onclick="if(event.target===this)closePrintChoice()">
         <div class="modal-content">
             <div class="modal-icon">🎫</div>
@@ -2194,12 +2238,13 @@
                 const isActive = slot.id === _activeSlotId;
                 const units = (slot.cart || []).reduce((a, p) => a + p.qty, 0);
                 html += '<div class="slot-tab' + (isActive ? ' active' : '') + '" id="stab_' + slot.id + '" onclick="switchSlot(\'' + slot.id + '\')">';
-                html += '<span class="slot-tab-name">' + _escHtml(slot.nombre) + '</span>';
+                html += '<span class="slot-tab-name">' + (slot.num ? '<b>#' + slot.num + '</b> ' : '') + _escHtml(slot.nombre) + '</span>';
                 if (units > 0) html += '<span class="slot-count-badge">' + units + '</span>';
                 if (_slots.length > 1) html += '<button class="slot-tab-x" onclick="deleteSlot(\'' + slot.id + '\',event)" title="Cerrar">✕</button>';
                 html += '</div>';
             });
             html += '<button class="slot-add-btn" onclick="createNewSlot()" title="Nuevo pedido">＋</button>';
+            html += '<button class="slot-add-btn" onclick="openPedidosModal()" title="Abrir pedido guardado">📂</button>';
             el.innerHTML = html;
             // Scroll horizontal solo dentro del contenedor de tabs (no mueve la página)
             const activeTab = document.getElementById('stab_' + _activeSlotId);
@@ -2642,7 +2687,7 @@
             // Limpiar también prices y nombre del slot activo (que no quede el
             // número de pedido viejo en la pestaña)
             const slot = _slots.find(s => s.id === _activeSlotId);
-            if (slot) { slot.cart = []; slot.prices = {}; slot.formData = null; slot.nombre = 'Nuevo pedido'; }
+            if (slot) { slot.cart = []; slot.prices = {}; slot.formData = null; slot.nombre = 'Nuevo pedido'; slot.num = null; slot.printedCart = null; slot.printedAt = 0; }
             saveSlots();
             renderCart(); renderSlotTabs(); updateBadge(); render();
             if (state.orderType === 'presupuesto') renderBudget();
@@ -4762,7 +4807,8 @@
             // Pasar entrega/pago del cartel al formulario (pedido y presupuesto)
             _syncSheetToForm(isPres);
             closeWaConfirm();
-            sharePrepTicketPDF();
+            if (!validateForm()) return;
+            savePedidoCloud(false).then(() => sharePrepTicketPDF());
         }
 
         // Copia entrega, dirección, pago y monto del cartel de WhatsApp al formulario principal
@@ -4812,7 +4858,7 @@
             $('wacTicketRow').classList.toggle('on', _wacTicket);
         }
 
-        function doShareWhatsApp() {
+        async function doShareWhatsApp() {
             const isPedido = state.orderType === 'pedido';
             const isPres   = state.orderType === 'presupuesto';
 
@@ -4829,6 +4875,8 @@
             if ($('clientName')) $('clientName').value = name;
             if ($('clientNamePres')) $('clientNamePres').value = name;
             if (isPedido || isPres) { syncClientName(name); _syncSheetToForm(isPres); }
+            const pedNum = (isPedido || isPres) ? await savePedidoCloud(false) : null;
+            const numTxt = pedNum ? ' #' + pedNum : '';
 
             // Construir texto WA (carrito ordenado: artículo → color → talle)
             const cart = getSortedCart();
@@ -4845,7 +4893,7 @@
                 const grouped = {};
                 cart.forEach(p => { const n=p.titulo||p.articulo; if(!grouped[n]) grouped[n]={qty:0,price:articlePrices[n]||0}; grouped[n].qty+=p.qty; });
                 const st = getTicketStatus();
-                text = 'PRESUPUESTO MIKRA\n─────────────────\n' + name + '\n';
+                text = 'PRESUPUESTO MIKRA' + numTxt + '\n─────────────────\n' + name + '\n';
                 if (st.deliveryText) text += st.deliveryText + '\n';
                 if (st.address) text += st.address + '\n';
                 text += (st.payment === 'pendiente' ? 'Falta abonar' + (st.amount ? ': $' + st.amount : '') : 'Ya abono') + '\n─────────────────\n\n';
@@ -4858,7 +4906,7 @@
                 const canalLabel = canal === 'tn' ? 'TN' : 'Local';
                 const delivLabel = _wacDelivery==='local' ? 'Local (Galeria)' : _wacDelivery==='deposito' ? 'Deposito' : 'Envio';
                 const payLabel   = _wacPayment==='abonado' ? 'Ya abono' : 'Falta abonar' + (payAmt ? ': $'+payAmt : '');
-                text = 'PEDIDO MIKRA\n─────────────────\n' + canalLabel + ' - ' + name + '\n' + delivLabel + '\n';
+                text = 'PEDIDO MIKRA' + numTxt + '\n─────────────────\n' + canalLabel + ' - ' + name + '\n' + delivLabel + '\n';
                 if (_wacDelivery === 'envio' && address) text += address + '\n';
                 text += payLabel + '\n─────────────────\n\n';
                 cart.forEach(p => { text += p.qty + ' - \t' + (p.titulo||p.articulo) + ', ' + (p.color||'-') + ', T:' + (p.talle||'-') + '\n'; });
@@ -5054,7 +5102,7 @@
                 return;
             }
             if (!validateForm()) return;
-            openPrintChoice();
+            startTicketPrint();
         }
         function closeTicketNameModal() { $('ticketNameModal').classList.remove('show'); }
         function confirmTicketName() {
@@ -5064,7 +5112,7 @@
             syncClientName(val);
             closeTicketNameModal();
             if (!validateForm()) return;
-            openPrintChoice();
+            startTicketPrint();
         }
         
         // Share a real PDF file (ticket preparados format) for WhatsApp sharing
@@ -5233,7 +5281,9 @@
             pdf.text('MIKRA', pw / 2, y, 'center');
             y += 6;
             pdf.setFontSize(13);
-            pdf.text(state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PREPARADOS', pw / 2, y, 'center');
+            var _pslot = _activeSlot();
+            var _pnum = conDatos && _pslot && _pslot.num ? ' #' + _pslot.num : '';
+            pdf.text((state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PREPARADOS') + _pnum, pw / 2, y, 'center');
             y += 5;
             pdf.setFontSize(10);
             pdf.text(date + '  ' + time, pw / 2, y, 'center');
@@ -5399,7 +5449,7 @@
 
             // Generate and share
             var clientNameVal = (conDatos ? $('clientName').value.trim() : '') || 'Pedido';
-            var fileName = 'Ticket_' + clientNameVal.replace(/\s+/g, '_') + '_' + date.replace(/\//g, '-') + '.pdf';
+            var fileName = 'Ticket_' + (_pnum ? _pnum.trim().replace('#', '') + '_' : '') + clientNameVal.replace(/\s+/g, '_') + '_' + date.replace(/\//g, '-') + '.pdf';
             var blob = pdf.toBlob();
             var file = new File([blob], fileName, { type: 'application/pdf' });
 
@@ -5484,10 +5534,17 @@
         
         function downloadTicketPreparados(mode) {
             if (!state.cart.length) return;
+            // Qué imprimir: completo, completo marcado MODIFICADO, o solo los cambios
+            const ctx = _ticketCtx || { mode: 'full', prev: null, prevAt: 0 };
+            _ticketCtx = null;
+            const conNum = state.orderType === 'pedido' || state.orderType === 'presupuesto';
+            const slotAct = _activeSlot();
+            const pedNum = conNum && slotAct && slotAct.num ? slotAct.num : null;
+            const diff = (ctx.mode !== 'full' && ctx.prev) ? _cartDiff(ctx.prev, state.cart) : null;
             const date = new Date().toLocaleDateString('es-AR');
             const time = new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
             const SO = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
-            
+
             function sizeIndex(s) {
                 const u = (s || '').toUpperCase();
                 const n = parseFloat(u);
@@ -5495,24 +5552,25 @@
                 const i = SO.indexOf(u);
                 return i > -1 ? i : 500;
             }
-            
-            // Group by article → color → sizes
-            const articles = {};
-            state.cart.forEach(p => {
-                const artName = p.titulo || p.articulo || 'Sin nombre';
-                const color = p.color || 'Sin color';
-                if (!articles[artName]) articles[artName] = {};
-                if (!articles[artName][color]) articles[artName][color] = {};
-                const talle = p.talle || '-';
-                const cell = articles[artName][color][talle] || { qty: 0, stock: null };
-                cell.qty += p.qty;
-                if (p.stock != null && !isNaN(p.stock)) cell.stock = p.stock;
-                articles[artName][color][talle] = cell;
-            });
-            
-            const sortedArticles = Object.keys(articles).sort((a, b) => a.localeCompare(b, 'es'));
-            
-            let grandTotal = 0;
+
+            // Agrupa artículo → color → talles (deltas: cambios desde la última impresión, para marcarlos)
+            function groupItems(items, deltas) {
+                const articles = {};
+                items.forEach(p => {
+                    const artName = p.titulo || p.articulo || 'Sin nombre';
+                    const color = p.color || 'Sin color';
+                    if (!articles[artName]) articles[artName] = {};
+                    if (!articles[artName][color]) articles[artName][color] = {};
+                    const talle = p.talle || '-';
+                    const cell = articles[artName][color][talle] || { qty: 0, stock: null, delta: 0 };
+                    cell.qty += p.qty;
+                    if (p.stock != null && !isNaN(p.stock)) cell.stock = p.stock;
+                    if (deltas) cell.delta += deltas.get(_cartKey(p)) || 0;
+                    articles[artName][color][talle] = cell;
+                });
+                return articles;
+            }
+
             
             let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preparados</title>' +
                 '<style>' +
@@ -5538,11 +5596,18 @@
                 '.size-cell.tot{max-width:30px;border:none;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}' +
                 '.sep{border-top:1px dashed #999;margin:3px 0}' +
                 '.grand{font-size:18px;font-weight:900;display:flex;justify-content:space-between;margin-top:8px;padding-top:4px}' +
+                '.pednum{font-size:26px;font-weight:900;letter-spacing:1px;margin-top:3px}' +
+                '.banner{text-align:center;background:#000;color:#fff;font-size:18px;font-weight:900;margin:6px -4mm 2px;padding:5px 0}' +
+                '.sec{text-align:center;border:3px solid #000;font-size:19px;font-weight:900;margin:8px 0 4px;padding:3px 0}' +
+                '.sec.dash{border-style:dashed}' +
+                '.size-cell.chg{border-width:4px}' +
+                '.size-cell .stk.chgtxt{font-size:12px;font-weight:900}' +
                 '</style></head><body>';
             
             html += '<div class="center"><div class="title">MIKRA</div></div>';
             html += '<div class="center subtitle">' + (state.orderType === 'presupuesto' ? 'PRESUPUESTO' : 'PREPARADOS') + '</div>';
             html += '<div style="text-align:center;font-size:12px;font-weight:900">' + date + ' ' + time + '</div>';
+            if (pedNum) html += '<div class="center pednum">' + (state.orderType === 'presupuesto' ? 'PRESUP.' : 'PEDIDO') + ' #' + pedNum + '</div>';
 
             if (state.orderType === 'pedido' || state.orderType === 'presupuesto') {
                 const cn = $('clientName').value.trim();
@@ -5578,6 +5643,10 @@
 
             html += '<div class="line-thick"></div>';
             
+            function renderArticles(items, deltas) {
+            const articles = groupItems(items, deltas);
+            const sortedArticles = Object.keys(articles).sort((a, b) => a.localeCompare(b, 'es'));
+            let html = '', grandTotal = 0;
             sortedArticles.forEach(artName => {
                 const colors = articles[artName];
                 
@@ -5619,8 +5688,10 @@
                     allSizes.forEach(s => {
                         if (sizeMap[s]) {
                             const stk = sizeMap[s].stock;
-                            const stkHtml = (stk != null) ? '<div class="stk">(' + stk + ')</div>' : '';
-                            html += '<div class="size-cell"><div class="lbl" style="font-size:' + lblFont + '">' + s + '</div><div class="qty" style="font-size:' + qtyFont + '">' + sizeMap[s].qty + '</div>' + stkHtml + '</div>';
+                            const dl = sizeMap[s].delta;
+                            const stkHtml = dl ? '<div class="stk chgtxt">★' + (dl > 0 ? '+' : '−') + Math.abs(dl) + '</div>'
+                                          : (stk != null) ? '<div class="stk">(' + stk + ')</div>' : '';
+                            html += '<div class="size-cell' + (dl ? ' chg' : '') + '"><div class="lbl" style="font-size:' + lblFont + '">' + s + '</div><div class="qty" style="font-size:' + qtyFont + '">' + sizeMap[s].qty + '</div>' + stkHtml + '</div>';
                         } else {
                             html += '<div class="size-cell empty"></div>';
                         }
@@ -5634,9 +5705,50 @@
                 html += '<div class="line"></div>';
             });
             
-            html += '<div class="line-thick"></div>';
-            html += '<div class="grand"><span>TOTAL:</span><span>' + grandTotal + ' uds</span></div>';
-            if (state.orderType === 'presupuesto') {
+            return { html, total: grandTotal };
+            }
+
+            const unitsOf = arr => arr.reduce((a, p) => a + p.qty, 0);
+            if (diff) {
+                const cuando = ctx.prevAt ? new Date(ctx.prevAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+                if (ctx.mode === 'diff') {
+                    html += '<div class="banner">SOLO CAMBIOS</div>';
+                    if (cuando) html += '<div class="center" style="font-size:11px">(lo anterior se imprimió el ' + cuando + ')</div>';
+                    if (diff.added.length) {
+                        html += '<div class="sec">+ AGREGAR ' + unitsOf(diff.added) + '</div>';
+                        html += renderArticles(diff.added).html;
+                    }
+                    if (diff.removed.length) {
+                        html += '<div class="sec dash">− SACAR ' + unitsOf(diff.removed) + '</div>';
+                        html += renderArticles(diff.removed).html;
+                    }
+                    html += '<div class="line-thick"></div>';
+                    if (diff.added.length) html += '<div class="grand"><span>AGREGAR:</span><span>' + unitsOf(diff.added) + ' uds</span></div>';
+                    if (diff.removed.length) html += '<div class="grand" style="margin-top:2px"><span>SACAR:</span><span>' + unitsOf(diff.removed) + ' uds</span></div>';
+                    html += '<div class="center" style="font-size:13px;margin-top:6px">Total del pedido ahora: ' + unitsOf(state.cart) + ' uds</div>';
+                } else {
+                    html += '<div class="banner">⚠ PEDIDO MODIFICADO</div>';
+                    html += '<div class="center" style="font-size:11px">★ = cambió' + (cuando ? ' desde la impresión del ' + cuando : '') + '</div>';
+                    const dmap = new Map();
+                    diff.added.forEach(p => dmap.set(_cartKey(p), p.qty));
+                    diff.removed.forEach(p => dmap.set(_cartKey(p), -p.qty));
+                    const r = renderArticles(state.cart, dmap);
+                    html += r.html;
+                    const gone = diff.removed.filter(p => !state.cart.some(c => _cartKey(c) === _cartKey(p)));
+                    if (gone.length) {
+                        html += '<div class="sec dash">− SACADOS ' + unitsOf(gone) + '</div>';
+                        html += renderArticles(gone).html;
+                    }
+                    html += '<div class="line-thick"></div>';
+                    html += '<div class="grand"><span>TOTAL:</span><span>' + r.total + ' uds</span></div>';
+                }
+            } else {
+                const r = renderArticles(state.cart);
+                html += r.html;
+                html += '<div class="line-thick"></div>';
+                html += '<div class="grand"><span>TOTAL:</span><span>' + r.total + ' uds</span></div>';
+            }
+            if (state.orderType === 'presupuesto' && (!diff || ctx.mode !== 'diff')) {
                 const totalPesos = getPresupuestoTotal();
                 if (totalPesos > 0) html += '<div class="grand" style="margin-top:2px"><span>$</span><span>' + totalPesos.toLocaleString('es-AR') + '</span></div>';
             }
@@ -5669,7 +5781,13 @@
                 .catch(() => { st.textContent = '⚠️ Sin conexión con la nube'; st.style.color = 'var(--danger)'; });
         }
         function closePrintChoice() { $('printChoiceModal').classList.remove('show'); }
-        function printChoiceHere() { closePrintChoice(); downloadTicketPreparados('print'); }
+        async function printChoiceHere() {
+            closePrintChoice();
+            const ctx = _ticketCtx;
+            await savePedidoCloud(true);
+            _ticketCtx = ctx;
+            downloadTicketPreparados('print');
+        }
 
         const PRINT_TARGETS = {
             deposito: { nombre: 'el depósito', a: 'al depósito', icon: '📦' },
@@ -5691,9 +5809,14 @@
         // target: 'deposito' (principal) u 'oficina'
         async function printChoiceLocal(target) {
             closePrintChoice();
+            const ctx = _ticketCtx;
+            await savePedidoCloud(true);
+            _ticketCtx = ctx;
             const html = downloadTicketPreparados('html');
             if (!html) return;
-            const title = $('clientName').value.trim() || (state.orderType === 'reposicion' ? 'Reposición' : 'Ticket');
+            const _sn = _activeSlot();
+            const title = ((_sn && _sn.num && state.orderType !== 'reposicion') ? '#' + _sn.num + ' ' : '') +
+                          ($('clientName').value.trim() || (state.orderType === 'reposicion' ? 'Reposición' : 'Ticket'));
             toast(PRINT_TARGETS[target].icon + ' Mandando ' + PRINT_TARGETS[target].a + '…', '');
             let res;
             try { res = await _printApi('/job', { html, title, target }); }
@@ -5744,6 +5867,180 @@
             if (!job) return;
             try { await _printApi('/job/cancel', { id: job.id }); toast('🗑️ Ticket descartado', ''); }
             catch (e) { toast('⚠️ No se pudo descartar: ' + e.message, 'error'); }
+        }
+
+        // ===== PEDIDOS CON NÚMERO (guardados en Cloudflare, Worker mikra-print) =====
+        let _ticketCtx = null;   // { mode: 'full'|'fullmod'|'diff', prev, prevAt } para el próximo ticket
+
+        function _activeSlot() { return _slots.find(s => s.id === _activeSlotId); }
+        function _cartKey(p) { return String(p.codigo != null && p.codigo !== '' ? p.codigo : p.id); }
+        function _resetSlotNum() {
+            const sl = _activeSlot();
+            if (sl) { sl.num = null; sl.printedCart = null; sl.printedAt = 0; }
+        }
+        // Lo mínimo para saber qué se imprimió (y poder imprimir "lo que cambió")
+        function _printedSnapshot(cart) {
+            return cart.map(p => ({ id: p.id, codigo: p.codigo, titulo: p.titulo, articulo: p.articulo,
+                                    color: p.color, talle: p.talle, stock: p.stock, qty: p.qty }));
+        }
+        // Diferencia entre lo impreso y el pedido actual
+        function _cartDiff(prev, cart) {
+            const before = new Map(), now = new Map();
+            (prev || []).forEach(p => { const k = _cartKey(p); const e = before.get(k); if (e) e.qty += p.qty; else before.set(k, { ...p }); });
+            cart.forEach(p => { const k = _cartKey(p); const e = now.get(k); if (e) e.qty += p.qty; else now.set(k, { ...p }); });
+            const added = [], removed = [];
+            now.forEach((p, k) => { const d = p.qty - (before.get(k)?.qty || 0); if (d > 0) added.push({ ...p, qty: d }); else if (d < 0) removed.push({ ...p, qty: -d }); });
+            before.forEach((p, k) => { if (!now.has(k)) removed.push({ ...p, qty: p.qty }); });
+            return { added, removed };
+        }
+
+        async function _pedApi(path, body, ms) {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), ms || 8000);
+            try {
+                const r = await fetch(PRINT_URL + path, body === undefined
+                    ? { headers: { 'X-Key': PRINT_KEY }, cache: 'no-store', signal: ctrl.signal }
+                    : { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Key': PRINT_KEY }, body: JSON.stringify(body), signal: ctrl.signal });
+                const res = await r.json();
+                if (!r.ok) throw new Error(res.error || ('HTTP ' + r.status));
+                return res;
+            } catch (e) {
+                throw new Error(e.name === 'AbortError' ? 'sin respuesta de la nube' : e.message);
+            } finally { clearTimeout(t); }
+        }
+
+        // Guarda el pedido activo en la nube. La primera vez le da número.
+        // markPrinted: además anota que esto es lo que quedó impreso.
+        async function savePedidoCloud(markPrinted) {
+            if (!(state.orderType === 'pedido' || state.orderType === 'presupuesto') || !state.cart.length) return null;
+            saveCart();
+            const slot = _activeSlot();
+            if (!slot) return null;
+            const body = {
+                num: slot.num || 0, nombre: getSlotNameFromForm(), orderType: state.orderType,
+                cart: state.cart, formData: getFormData(), prices: Object.assign({}, articlePrices)
+            };
+            if (markPrinted) body.printedCart = _printedSnapshot(state.cart);
+            try {
+                const res = await _pedApi('/pedido/save', body, 4000);
+                const nuevo = !slot.num;
+                slot.num = res.num;
+                if (markPrinted) { slot.printedCart = body.printedCart; slot.printedAt = res.printedAt || Date.now(); }
+                saveSlots(); renderSlotTabs();
+                if (nuevo) toast('☁️ Pedido #' + res.num + ' guardado', 'success');
+                return res.num;
+            } catch (e) {
+                toast('⚠️ No se pudo guardar el pedido en la nube (' + e.message + ')', 'warning');
+                return slot.num || null;
+            }
+        }
+
+        // 🎫 Ticket: si el pedido ya se imprimió y cambió, preguntar qué imprimir
+        function startTicketPrint() {
+            _ticketCtx = null;
+            const slot = _activeSlot();
+            if (slot && slot.num && slot.printedCart && (state.orderType === 'pedido' || state.orderType === 'presupuesto')) {
+                const d = _cartDiff(slot.printedCart, state.cart);
+                if (d.added.length || d.removed.length) {
+                    const u = arr => arr.reduce((a, p) => a + p.qty, 0);
+                    const partes = [];
+                    if (d.added.length) partes.push('➕ ' + u(d.added) + (u(d.added) === 1 ? ' unidad agregada' : ' unidades agregadas'));
+                    if (d.removed.length) partes.push('➖ ' + u(d.removed) + (u(d.removed) === 1 ? ' sacada' : ' sacadas'));
+                    const cuando = slot.printedAt ? new Date(slot.printedAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+                    $('ticketDiffTitle').textContent = 'El pedido #' + slot.num + ' cambió';
+                    $('ticketDiffMsg').innerHTML = 'Desde que se imprimió' + (cuando ? ' (' + cuando + ')' : '') + ':<br><b>' + partes.join(' · ') + '</b><br>¿Qué imprimo?';
+                    $('ticketDiffModal').classList.add('show');
+                    return;
+                }
+            }
+            openPrintChoice();
+        }
+        function chooseTicketMode(mode) {
+            $('ticketDiffModal').classList.remove('show');
+            const slot = _activeSlot();
+            _ticketCtx = { mode, prev: slot && slot.printedCart, prevAt: (slot && slot.printedAt) || 0 };
+            openPrintChoice();
+        }
+        function closeTicketDiff() { $('ticketDiffModal').classList.remove('show'); _ticketCtx = null; }
+
+        // 📂 Abrir pedido guardado
+        let _pedListTimer = null;
+        function openPedidosModal() {
+            $('pedidosModal').classList.add('show');
+            $('pedNumInput').value = '';
+            $('pedSearchInput').value = '';
+            loadPedidosList('');
+            setTimeout(() => $('pedNumInput').focus(), 60);
+        }
+        function closePedidosModal() { $('pedidosModal').classList.remove('show'); }
+        function onPedSearch() {
+            clearTimeout(_pedListTimer);
+            _pedListTimer = setTimeout(() => loadPedidosList($('pedSearchInput').value.trim()), 300);
+        }
+        async function loadPedidosList(q) {
+            const box = $('pedList');
+            box.innerHTML = '<div class="ped-empty">⏳ Cargando…</div>';
+            try {
+                const res = await _pedApi('/pedidos?limit=40&q=' + encodeURIComponent(q));
+                if (!res.pedidos.length) { box.innerHTML = '<div class="ped-empty">' + (q ? 'No hay pedidos con "' + _escHtml(q) + '"' : 'Todavía no hay pedidos guardados') + '</div>'; return; }
+                const hoy = new Date().toDateString();
+                box.innerHTML = res.pedidos.map(p => {
+                    const d = new Date(p.updated);
+                    const when = d.toDateString() === hoy ? 'hoy ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+                                                          : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+                    return '<div class="ped-row" onclick="openPedidoCloud(' + p.num + ')">' +
+                        '<span class="ped-num">#' + p.num + '</span>' +
+                        '<span class="ped-name">' + _escHtml(p.nombre || 'Sin nombre') + (p.orderType === 'presupuesto' ? ' <small>(presup.)</small>' : '') + '</span>' +
+                        '<span class="ped-meta">' + p.units + ' uds · ' + when + (p.printedAt ? ' · 🖨️' : '') + '</span></div>';
+                }).join('');
+            } catch (e) {
+                box.innerHTML = '<div class="ped-empty">⚠️ ' + _escHtml(e.message) + '</div>';
+            }
+        }
+        function openPedidoByNum() {
+            const n = parseInt(($('pedNumInput').value || '').replace(/\D/g, ''), 10);
+            if (!n) { $('pedNumInput').focus(); return; }
+            openPedidoCloud(n);
+        }
+        async function openPedidoCloud(num) {
+            // ¿Ya está abierto en una pestaña?
+            const ya = _slots.find(sl => sl.num === num);
+            if (ya) {
+                closePedidosModal();
+                switchSlot(ya.id);
+                toast('📂 El pedido #' + num + ' ya estaba abierto', '');
+                return;
+            }
+            let p;
+            try { p = await _pedApi('/pedido?num=' + num); }
+            catch (e) { toast('⚠️ ' + e.message, 'error'); return; }
+            const cur = _activeSlot();
+            const reusar = cur && !cur.num && !state.cart.length;
+            if (!reusar && _slots.length >= 8) { toast('Máximo 8 pedidos abiertos: cerrá una pestaña', 'warning'); return; }
+            // Traer stock/datos actuales del catálogo por código
+            const cart = (p.cart || []).map(it => {
+                const prod = it.codigo != null ? productByCodigo(it.codigo) : null;
+                return prod ? { ...prod, qty: it.qty } : it;
+            });
+            _snapshotActive();
+            let slot;
+            if (reusar) {
+                slot = cur;
+                Object.assign(slot, { nombre: p.nombre || ('Pedido #' + num), cart, orderType: p.orderType || 'pedido', formData: p.formData || null, prices: p.prices || {} });
+            } else {
+                slot = makeSlot(p.nombre || ('Pedido #' + num), cart, p.orderType || 'pedido', p.formData || null, p.prices || {});
+                _slots.push(slot);
+            }
+            slot.num = p.num;
+            slot.printedCart = p.printedCart || null;
+            slot.printedAt = p.printedAt || 0;
+            _applySlot(slot.id);
+            saveSlots();
+            ecomStockMap = {};
+            updateBadge(); renderSlotTabs(); renderCart(); render();
+            if (state.orderType === 'presupuesto' && typeof renderBudget === 'function') renderBudget();
+            closePedidosModal();
+            toast('📂 Pedido #' + num + ' abierto — ' + (p.nombre || ''), 'success');
         }
 
         function showPreparadosOptions() { $('preparadosOptModal').classList.add('show'); }
@@ -5991,8 +6288,9 @@
                 return;
             }
             
-            // Clear cart
+            // Clear cart (es un pedido nuevo: sin número)
             state.cart = [];
+            _resetSlotNum();
             
             let found = 0, notFound = [];
             
@@ -6062,6 +6360,7 @@
 
             const loadAndPrint = () => {
                 state.cart = [];
+                _resetSlotNum();
                 let found = 0, notFound = [];
 
                 lines.forEach(line => {

@@ -446,6 +446,26 @@
         .article-compact-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--border); cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .article-compact-row:last-child { border-bottom: none; }
         .article-compact-row.selected { background: rgba(79,172,254,0.1); }
+        /* Deslizar fila: → suma 1 (verde), ← resta 1 (rojo) */
+        .article-compact-row { position: relative; touch-action: pan-y; }
+        .article-compact-row.sw-mas { background: rgba(52,211,153,0.10); }
+        .article-compact-row.sw-menos { background: rgba(248,113,113,0.12); }
+        .article-compact-row.sw-mas::before, .article-compact-row.sw-menos::after {
+            position: absolute; top: 0; bottom: 0; width: 110px; display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 900; font-size: 1.35em; opacity: 0.45; transition: opacity .1s;
+        }
+        .article-compact-row.sw-mas::before { content: '+1'; left: -110px; background: var(--success); }
+        .article-compact-row.sw-menos::after { content: '−1'; right: -110px; background: var(--danger); }
+        .article-compact-row.sw-listo::before, .article-compact-row.sw-listo::after { opacity: 1; }
+        .article-compact-row.flash-mas { animation: flashMas .7s ease-out; }
+        .article-compact-row.flash-menos { animation: flashMenos .7s ease-out; }
+        @keyframes flashMas { 0% { background: rgba(52,211,153,0.55); } 100% { background: transparent; } }
+        @keyframes flashMenos { 0% { background: rgba(248,113,113,0.6); } 100% { background: transparent; } }
+        .sw-burbuja { position: fixed; z-index: 400; pointer-events: none; font-weight: 900; font-size: 1.6em; color: #fff; padding: 4px 14px; border-radius: 14px; transform: translate(-50%, -50%); animation: swBurbuja .9s ease-out forwards; box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+        .sw-burbuja.mas { background: var(--success); }
+        .sw-burbuja.menos { background: var(--danger); animation-name: swBurbujaBaja; }
+        @keyframes swBurbuja { 0% { opacity: 0; transform: translate(-50%, -30%) scale(0.7); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -160%) scale(1); } }
+        @keyframes swBurbujaBaja { 0% { opacity: 0; transform: translate(-50%, -70%) scale(0.7); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, 70%) scale(1); } }
         .acr-photo { width: 60px; height: 60px; flex-shrink: 0; border-radius: 7px; overflow: hidden; background: var(--bg-input); }
         .acr-photo img { width: 100%; height: 100%; object-fit: cover; }
         .acr-photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; }
@@ -3780,6 +3800,7 @@
         
         let _detailScrollKey = ''; // artículo dibujado la última vez (para conservar el scroll)
         function renderArticleDetail() {
+            _swipeInit();
             if (_copySel && _copyKey !== _artCopyKeyNow()) _copySel = null;
             const products = state.filtered;
             if (!products.length) {
@@ -3876,7 +3897,7 @@
                     const ecHtml = ec !== null ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>' : '';
                     const colorImgUrl = colorMeta[color].imgUrl;
                     const cpCls = _copySel ? (_copySel.has(p.id) ? ' copy-pick' : ' copy-off') : '';
-                    html += '<div class="article-compact-row' + (isSelected && !_copySel ? ' selected' : '') + cpCls + '" onclick="articleTapSize(' + p.id + ')">' +
+                    html += '<div class="article-compact-row' + (isSelected && !_copySel ? ' selected' : '') + cpCls + '" data-pid="' + p.id + '" onclick="articleTapSize(' + p.id + ')">' +
                         (_copySel ? '<div class="acr-check">✓</div>' : '') +
                         '<div class="acr-photo">' + (colorImgUrl ? '<img src="' + colorImgUrl + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '<div class="acr-photo-placeholder">📦</div>') + '</div>' +
                         '<div class="acr-color">🎨 ' + color + '</div>' +
@@ -4099,6 +4120,7 @@
         
         // Tap size cell = add 1 to cart + select
         function articleTapSize(productId) {
+            if (Date.now() - _swTapBlock < 450) return;   // venía de deslizar
             if (_copySel) {
                 if (_copySel.has(productId)) _copySel.delete(productId); else _copySel.add(productId);
                 renderArticleDetail();
@@ -4186,6 +4208,70 @@
             renderArticleDetail();
         }
         
+        // ─── Deslizar filas (talle filtrado): → suma 1, ← resta 1 ──────────
+        // Hay que deslizar bastante (se pone verde/rojo y vibra al llegar); si soltás antes, no hace nada.
+        let _swTapBlock = 0;
+        function _swipeCambio(id, d, row) {
+            if (d < 0 && getCartQty(id) <= 0) { toast('Ese no está en el pedido', 'warning'); return; }
+            const r = row.getBoundingClientRect();
+            const b = document.createElement('div');
+            b.className = 'sw-burbuja ' + (d > 0 ? 'mas' : 'menos');
+            b.textContent = d > 0 ? '+1' : '−1';
+            b.style.left = (r.left + r.width * 0.62) + 'px'; b.style.top = (r.top + r.height / 2) + 'px';
+            document.body.appendChild(b); setTimeout(() => b.remove(), 950);
+            try { navigator.vibrate && navigator.vibrate(d > 0 ? 25 : [40, 60, 40]); } catch (e) {}
+            articleSelectedId = id;
+            articleChangeQty(d);
+            const nueva = document.querySelector('.article-compact-row[data-pid="' + id + '"]');
+            if (nueva) nueva.classList.add(d > 0 ? 'flash-mas' : 'flash-menos');
+        }
+        function _swipeInit() {
+            const cont = $('articleDetailContent');
+            if (!cont || cont._swOk) return;
+            cont._swOk = true;
+            const UMBRAL = 85, MAX = 110;
+            let sw = null;
+            cont.addEventListener('pointerdown', e => {
+                if (_copySel || (e.pointerType === 'mouse' && e.button !== 0)) return;
+                const row = e.target.closest('.article-compact-row');
+                if (!row || !row.dataset.pid) return;
+                sw = { row, id: +row.dataset.pid, x0: e.clientX, y0: e.clientY, dx: 0, modo: null, pid: e.pointerId, vib: false };
+            });
+            cont.addEventListener('pointermove', e => {
+                if (!sw || e.pointerId !== sw.pid) return;
+                const dx = e.clientX - sw.x0, dy = e.clientY - sw.y0;
+                if (!sw.modo) {
+                    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+                    sw.modo = Math.abs(dx) > Math.abs(dy) * 1.4 ? 'h' : 'v';   // si va para abajo es scroll
+                    if (sw.modo === 'v') { sw = null; return; }
+                    try { sw.row.setPointerCapture(e.pointerId); } catch (er) {}
+                    sw.row.style.transition = 'none';
+                }
+                sw.dx = dx;
+                const x = Math.max(-MAX, Math.min(MAX, dx));
+                sw.row.style.transform = 'translateX(' + x + 'px)';
+                const listo = Math.abs(dx) >= UMBRAL;
+                sw.row.classList.toggle('sw-mas', dx > 0);
+                sw.row.classList.toggle('sw-menos', dx < 0);
+                sw.row.classList.toggle('sw-listo', listo);
+                if (listo && !sw.vib) { sw.vib = true; try { navigator.vibrate && navigator.vibrate(12); } catch (er) {} }
+                if (!listo) sw.vib = false;
+            });
+            const fin = e => {
+                if (!sw || e.pointerId !== sw.pid) return;
+                const s = sw; sw = null;
+                if (s.modo !== 'h') return;
+                _swTapBlock = Date.now();
+                const ok = e.type === 'pointerup' && Math.abs(s.dx) >= UMBRAL;
+                s.row.style.transition = 'transform .18s ease-out';
+                s.row.style.transform = '';
+                setTimeout(() => s.row.classList.remove('sw-mas', 'sw-menos', 'sw-listo'), 180);
+                if (ok) _swipeCambio(s.id, s.dx > 0 ? 1 : -1, s.row);
+            };
+            cont.addEventListener('pointerup', fin);
+            cont.addEventListener('pointercancel', fin);
+        }
+
         function articleChangeQty(delta) {
             if (!articleSelectedId) return;
             const p = productById(articleSelectedId);

@@ -32,14 +32,19 @@
             padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border); background: var(--bg-card);
         }
-        .header-left { display: flex; align-items: center; gap: 10px; }
-        .header-title { font-size: 1em; font-weight: 700; color: var(--primary); }
-        .sync-inline { display: flex; align-items: center; gap: 5px; font-size: 0.68em; color: var(--text-secondary); }
+        .header-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+        .header { gap: 8px; }
+        .header-title { font-size: 1em; font-weight: 700; color: var(--primary); white-space: nowrap; flex: none; }
+        .sync-inline { display: flex; align-items: center; gap: 5px; font-size: 0.68em; color: var(--text-secondary); white-space: nowrap; overflow: hidden; min-width: 0; }
+        body.hdr-col #syncTime { display: none; }   /* con el botón de color arriba no entra la hora */
         .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
         .sync-dot.loading { background: var(--warning); animation: pulse 1s infinite; }
         .sync-dot.error { background: var(--danger); }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .header-right { display: flex; gap: 6px; }
+        .header-right { display: flex; gap: 6px; align-items: center; flex: none; }
+        .hdr-color { display: inline-block; max-width: 128px; padding: 6px 11px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 700; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .hdr-color.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .hdr-color-x { padding: 5px 9px; border-radius: 14px; border: 1px solid var(--danger); background: rgba(248,113,113,0.15); color: var(--danger); font-weight: 800; font-size: 0.78em; cursor: pointer; }
         .icon-btn { 
             background: none; border: none; font-size: 1.2em; cursor: pointer; padding: 4px; 
             -webkit-tap-highlight-color: transparent;
@@ -132,9 +137,8 @@
         .srch-more.on { color: var(--primary); }
         .srch-more.dot::after { content: ''; position: absolute; top: 0; right: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--warning); }
         /* Barra de talles siempre a mano (+ el botón de colores por foto) */
-        .talle-bar { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; margin: -2px 0 8px; padding: 1px; -webkit-overflow-scrolling: touch; }
-        .talle-bar::-webkit-scrollbar { display: none; }
-        .tb-chip { flex: none; min-width: 40px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-weight: 800; font-size: 0.8em; text-align: center; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .talle-bar { display: grid; gap: 5px; margin: -2px 0 8px; }
+        .tb-chip { min-width: 0; padding: 8px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-weight: 800; font-size: 0.8em; text-align: center; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
         .tb-chip:active { transform: scale(0.95); }
         .tb-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
         .tb-chip.zero { opacity: 0.4; text-decoration: line-through; }
@@ -1368,7 +1372,7 @@
     <div class="page active" id="page-products">
         <div class="header">
             <div class="header-left">
-                <span class="header-title">🛒 Mikra Pedidos</span>
+                <span class="header-title">🛒 Mikra</span>
                 <div class="sync-inline">
                     <div class="sync-dot" id="syncDot"></div>
                     <span id="syncStatus">Cargando...</span>
@@ -1377,6 +1381,8 @@
                 </div>
             </div>
             <div class="header-right">
+                <button class="hdr-color" id="hdrColorBtn" onclick="openColorPhotoOverlay()" style="display:none" title="Elegir color por foto">🎨 <span id="hdrColorTxt">Color</span></button>
+                <button class="hdr-color-x" id="hdrColorX" onclick="clearColorFilter(event)" style="display:none" title="Sacar el filtro de color">✕</button>
                 <button class="icon-btn" onclick="openSettings()" title="Ajustes">⚙️</button>
             </div>
         </div>
@@ -3431,19 +3437,24 @@
             const bar = $('talleBar');
             if (!bar) return;
             const ver = (state.searchExact || !state.search) && !isHomeState() && (_tbSizes.length || Object.keys(colorStockMap).length);
-            bar.style.display = ver ? '' : 'none';
-            if (!ver) return;
-            const nCol = state.colors.length;
-            const colorTxt = nCol ? nCol + ' colores' : (state.color || 'Color');
-            let h = '<div class="tb-chip tb-color' + (nCol || state.color ? ' on' : '') + '" onclick="openColorPhotoOverlay()">🎨 ' + _escHtml(colorTxt) + '</div>';
-            if (nCol || state.color) h += '<div class="tb-chip tb-x" onclick="clearColorFilter(event)" title="Sacar el filtro de color">✕</div>';
-            if (_tbSizes.length) h += '<div class="tb-sep"></div>';
-            _tbSizes.forEach(t => {
+            // 🎨 Color arriba, al lado de ⚙️
+            const nCol = state.colors.length, hayColor = !!(nCol || state.color);
+            $('hdrColorBtn').style.display = ver ? '' : 'none';
+            document.body.classList.toggle('hdr-col', !!ver);
+            $('hdrColorBtn').classList.toggle('on', hayColor);
+            $('hdrColorTxt').textContent = nCol ? nCol + ' colores' : (state.color || 'Color');
+            $('hdrColorX').style.display = ver && hayColor ? '' : 'none';
+            // Talles fijos, repartidos en todo el ancho (hasta 8 por fila)
+            // los talles sin stock no se muestran (salvo el elegido o con 🚫 "ver sin stock")
+            const tbVis = _tbSizes.filter(t => t.avail > 0 || state.size === t.s || showZeroStock);
+            bar.style.display = ver && tbVis.length ? '' : 'none';
+            if (!ver || !tbVis.length) return;
+            bar.style.gridTemplateColumns = 'repeat(' + Math.min(tbVis.length, 8) + ', minmax(0, 1fr))';
+            let h = '';
+            tbVis.forEach(t => {
                 h += '<div class="tb-chip' + (state.size === t.s ? ' on' : '') + (t.avail <= 0 && state.size !== t.s ? ' zero' : '') + '" data-s="' + _escHtml(t.s) + '" onclick="tbTalle(this.dataset.s)">' + _escHtml(t.s) + '</div>';
             });
             bar.innerHTML = h;
-            const on = bar.querySelector('.tb-chip.on:not(.tb-color)');
-            if (on) { const r = on.offsetLeft - bar.offsetLeft; if (r < bar.scrollLeft || r + on.offsetWidth > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = r - 40; }
         }
         function tbTalle(t) {   // tocar el talle activo lo saca
             state.size = state.size === t ? '' : t;
@@ -3573,7 +3584,7 @@
 
             const colors = [...colorMap.keys()].sort();
             const sizes  = [...sizeMap.keys()].sort((a, b) => {
-                const na = parseInt(a), nb = parseInt(b);
+                const na = Number(a), nb = Number(b);   // Number: "2XL" no es 2
                 if (!isNaN(na) && !isNaN(nb)) return na - nb;
                 const ia = SIZE_ORDER.indexOf(a.toUpperCase()), ib = SIZE_ORDER.indexOf(b.toUpperCase());
                 if (ia !== -1 && ib !== -1) return ia - ib;
@@ -4900,6 +4911,7 @@
             $('locationSearch').style.display = 'none';
             $('filtersCollapse').style.display = 'none';
             $('talleBar').style.display = 'none';
+            $('hdrColorBtn').style.display = 'none'; $('hdrColorX').style.display = 'none'; document.body.classList.remove('hdr-col');
 
             const esc = s => String(s).replace(/'/g, "\\'");
             let html = '';
@@ -5064,6 +5076,7 @@
         function toggleZeroStock() {
             showZeroStock = !showZeroStock;
             renderArticleDetail();
+            _pintarExtrasFiltro();   // también muestra/oculta los talles sin stock
         }
 
         function removeCurvaColor(color) {

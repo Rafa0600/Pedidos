@@ -1040,6 +1040,16 @@
         .home-recent-chip:active { background: var(--bg-input); border-color: var(--primary); }
         .home-recent-remove { color: var(--text-secondary); font-size: 0.95em; padding: 2px 4px; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
         .home-recent-remove:active { color: var(--danger); background: rgba(248,113,113,0.15); }
+        /* Últimas búsquedas como banners con foto, una abajo de la otra */
+        .home-recent-rows { display: flex; flex-direction: column; gap: 6px; }
+        .hr-row { display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .hr-row:active { background: var(--bg-input); border-color: var(--primary); }
+        .hr-foto { width: 58px; height: 58px; flex: none; border-radius: 10px; overflow: hidden; background: var(--bg-input); display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: var(--text-secondary); }
+        .hr-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .hr-mid { flex: 1; min-width: 0; }
+        .hr-nom { font-weight: 800; font-size: 0.95em; color: var(--text); line-height: 1.2; }
+        .hr-meta { font-size: 0.74em; color: var(--text-secondary); margin-top: 3px; }
+        .hr-row .home-recent-remove { flex: none; padding: 8px 10px; font-size: 0.9em; }
         .home-back-btn { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 7px 16px; color: var(--text-secondary); font-size: 0.82em; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .home-back-btn:active { background: var(--bg-input); }
         .home-edit-inline-btn { margin-left:auto; flex-shrink:0; background:none; border:1px solid var(--border); border-radius:20px; padding:5px 11px; font-size:0.82em; cursor:pointer; color:var(--text-secondary); }
@@ -2145,14 +2155,14 @@
         }
 
         const RECENT_KEY = 'mikra_recentSearches';
-        const RECENT_MAX = 8;
+        const RECENT_MAX = 20;
         function getRecentSearches() {
             try { const r = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return r.map(i => typeof i === 'string' ? { name: i, exact: false } : i); } catch(e) { return []; }
         }
         function addRecentSearch(term, exact) {
             term = (term || '').trim(); if (term.length < 2) return;
             let list = getRecentSearches().filter(t => t.name.toLowerCase() !== term.toLowerCase());
-            list.unshift({ name: term, exact: !!exact }); list = list.slice(0, RECENT_MAX);
+            list.unshift({ name: term, exact: !!exact, at: Date.now() }); list = list.slice(0, RECENT_MAX);
             try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch(e) {}
         }
         function removeRecentSearch(term) {
@@ -4930,10 +4940,33 @@
                 if (!homeEditMode) {
                     const recents = getRecentSearches();
                     if (recents.length) {
-                        html += '<div class="home-recent-title">🕘 Últimas búsquedas</div><div class="home-recent-list">' +
+                        html += '<div class="home-recent-title">🕘 Últimas búsquedas</div><div class="home-recent-rows">' +
                             recents.map(r => {
-                                const safe = r.name.replace(/'/g, "\\'");
-                                return '<span class="home-recent-chip" onclick="commitSearch(\'' + safe + '\',' + (r.exact?'true':'false') + ')">🔍 ' + r.name + '<span class="home-recent-remove" onclick="event.stopPropagation();removeHomeRecentSearch(\'' + safe + '\')">✕</span></span>';
+                                const safe = _escHtml(r.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+                                // Foto y datos del artículo (si es un artículo; si fue una búsqueda suelta, la lupa)
+                                const prods = _byArticle.get(r.name.toLowerCase()) || [];
+                                let foto = prods.length ? (getArticleImageCandidates(r.name)[0] || '') : '';
+                                let nRes = 0;
+                                if (!prods.length) {   // búsqueda suelta (ej. "6b"): foto del primer resultado que tenga
+                                    const q = r.name.toLowerCase();
+                                    for (const p of PRODUCTS) {
+                                        if (!(_searchStr.get(p.id) || '').includes(q)) continue;
+                                        nRes++;
+                                        if (!foto) foto = getProductImageFull(p.codigo, p) || '';
+                                    }
+                                }
+                                const meta = [];
+                                if (r.at) meta.push(_fechaCorta(r.at));
+                                if (prods.length) {
+                                    const cols = new Set(prods.map(p => p.color || '')).size;
+                                    const st = prods.reduce((a, p) => a + (p.stock || 0), 0);
+                                    meta.push(cols + (cols === 1 ? ' color' : ' colores'), st + ' en stock');
+                                } else meta.push(nRes ? nRes + ' resultados' : 'búsqueda');
+                                return '<div class="hr-row" onclick="commitSearch(\'' + safe + '\',' + (r.exact ? 'true' : 'false') + ')">' +
+                                    '<div class="hr-foto">' + (foto ? '<img src="' + foto + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'🔍\'">' : '🔍') + '</div>' +
+                                    '<div class="hr-mid"><div class="hr-nom">' + _escHtml(r.name) + '</div><div class="hr-meta">' + meta.join(' · ') + '</div></div>' +
+                                    '<span class="home-recent-remove" onclick="event.stopPropagation();removeHomeRecentSearch(\'' + safe + '\')">✕</span>' +
+                                    '</div>';
                             }).join('') + '</div>';
                     }
                 }

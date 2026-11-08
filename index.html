@@ -124,6 +124,23 @@
         .clear-all-filters-btn:active { opacity: 0.7; }
         
         .location-search { display: none; margin-bottom: 8px; }
+
+        /* Compacto: stock/ubicación/"Mostrando" escondidos detrás del ⋮ del buscador */
+        body:not(.mas-filtros) #stockFilters, body:not(.mas-filtros) #resultsInfo { display: none !important; }
+        #filtersCollapse { display: none !important; }   /* reemplazado por la barra de talles */
+        .srch-more { position: relative; flex: none; background: none; border: none; color: var(--text-secondary); font-size: 1.25em; font-weight: 900; line-height: 1; padding: 2px 4px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .srch-more.on { color: var(--primary); }
+        .srch-more.dot::after { content: ''; position: absolute; top: 0; right: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--warning); }
+        /* Barra de talles siempre a mano (+ el botón de colores por foto) */
+        .talle-bar { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; margin: -2px 0 8px; padding: 1px; -webkit-overflow-scrolling: touch; }
+        .talle-bar::-webkit-scrollbar { display: none; }
+        .tb-chip { flex: none; min-width: 40px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-weight: 800; font-size: 0.8em; text-align: center; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .tb-chip:active { transform: scale(0.95); }
+        .tb-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .tb-chip.zero { opacity: 0.4; text-decoration: line-through; }
+        .tb-chip.tb-color { font-weight: 700; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tb-chip.tb-x { min-width: 0; padding: 7px 9px; background: rgba(248,113,113,0.15); border-color: var(--danger); color: var(--danger); }
+        .tb-sep { flex: none; width: 1px; margin: 4px 1px; background: var(--border); }
         
         .results-info { font-size: 0.75em; color: var(--text-secondary); padding: 4px 0; }
         .results-info strong { color: var(--primary); }
@@ -345,6 +362,16 @@
             display: flex; align-items: center; justify-content: center; font-size: 2em;
             color: var(--text-secondary);
         }
+        .color-photo-card { position: relative; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+        .color-photo-card img { -webkit-user-drag: none; pointer-events: none; }
+        .cp-ck { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,0.45); color: transparent; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85em; }
+        .color-photo-card.active .cp-ck { background: var(--success); border-color: var(--success); color: #fff; }
+        .cp-hint { display: block; font-size: 0.68em; font-weight: 600; color: var(--text-secondary); margin-top: 2px; }
+        .cp-multi-bar { position: sticky; bottom: 0; z-index: 10; margin-top: auto; display: none; align-items: center; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: var(--bg-card); border-top: 1px solid var(--border); }
+        .cp-multi-bar.show { display: flex; }
+        .cp-multi-bar span { flex: 1; font-weight: 700; font-size: 0.88em; color: var(--text); }
+        .cp-multi-bar button { padding: 11px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 800; font-size: 0.9em; cursor: pointer; }
+        .cp-multi-bar .cp-apply { background: var(--primary); border-color: var(--primary); color: #fff; }
         .color-photo-card .cp-name {
             padding: 6px 4px 2px; font-size: 0.72em; font-weight: 700; color: var(--text);
         }
@@ -1301,7 +1328,7 @@
             <div class="settings-title">⚙️ Ajustes</div>
             <div class="setting-row">
                 <span class="setting-label">Mostrar SKU</span>
-                <div class="setting-toggle on" id="toggleSku" onclick="toggleSetting('showSku')"></div>
+                <div class="setting-toggle" id="toggleSku" onclick="toggleSetting('showSku')"></div>
             </div>
             <div class="setting-row">
                 <span class="setting-label">Mostrar ubicación</span>
@@ -1350,6 +1377,7 @@
                     <span>🔍</span>
                     <input type="text" id="searchInput" placeholder="Buscar artículo, SKU, color..." autocomplete="off">
                     <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+                    <button class="srch-more" id="masFiltBtn" onclick="toggleMasFiltros()" title="Más filtros: stock, ubicación">⋮</button>
                 </div>
                 <div class="autocomplete" id="autocomplete"></div>
             </div>
@@ -1370,6 +1398,8 @@
                 </div>
             </div>
             
+            <div class="talle-bar" id="talleBar" style="display:none"></div>
+
             <div class="filters-collapse" id="filtersCollapse">
                 <div class="filters-header">
                     <span onclick="toggleFilters()" style="flex:1;cursor:pointer;">🎨 Color / 📏 Talle</span>
@@ -1595,10 +1625,15 @@
     <!-- COLOR PHOTO OVERLAY -->
     <div class="color-photo-overlay" id="colorPhotoOverlay">
         <div class="color-photo-header">
-            <span class="color-photo-title" id="colorPhotoTitle">Colores</span>
+            <span class="color-photo-title"><span id="colorPhotoTitle">Colores</span><span class="cp-hint" id="cpHint">Mantené apretado un color para elegir varios</span></span>
             <button class="color-photo-close" onclick="closeColorPhotoOverlay()">✕</button>
         </div>
         <div class="color-photo-grid" id="colorPhotoGrid"></div>
+        <div class="cp-multi-bar" id="cpMultiBar">
+            <span id="cpMultiTxt"></span>
+            <button onclick="closeColorPhotoOverlay()">Cancelar</button>
+            <button class="cp-apply" id="cpApplyBtn" onclick="cpMultiApply()">Aplicar</button>
+        </div>
     </div>
     
     <div class="img-modal-overlay" id="imgModal" onclick="closeImgModal()">
@@ -2186,14 +2221,15 @@
         let _prevHomeState = null;
         let showZeroStock = false;
         
+        try { if (!localStorage.getItem('mikra_ord_sku_v2')) { localStorage.removeItem('mikra_ord_showSku'); localStorage.setItem('mikra_ord_sku_v2', '1'); } } catch (e) {}
         const settings = {
-            showSku: JSON.parse(localStorage.getItem('mikra_ord_showSku') ?? 'true'),
+            showSku: JSON.parse(localStorage.getItem('mikra_ord_showSku') ?? 'false'),
             showUbic: JSON.parse(localStorage.getItem('mikra_ord_showUbic') ?? 'false'),
         };
         
         const state = {
             filtered: [], search: '', searchExact: false, stock: 'all',
-            color: '', size: '', location: '', page: 1, pageSize: 50,
+            color: '', colors: [], size: '', location: '', page: 1, pageSize: 50,   // colors = varios colores a la vez (si hay 2 o más)
             cart: [],
             orderType: 'pedido', showImages: false
         };
@@ -3348,7 +3384,7 @@
         
         function clearSearch() {
             $('searchInput').value = '';
-            state.search = ''; state.searchExact = false; state.color = ''; state.size = '';
+            state.search = ''; state.searchExact = false; state.color = ''; state.colors = []; state.size = '';
             $('searchClear').classList.remove('show'); $('autocomplete').classList.remove('show');
             forceListView = false; articleColorFilter = ''; showColorStrip = false;
             homeCatSelected = null;
@@ -3369,6 +3405,40 @@
         }
         
         function toggleFilters() { $('filtersCollapse').classList.toggle('open'); }
+        // ⋮ del buscador: muestra/oculta stock, ubicación y "Mostrando"
+        function toggleMasFiltros() {
+            const on = document.body.classList.toggle('mas-filtros');
+            if (on) { $('stockFilters').style.display = ''; $('resultsInfo').style.display = ''; }
+            _pintarExtrasFiltro();
+        }
+        let _tbSizes = [];   // talles del artículo/lista actual: [{ s, avail }]
+        function _pintarExtrasFiltro() {
+            const b = $('masFiltBtn');
+            if (b) {
+                b.classList.toggle('on', document.body.classList.contains('mas-filtros'));
+                b.classList.toggle('dot', state.stock !== 'all' || !!state.location);   // hay un filtro escondido activo
+            }
+            const bar = $('talleBar');
+            if (!bar) return;
+            const ver = (state.searchExact || !state.search) && !isHomeState() && (_tbSizes.length || Object.keys(colorStockMap).length);
+            bar.style.display = ver ? '' : 'none';
+            if (!ver) return;
+            const nCol = state.colors.length;
+            const colorTxt = nCol ? nCol + ' colores' : (state.color || 'Color');
+            let h = '<div class="tb-chip tb-color' + (nCol || state.color ? ' on' : '') + '" onclick="openColorPhotoOverlay()">🎨 ' + _escHtml(colorTxt) + '</div>';
+            if (nCol || state.color) h += '<div class="tb-chip tb-x" onclick="clearColorFilter(event)" title="Sacar el filtro de color">✕</div>';
+            if (_tbSizes.length) h += '<div class="tb-sep"></div>';
+            _tbSizes.forEach(t => {
+                h += '<div class="tb-chip' + (state.size === t.s ? ' on' : '') + (t.avail <= 0 && state.size !== t.s ? ' zero' : '') + '" data-s="' + _escHtml(t.s) + '" onclick="tbTalle(this.dataset.s)">' + _escHtml(t.s) + '</div>';
+            });
+            bar.innerHTML = h;
+            const on = bar.querySelector('.tb-chip.on:not(.tb-color)');
+            if (on) { const r = on.offsetLeft - bar.offsetLeft; if (r < bar.scrollLeft || r + on.offsetWidth > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = r - 40; }
+        }
+        function tbTalle(t) {   // tocar el talle activo lo saca
+            state.size = state.size === t ? '' : t;
+            applyFilters();
+        }
         function toggleLocationSearch() {
             const vis = $('locationSearch').style.display !== 'block';
             $('locationSearch').style.display = vis ? 'block' : 'none';
@@ -3439,11 +3509,13 @@
                 updateDynamicFilters(r);
             }
             if (state.color) r = r.filter(p => p.color === state.color);
+            if (state.colors.length) r = r.filter(p => state.colors.includes(p.color));
             if (state.size)  r = r.filter(p => p.talle === state.size);
             // Solo ordenar cuando es búsqueda exacta (artículo seleccionado)
             if (r !== PRODUCTS && (state.searchExact || !state.search)) r = sortProducts(r);
             state.filtered = r; state.page = 1;
             render(); updateActiveFilterTags();
+            _pintarExtrasFiltro();
         }
         
         function updateActiveFilterTags() {
@@ -3454,9 +3526,9 @@
             $('activeFilters').innerHTML = tags;
         }
         
-        function clearColorFilter(e) { if(e) e.stopPropagation(); state.color = ''; articleColorFilter = ''; applyFilters(); }
+        function clearColorFilter(e) { if(e) e.stopPropagation(); state.color = ''; state.colors = []; articleColorFilter = ''; applyFilters(); }
         function clearSizeFilter(e) { if(e) e.stopPropagation(); state.size = ''; applyFilters(); }
-        function clearAllQuickFilters(e) { if(e) e.stopPropagation(); state.color = ''; state.size = ''; articleColorFilter = ''; applyFilters(); }
+        function clearAllQuickFilters(e) { if(e) e.stopPropagation(); state.color = ''; state.colors = []; state.size = ''; articleColorFilter = ''; applyFilters(); }
         let colorStockMap = {}; // { colorName: { stock, avail, imgUrl } }
         
         function updateDynamicFilters(results) {
@@ -3466,7 +3538,7 @@
             const n = results.length;
             for (let i = 0; i < n; i++) {
                 const p = results[i];
-                const avail = (p.stock || 0) - _cartQtyCache.get(p.id) || 0;
+                const avail = (p.stock || 0) - (_cartQtyCache.get(p.id) || 0);
                 // Color
                 if (p.color) {
                     let cm = colorMap.get(p.color);
@@ -3479,7 +3551,7 @@
                 }
                 // Talle
                 if (p.talle) {
-                    if (!state.color || p.color === state.color) {
+                    if ((!state.color || p.color === state.color) && (!state.colors.length || state.colors.includes(p.color))) {
                         sizeMap.set(p.talle, (sizeMap.get(p.talle) || 0) + avail);
                     }
                 }
@@ -3505,6 +3577,7 @@
                     return '<div class="filter-opt' + (state.color === c ? ' active' : '') + zs + '" data-color="' + c + '">' + c + '</div>';
                 }).join('');
 
+            _tbSizes = sizes.map(sz => ({ s: sz, avail: sizeMap.get(sz) || 0 }));
             $('sizeOptions').innerHTML = '<div class="filter-opt' + (!state.size ? ' active' : '') + '" data-size="">Todos</div>' +
                 sizes.map(s => {
                     const avail = sizeMap.get(s) || 0;
@@ -3523,18 +3596,26 @@
 
             const articleName = state.searchExact ? state.search : '';
             $('colorPhotoTitle').textContent = articleName ? articleName : 'Colores';
-
+            _cpMulti = state.colors.length ? new Set(state.colors) : null;   // si ya había varios, sigue en modo varios
+            _cpColors = colors;
+            _cpPaint();
+            $('colorPhotoOverlay').classList.add('show');
+        }
+        let _cpMulti = null, _cpColors = [], _cpLP = null, _cpLPfired = false;
+        function _cpPaint() {
             let html = '';
-            colors.forEach(c => {
+            _cpColors.forEach(c => {
                 const cm = colorStockMap[c];
+                if (!cm) return;
                 const isZero = cm.avail <= 0;
+                const isActive = _cpMulti ? _cpMulti.has(c) : state.color === c;
                 // ocultar sin stock, salvo que esté seleccionado o activado 🚫 "mostrar ocultos"
-                if (isZero && state.color !== c && !showZeroStock) return;
-                const isActive = state.color === c;
+                if (isZero && !isActive && !showZeroStock) return;
                 const imgUrl = cm.imgUrl;
                 const thumbUrl = imgUrl || '';
 
-                html += '<div class="color-photo-card' + (isActive ? ' active' : '') + (isZero ? ' zero-stock' : '') + '" onclick="selectColorFromOverlay(\'' + c.replace(/'/g, "\\'") + '\')">';
+                html += '<div class="color-photo-card' + (isActive ? ' active' : '') + (isZero ? ' zero-stock' : '') + '" data-c="' + _escHtml(c) + '" onclick="cpTap(this)" onpointerdown="cpDown(this)" onpointerup="cpUp()" onpointerleave="cpUp()" onpointercancel="cpUp()" oncontextmenu="return false">';
+                if (_cpMulti) html += '<div class="cp-ck">✓</div>';
                 if (thumbUrl) {
                     html += '<img class="cp-img" src="' + thumbUrl + '" loading="lazy" onerror="this.outerHTML=\'<div class=cp-placeholder>📦</div>\'">';
                 } else {
@@ -3546,14 +3627,51 @@
             });
             
             $('colorPhotoGrid').innerHTML = html;
-            $('colorPhotoOverlay').classList.add('show');
+            const n = _cpMulti ? _cpMulti.size : 0;
+            $('cpMultiBar').classList.toggle('show', !!_cpMulti);
+            $('cpMultiTxt').textContent = n === 1 ? '1 color' : n + ' colores';
+            $('cpApplyBtn').textContent = 'Aplicar' + (n ? ' (' + n + ')' : '');
+            $('cpHint').textContent = _cpMulti ? 'Tocá para sumar o sacar colores' : 'Mantené apretado un color para elegir varios';
         }
-        
+        // Toque largo = pasar a elegir varios (o sumar/sacar si ya estás eligiendo)
+        function cpDown(el) {
+            clearTimeout(_cpLP); _cpLPfired = false;
+            _cpLP = setTimeout(() => {
+                _cpLPfired = true;
+                const c = el.dataset.c;
+                if (!_cpMulti) _cpMulti = new Set(state.color && state.color !== c ? [state.color] : []);
+                if (_cpMulti.has(c)) _cpMulti.delete(c); else _cpMulti.add(c);
+                try { navigator.vibrate && navigator.vibrate(40); } catch (e) {}
+                _cpPaint();
+            }, 450);
+        }
+        function cpUp() { clearTimeout(_cpLP); }
+        function cpTap(el) {
+            if (_cpLPfired) { _cpLPfired = false; return; }   // el click que viene después del toque largo
+            const c = el.dataset.c;
+            if (_cpMulti) {
+                if (_cpMulti.has(c)) _cpMulti.delete(c); else _cpMulti.add(c);
+                _cpPaint();
+                return;
+            }
+            selectColorFromOverlay(c);
+        }
+        function cpMultiApply() {
+            const arr = _cpColors.filter(c => _cpMulti && _cpMulti.has(c));
+            if (arr.length >= 2) { state.color = ''; state.colors = arr; }
+            else { state.color = arr[0] || ''; state.colors = []; }
+            articleColorFilter = state.color;
+            closeColorPhotoOverlay();
+            applyFilters();
+        }
+
         function closeColorPhotoOverlay() {
+            clearTimeout(_cpLP); _cpMulti = null;
             $('colorPhotoOverlay').classList.remove('show');
         }
-        
+
         function selectColorFromOverlay(color) {
+            state.colors = [];
             state.color = (state.color === color) ? '' : color;
             articleColorFilter = state.color;
             closeColorPhotoOverlay();
@@ -3722,7 +3840,6 @@
 
             if (isSingleTalleMode) {
                 // Modo compacto: un talle filtrado → fila horizontal foto + color + celda
-                html += '<div class="article-single-talle-header">Talle filtrado: <strong>' + state.size + '</strong></div>';
                 html += '<div class="article-compact-list">';
                 visibleColors.forEach(color => {
                     const prods = colorGroups[color];
@@ -3863,7 +3980,7 @@
         }
         
         // ─── 📋 COPIAR COLORES (talle filtrado) / TALLES (color filtrado) ─────
-        function _artCopyKeyNow() { return state.search + '|' + state.size + '|' + state.color; }
+        function _artCopyKeyNow() { return state.search + '|' + state.size + '|' + state.color + '|' + state.colors.join(','); }
         function _lindoNom(x) {   // "NEGRO JASPEADO" → "Negro jaspeado" (si ya viene escrito lindo, se respeta)
             x = String(x || '').trim();
             return x && x === x.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(x) ? x.charAt(0) + x.slice(1).toLowerCase() : x;
@@ -3952,7 +4069,7 @@
         
         function filterArticleColor(color) {
             articleColorFilter = color;
-            state.color = color;
+            state.color = color; state.colors = [];
             applyFilters();
         }
         
@@ -4131,7 +4248,7 @@
 
         // ===== HOME DASHBOARD =====
         function isHomeState() {
-            return !_inputFocused && !state.search && state.stock === 'all' && !state.color && !state.size && !state.location && PRODUCTS.length > 0;
+            return !_inputFocused && !state.search && state.stock === 'all' && !state.color && !state.colors.length && !state.size && !state.location && PRODUCTS.length > 0;
         }
 
         function getArticleStock(name) {
@@ -4772,6 +4889,7 @@
             $('stockFilters').style.display = 'none';
             $('locationSearch').style.display = 'none';
             $('filtersCollapse').style.display = 'none';
+            $('talleBar').style.display = 'none';
 
             const esc = s => String(s).replace(/'/g, "\\'");
             let html = '';
@@ -7390,7 +7508,7 @@
             $('searchClear').classList.remove('show');
             $('autocomplete').classList.remove('show');
             state.search = ''; state.searchExact = false;
-            state.color = ''; state.size = ''; state.location = '';
+            state.color = ''; state.colors = []; state.size = ''; state.location = '';
             forceListView = false; articleColorFilter = ''; showColorStrip = false;
 
             $('articleEditBar').classList.remove('show');
@@ -7428,7 +7546,7 @@
         });
         $('searchInput').addEventListener('input', e => {
             const val = e.target.value.trim();
-            state.searchExact = false; state.color = ''; state.size = '';
+            state.searchExact = false; state.color = ''; state.colors = []; state.size = '';
             forceListView = false;
             $('searchClear').classList.toggle('show', val.length > 0);
 
@@ -7471,7 +7589,7 @@
                 el.classList.add('active'); state.stock = el.dataset.stock; applyFilters();
             });
         });
-        $('colorOptions').addEventListener('click', e => { const opt = e.target.closest('[data-color]'); if (opt) { state.color = opt.dataset.color; applyFilters(); } });
+        $('colorOptions').addEventListener('click', e => { const opt = e.target.closest('[data-color]'); if (opt) { state.color = opt.dataset.color; state.colors = []; applyFilters(); } });
         $('sizeOptions').addEventListener('click', e => { const opt = e.target.closest('[data-size]'); if (opt) { state.size = opt.dataset.size; applyFilters(); } });
         // Nav buttons usan onclick directamente (goHome / switchPage)
         document.querySelectorAll('.delivery-option[data-delivery]').forEach(opt => {

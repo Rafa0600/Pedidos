@@ -7491,13 +7491,14 @@
                     const s = _savedStockState;
                     state.search = s.search;
                     state.searchExact = s.searchExact;
-                    state.filtered = s.filtered;
+                    state.color = s.color || ''; state.colors = s.colors || []; state.size = s.size || ''; state.location = s.location || '';
+                    articleColorFilter = state.color;
                     $('searchInput').value = s.search;
                     $('searchClear').classList.add('show');
                     _savedStockState = null;
                     hideHomeScreen();
-                    if (s.searchExact) renderArticleDetail();
-                    else { applyFilters(); }
+                    applyFilters();   // rearma todo igual que estaba (talle, color, barra de talles)
+                    if (s.fotos) { $('articleDetailView').classList.add('show-photos'); const b = $('articlePhotoToggle'); if (b) b.classList.add('active'); }
                     volverA = s.scroll || 0;
                 } else if (_savedStockState && _savedStockState.cat) {
                     // Volver a la categoría donde estabas antes de tocar Inicio
@@ -7532,7 +7533,10 @@
 
             const _scr = $('page-products').classList.contains('active') ? window.scrollY : _stockScroll;
             if (state.search) {
-                _savedStockState = { search: state.search, searchExact: state.searchExact, filtered: [...state.filtered], scroll: _scr };
+                // guardar también talle/color/ubicación y si estaban las fotos: al volver se veía distinto (sin fotos)
+                _savedStockState = { search: state.search, searchExact: state.searchExact, filtered: [...state.filtered], scroll: _scr,
+                    color: state.color, colors: [...state.colors], size: state.size, location: state.location,
+                    fotos: $('articleDetailView').classList.contains('show-photos') };
             } else if (homeCatSelected) {
                 _savedStockState = { cat: [homeCatSelected, homeCatChild, homeCatGrandchild, homeCatSubcat], scroll: _scr };
             }

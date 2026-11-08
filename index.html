@@ -262,6 +262,17 @@
             font-weight: 600; -webkit-tap-highlight-color: transparent;
         }
         .article-photo-toggle.active { background: var(--primary); border-color: var(--primary); color: white; }
+        /* 📋 Copiar colores / talles para ofrecer */
+        .article-photo-toggle.art-copy-on { background: var(--success); border-color: var(--success); color: #05301f; font-weight: 800; white-space: nowrap; }
+        .art-copy-bar { display: flex; align-items: center; gap: 6px; margin: 2px 10px 6px; padding: 6px 8px 6px 10px; border-radius: 10px; background: rgba(52,211,153,0.12); border: 1px dashed var(--success); font-size: 0.76em; color: var(--text); }
+        .art-copy-bar .acb-txt { flex: 1; min-width: 0; line-height: 1.25; }
+        .art-copy-bar button { flex: none; padding: 5px 9px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-size: 0.95em; font-weight: 700; cursor: pointer; }
+        .article-compact-row.copy-off, .article-size-cell.copy-off { opacity: 0.3; }
+        .article-compact-row.copy-pick { background: rgba(52,211,153,0.10); }
+        .acr-check { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.75em; font-weight: 900; color: transparent; }
+        .copy-pick .acr-check { background: var(--success); border-color: var(--success); color: #fff; }
+        .article-size-cell.copy-pick { box-shadow: inset 0 0 0 2px var(--success); }
+        .asc-copy-ck { position: absolute; top: 1px; left: 3px; font-size: 0.62em; font-weight: 900; color: var(--success); }
         
         .article-color-strip {
             display: flex; gap: 6px; padding: 6px 8px; overflow-x: auto;
@@ -2191,6 +2202,8 @@
         let ecomStockMap = {};  // { sku: stock_real }
         // Stock ecom del artículo abierto en detalle
         let artEcomMap = {};    // { sku: stock_real }
+        // 📋 Copiar colores/talles: ids elegidos para copiar (null = modo normal)
+        let _copySel = null, _copyKey = '';
         
         const $ = id => document.getElementById(id);
         
@@ -3628,6 +3641,7 @@
         
         let _detailScrollKey = ''; // artículo dibujado la última vez (para conservar el scroll)
         function renderArticleDetail() {
+            if (_copySel && _copyKey !== _artCopyKeyNow()) _copySel = null;
             const products = state.filtered;
             if (!products.length) {
                 $('articleDetailContent').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>No hay variantes</div></div>';
@@ -3689,7 +3703,15 @@
                 (totalColorsCero > 0 ? '<button class="article-photo-toggle" onclick="toggleZeroStock()" style="' + (showZeroStock ? 'background:rgba(248,113,113,0.2);color:var(--danger);' : '') + '" title="' + (showZeroStock ? 'Ocultar colores sin stock' : 'Ver ' + totalColorsCero + ' color(es) sin stock') + '">🚫' + (showZeroStock ? '✓' : totalColorsCero) + '</button>' : '') +
                 '<button class="article-photo-toggle" id="articlePhotoToggle" onclick="toggleArticlePhotos()">📷</button>' +
                 '<button class="article-photo-toggle" id="artEcomRefreshBtn" onclick="fetchEcomStockForArticle()" title="Actualizar stock ecom de este artículo" style="' + (Object.keys(artEcomMap).length ? 'color:var(--success);border-color:var(--success);' : '') + '">🔄</button>' +
+                ((state.size || state.color)
+                    ? '<button class="article-photo-toggle' + (_copySel ? ' art-copy-on' : '') + '" id="artCopyBtn" onclick="artCopyTap()" title="' + (state.size ? 'Copiar los colores de este talle' : 'Copiar los talles de este color') + '">📋' + (_copySel ? ' Copiar ' + _copySel.size : '') + '</button>'
+                    : '') +
                 '</div>';
+            if (_copySel) {
+                html += '<div class="art-copy-bar"><span class="acb-txt">Tocá ' + (state.size ? 'los colores' : 'los talles') + ' que <b>no</b> querés ofrecer · 📋 de nuevo copia</span>' +
+                    '<button onclick="fetchEcomStockForArticle()" title="Ver stock real en Ecom y sacar los que no hay">🔄 Ecom</button>' +
+                    '<button onclick="artCopyCancel()" title="Cancelar">✕</button></div>';
+            }
             
             // Ocultar colores enteros sin stock, salvo que el toggle esté activo
             const visibleColors = showZeroStock
@@ -3715,7 +3737,9 @@
                     const ec = artEcomMap[String(p.codigo)] !== undefined ? artEcomMap[String(p.codigo)] : null;
                     const ecHtml = ec !== null ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>' : '';
                     const colorImgUrl = colorMeta[color].imgUrl;
-                    html += '<div class="article-compact-row' + (isSelected ? ' selected' : '') + '" onclick="articleTapSize(' + p.id + ')">' +
+                    const cpCls = _copySel ? (_copySel.has(p.id) ? ' copy-pick' : ' copy-off') : '';
+                    html += '<div class="article-compact-row' + (isSelected && !_copySel ? ' selected' : '') + cpCls + '" onclick="articleTapSize(' + p.id + ')">' +
+                        (_copySel ? '<div class="acr-check">✓</div>' : '') +
                         '<div class="acr-photo">' + (colorImgUrl ? '<img src="' + colorImgUrl + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '<div class="acr-photo-placeholder">📦</div>') + '</div>' +
                         '<div class="acr-color">🎨 ' + color + '</div>' +
                         '<div class="article-size-cell' + (isZero ? ' zero' : '') + (inCart ? ' in-cart' : '') + (isSelected ? ' selected' : '') + '" data-pid="' + p.id + '" style="flex-shrink:0;">' +
@@ -3765,11 +3789,14 @@
                         const ec = artEcomMap[String(p.codigo)] !== undefined ? artEcomMap[String(p.codigo)] : null;
                         const ecHtml = ec !== null ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>' : '';
 
+                        const cpPick = _copySel && _copySel.has(p.id);
                         html += '<div class="article-size-cell' +
                             (isZero ? ' zero' : '') +
                             (inCart ? ' in-cart' : '') +
-                            (isSelected ? ' selected' : '') +
+                            (isSelected && !_copySel ? ' selected' : '') +
+                            (_copySel ? (cpPick ? ' copy-pick' : ' copy-off') : '') +
                             '" data-pid="' + p.id + '" onclick="articleTapSize(' + p.id + ')">' +
+                            (cpPick ? '<span class="asc-copy-ck">✓</span>' : '') +
                             (inCart ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
                             '<div class="asc-size">' + talle + '</div>' +
                             '<div class="asc-stock ' + stockClass + '">' + available + '</div>' +
@@ -3780,8 +3807,8 @@
                     const colorKey = color.replace(/'/g, "\\'");
                     const colorProds = state.filtered.filter(p => (p.color || 'Sin color') === color);
                     const canRemoveCurva = colorProds.length > 0 && colorProds.every(p => getCartQty(p.id) >= 1);
-                    html += '<div class="article-size-cell curva-btn-cell" onclick="addCurvaColor(\'' + colorKey + '\')" title="Agregar 1 de cada talle"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">+<br>Curva</div></div>';
-                    if (canRemoveCurva) {
+                    if (!_copySel) html += '<div class="article-size-cell curva-btn-cell" onclick="addCurvaColor(\'' + colorKey + '\')" title="Agregar 1 de cada talle"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">+<br>Curva</div></div>';
+                    if (canRemoveCurva && !_copySel) {
                         html += '<div class="article-size-cell minus-curva-btn-cell" onclick="removeCurvaColor(\'' + colorKey + '\')" title="Quitar 1 de cada talle"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">−<br>Curva</div></div>';
                     }
                     html += '</div></div>';
@@ -3823,6 +3850,7 @@
             articleColorFilter = '';
             showColorStrip = false;
             artEcomMap = {}; // limpiar mapa ecom al salir del artículo
+            _copySel = null;
             // If home state, hide productList and show home
             if (isHomeState()) {
                 $('productList').style.display = 'none';
@@ -3834,6 +3862,85 @@
             }
         }
         
+        // ─── 📋 COPIAR COLORES (talle filtrado) / TALLES (color filtrado) ─────
+        function _artCopyKeyNow() { return state.search + '|' + state.size + '|' + state.color; }
+        function _lindoNom(x) {   // "NEGRO JASPEADO" → "Negro jaspeado" (si ya viene escrito lindo, se respeta)
+            x = String(x || '').trim();
+            return x && x === x.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(x) ? x.charAt(0) + x.slice(1).toLowerCase() : x;
+        }
+        function _cmpTalle(a, b) {
+            const na = parseFloat(a), nb = parseFloat(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            const ia = SIZE_ORDER.indexOf(String(a).toUpperCase()), ib = SIZE_ORDER.indexOf(String(b).toUpperCase());
+            if (ia > -1 && ib > -1) return ia - ib;
+            if (ia > -1) return -1; if (ib > -1) return 1;
+            return String(a).localeCompare(String(b));
+        }
+        // Lo que se puede copiar, en el mismo orden que se ve en pantalla
+        function _artCopyItems() {
+            if (state.size) {
+                const vistos = new Set(), out = [];
+                state.filtered.forEach(p => { const c = p.color || 'Sin color'; if (vistos.has(c)) return; vistos.add(c); out.push({ p, label: c }); });
+                return out.sort((a, b) => a.label < b.label ? -1 : a.label > b.label ? 1 : 0);
+            }
+            if (state.color) {
+                const vistos = new Set(), out = [];
+                state.filtered.forEach(p => { if (!p.talle || vistos.has(p.talle)) return; vistos.add(p.talle); out.push({ p, label: p.talle }); });
+                return out.sort((a, b) => _cmpTalle(a.label, b.label));
+            }
+            return [];
+        }
+        function _artCopyHay(p) {   // hay para ofrecer: stock libre y, si ya se consultó Ecom, que Ecom también tenga
+            if ((p.stock || 0) - getCartQty(p.id) <= 0) return false;
+            const ec = artEcomMap[String(p.codigo)];
+            return ec === undefined || ec > 0;
+        }
+        function _juntarY(arr) { return arr.length <= 1 ? (arr[0] || '') : arr.slice(0, -1).join(', ') + ' y ' + arr[arr.length - 1]; }
+        function _copiarTexto(txt) {
+            const viejo = () => {
+                const ta = document.createElement('textarea');
+                ta.value = txt; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+                document.body.appendChild(ta); ta.select();
+                let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+                ta.remove(); return ok;
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(txt).then(() => true, () => viejo());
+            return Promise.resolve(viejo());
+        }
+        function artCopyTap() {
+            if (!_copySel) {
+                // 1er toque: se marcan todos los que hay; tocás para sacar los que no querés ofrecer
+                const items = _artCopyItems();
+                if (!items.length) { toast('No hay nada para copiar', 'warning'); return; }
+                _copySel = new Set(items.filter(it => _artCopyHay(it.p)).map(it => it.p.id));
+                _copyKey = _artCopyKeyNow();
+                try { navigator.vibrate && navigator.vibrate(30); } catch (e) {}
+                renderArticleDetail();
+                return;
+            }
+            // 2do toque: copiar
+            const elegidos = _artCopyItems().filter(it => _copySel.has(it.p.id)).map(it => state.size ? _lindoNom(it.label) : it.label);   // los talles van tal cual (XL, 2XL)
+            if (!elegidos.length) { toast('No elegiste ninguno', 'warning'); return; }
+            let txt;
+            if (state.size) {
+                txt = elegidos.length === 1
+                    ? 'En talle ' + state.size + ' tenemos en ' + elegidos[0]
+                    : 'En talle ' + state.size + ' tenemos en estos colores:\n' + elegidos.map(c => '• ' + c).join('\n');
+            } else {
+                txt = 'En ' + _lindoNom(state.color) + ' tenemos en ' + (elegidos.length === 1 ? 'talle ' : 'talles ') + _juntarY(elegidos);
+            }
+            const cuantos = elegidos.length + ' ' + (state.size ? (elegidos.length === 1 ? 'color' : 'colores') : (elegidos.length === 1 ? 'talle' : 'talles'));
+            _copiarTexto(txt).then(ok => {
+                if (ok) {
+                    toast('📋 Copiado: ' + cuantos + ' · pegalo en WhatsApp', 'success');
+                    _copySel = null; renderArticleDetail();
+                } else {
+                    toast('No se pudo copiar', 'error');
+                }
+            });
+        }
+        function artCopyCancel() { _copySel = null; renderArticleDetail(); }
+
         function toggleArticlePhotos() {
             const view = $('articleDetailView');
             view.classList.toggle('show-photos');
@@ -3854,6 +3961,11 @@
         
         // Tap size cell = add 1 to cart + select
         function articleTapSize(productId) {
+            if (_copySel) {
+                if (_copySel.has(productId)) _copySel.delete(productId); else _copySel.add(productId);
+                renderArticleDetail();
+                return;
+            }
             const p = productById(productId);
             if (!p) return;
             
@@ -7528,7 +7640,17 @@
 
             try {
                 artEcomMap = await _fetchEcomSkus(skus);
-                toast('✅ Stock ecom actualizado', 'success');
+                if (_copySel) {
+                    const sacados = [];
+                    [..._copySel].forEach(id => {
+                        const p = productById(id);
+                        const ec = p ? artEcomMap[String(p.codigo)] : undefined;
+                        if (ec !== undefined && ec <= 0) { _copySel.delete(id); sacados.push(state.size ? (p.color || '') : (p.talle || '')); }
+                    });
+                    toast(sacados.length ? '🔄 Ecom: saqué ' + sacados.length + ' sin stock (' + sacados.map(x => state.size ? _lindoNom(x) : x).join(', ') + ')' : '✅ Ecom: todos los elegidos tienen stock', sacados.length ? 'warning' : 'success');
+                } else {
+                    toast('✅ Stock ecom actualizado', 'success');
+                }
                 renderArticleDetail();
             } catch(e) {
                 toast('❌ Error al consultar ecom', 'error');

@@ -7814,6 +7814,46 @@
     </script>
     <script>
         const WORKER_BASE = 'https://ecomm-token-proxy.rafaelassir.workers.dev';
+        // ── Clave para MODIFICAR stock de Ecom ───────────────────────────────────────
+        // La valida el worker (secreto CLAVE_STOCK en Cloudflare): sin la clave correcta no se toca nada.
+        // Se pide una sola vez y queda guardada en este equipo. Si el worker la rechaza, la vuelve a pedir.
+        const CLAVE_LS = 'mikra_clave_stock';
+        function claveStock() { try { return localStorage.getItem(CLAVE_LS) || ''; } catch (e) { return ''; } }
+        function _claveGuardar(v) { try { v ? localStorage.setItem(CLAVE_LS, v) : localStorage.removeItem(CLAVE_LS); } catch (e) {} }
+        function pedirClaveStock(mal) {
+            return new Promise(res => {
+                const o = document.createElement('div');
+                o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px;font-family:system-ui,-apple-system,sans-serif';
+                o.innerHTML = '<form style="background:#1e2433;color:#fff;border-radius:16px;padding:20px;width:100%;max-width:330px;box-shadow:0 10px 40px rgba(0,0,0,.5)">' +
+                    '<div style="font-size:1.15em;font-weight:800;margin-bottom:6px">🔒 Clave para modificar stock</div>' +
+                    '<div style="font-size:.9em;opacity:.8;margin-bottom:12px">' + (mal ? '❌ Clave incorrecta, probá de nuevo.' : 'Se pide una sola vez en este equipo.') + '</div>' +
+                    '<input type="password" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #445;background:#111722;color:#fff;font-size:1.1em">' +
+                    '<div style="display:flex;gap:8px;margin-top:14px">' +
+                    '<button type="button" data-x style="flex:1;padding:11px;border-radius:10px;border:0;background:#394155;color:#fff;font-weight:700;font-size:1em">Cancelar</button>' +
+                    '<button style="flex:1;padding:11px;border-radius:10px;border:0;background:#22c55e;color:#04210f;font-weight:800;font-size:1em">Guardar</button></div></form>';
+                const inp = o.querySelector('input'), fin = v => { o.remove(); res(v); };
+                o.querySelector('[data-x]').onclick = () => fin('');
+                o.querySelector('form').onsubmit = e => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; _claveGuardar(v); fin(v); };
+                document.body.appendChild(o); setTimeout(() => inp.focus(), 60);
+            });
+        }
+        let _clavePidiendo = null;
+        // fetch al worker que cambia stock, con la clave. Si el worker dice 401 (no se modificó nada),
+        // pide la clave y reintenta. Si cancelás, tira error y no se envía nada.
+        async function fetchConClave(url, opts = {}) {
+            for (let i = 0; i < 4; i++) {
+                const k = claveStock();
+                const r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), 'X-Clave': k } });
+                if (r.status !== 401) return r;
+                if (claveStock() === k && !_clavePidiendo) {
+                    _claveGuardar('');
+                    _clavePidiendo = pedirClaveStock(i > 0 || !!k).finally(() => { _clavePidiendo = null; });
+                }
+                if (_clavePidiendo) await _clavePidiendo;
+                if (!claveStock()) throw new Error('Sin clave: no se modificó el stock');
+            }
+            throw new Error('Clave incorrecta: no se modificó el stock');
+        }
         const PIN_CORRECTO = '9148';
 
         // ─── STOCK ECOM EN TIEMPO REAL ────────────────────────────────────────
@@ -8079,14 +8119,14 @@
             let completados = 0;
             await Promise.all(lotes.map(async (lote) => {
                 try {
-                    const data = await fetch(`${WORKER_BASE}/bulk-update-stock`, {
+                    const data = await fetchConClave(`${WORKER_BASE}/bulk-update-stock`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(lote.map(p => ({ sku: p.codigo, qty: p.qty })))
                     }).then(r => r.json());
                     (data.results || []).forEach(r => { resMap[String(r.sku)] = r; });
                 } catch(e) {
-                    lote.forEach(p => { resMap[String(p.codigo)] = { sku: p.codigo, error: 'Error de conexión' }; });
+                    lote.forEach(p => { resMap[String(p.codigo)] = { sku: p.codigo, error: /clave/i.test(e.message) ? e.message : 'Error de conexión' }; });
                 }
                 completados += lote.length;
                 $('ventaProgressBar').style.width = Math.round(completados / snap.length * 100) + '%';
@@ -8207,7 +8247,7 @@
                 if (!item || item.revertido) return;
                 try {
                     // qty negativo = sumar stock
-                    const res = await fetch(`${WORKER_BASE}/update-stock?sku=${item.sku}&qty=${-Math.abs(item.qty)}`).then(r => r.json());
+                    const res = await fetchConClave(`${WORKER_BASE}/update-stock?sku=${item.sku}&qty=${-Math.abs(item.qty)}`).then(r => r.json());
                     if (!res.error) { h[vi].items[ii].revertido = true; ok++; }
                     else err++;
                 } catch(e) { err++; }

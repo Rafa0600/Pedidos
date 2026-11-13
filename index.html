@@ -641,6 +641,12 @@
         .po-ajrow input { padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-size: 15px; font-weight: 600; min-width: 0; }
         .po-ajrow #poAjLabel { flex: 1; }
         .po-ajrow #poAjPct { width: 64px; text-align: center; }
+        .po-ajrow #poAjPct.monto { width: auto; flex: 1; }
+        .po-ajrow { flex-wrap: wrap; }
+        .po-ajrow #poAjLabel { flex: 1 1 100%; }   /* el concepto entero arriba; abajo el valor y % / $ */
+        .po-unit { display: flex; flex: none; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .po-unit button { padding: 9px 11px; border: none; background: var(--bg-input); color: var(--text-secondary); font-weight: 800; font-size: 0.9em; cursor: pointer; }
+        .po-unit button.on { background: var(--primary); color: #fff; }
         .po-prev { margin-top: 14px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 0.85em; }
         .po-prev .r { display: flex; justify-content: space-between; padding: 2px 0; color: var(--text-secondary); }
         .po-prev .r span:last-child { white-space: nowrap; margin-left: 10px; }
@@ -1851,8 +1857,8 @@
                 </div>
                 <div class="po-ajrow" id="poAjRow">
                     <input type="text" id="poAjLabel" maxlength="40" oninput="poUpd()" placeholder="Concepto">
-                    <input type="text" id="poAjPct" inputmode="decimal" maxlength="5" oninput="poUpd()" placeholder="%">
-                    <span>%</span>
+                    <input type="text" id="poAjPct" inputmode="decimal" maxlength="9" oninput="poUpd()" placeholder="%">
+                    <div class="po-unit" id="poUnit"><button data-u="pct" onclick="poSet('ajTipo','pct')">%</button><button data-u="monto" onclick="poSet('ajTipo','monto')">$</button></div>
                 </div>
             </div>
             <div class="po-prev" id="poPrev"></div>
@@ -5658,7 +5664,7 @@
         function detallesPDF() { showPdfOptions(); }
 
         // Opciones del presupuesto (se recuerdan para la próxima)
-        let _po = { iva: 'no', aj: 'no', ajPct: '10', descLabel: 'Descuento por transferencia', recLabel: 'Recargo' };
+        let _po = { iva: 'no', aj: 'no', ajTipo: 'pct', ajPct: '10', ajMonto: '', descLabel: 'Descuento por transferencia', recLabel: 'Recargo' };   // ajTipo: 'pct' (porcentaje) o 'monto' (pesos fijos)
         try { Object.assign(_po, JSON.parse(localStorage.getItem('mikra_pdf_opts') || '{}')); } catch (e) {}
         function openPresOpts() {
             $('poTitle').textContent = '📄 PDF del ' + (state.orderType === 'presupuesto' ? 'presupuesto' : 'pedido');
@@ -5666,6 +5672,12 @@
             $('presOptsModal').classList.add('show');
         }
         function poSet(k, v) {
+            if (k === 'ajTipo') {   // cambiar entre % y $: mostrar el valor guardado de cada uno
+                _po.ajTipo = v;
+                $('poAjPct').value = v === 'monto' ? _fmtMonto(_po.ajMonto) : _po.ajPct;
+                poPaint(); $('poAjPct').focus();
+                return;
+            }
             if (k === 'aj' && v !== 'no') {
                 // al cambiar de descuento a recargo, proponer el concepto de cada uno
                 $('poAjLabel').value = v === 'desc' ? _po.descLabel : _po.recLabel;
@@ -5678,19 +5690,32 @@
             document.querySelectorAll('#poAj button').forEach(b => b.classList.toggle('on', b.dataset.v === _po.aj));
             $('poAjRow').classList.toggle('show', _po.aj !== 'no');
             if (_po.aj !== 'no' && !$('poAjLabel').value) $('poAjLabel').value = _po.aj === 'desc' ? _po.descLabel : _po.recLabel;
-            if (!$('poAjPct').value) $('poAjPct').value = _po.ajPct;
+            const esMonto = _po.ajTipo === 'monto';
+            document.querySelectorAll('#poUnit button').forEach(b => b.classList.toggle('on', b.dataset.u === (esMonto ? 'monto' : 'pct')));
+            $('poAjPct').classList.toggle('monto', esMonto);
+            $('poAjPct').placeholder = esMonto ? '$ monto' : '%';
+            $('poAjPct').inputMode = esMonto ? 'numeric' : 'decimal';
+            if (!$('poAjPct').value) $('poAjPct').value = esMonto ? _fmtMonto(_po.ajMonto) : _po.ajPct;
             poUpd();
         }
+        function _fmtMonto(v) { const n = parseInt(String(v || '').replace(/\D/g, ''), 10); return n ? n.toLocaleString('es-AR') : ''; }
         function poUpd() {
-            if (_po.aj !== 'no') {
+            if (_po.aj !== 'no' && _po.ajTipo === 'monto') {
+                const inp = $('poAjPct'), crudo = inp.value.replace(/\D/g, '');
+                _po.ajMonto = crudo;
+                const lindo = _fmtMonto(crudo);   // 5000 → 5.000 mientras escribís
+                if (inp.value !== lindo) inp.value = lindo;
+            } else if (_po.aj !== 'no') {
                 _po.ajPct = ($('poAjPct').value || '').replace(',', '.').replace(/[^\d.]/g, '');
+            }
+            if (_po.aj !== 'no') {
                 const lbl = $('poAjLabel').value.trim();
                 if (lbl) { if (_po.aj === 'desc') _po.descLabel = lbl; else _po.recLabel = lbl; }
             }
             const c = _calcPres(_po);
             const $f = n => '$' + Math.round(n).toLocaleString('es-AR');
             let h = '<div class="r"><span>Subtotal productos</span><span>' + $f(c.bruto) + '</span></div>';
-            if (c.ajuste) h += '<div class="r' + (c.ajuste < 0 ? ' neg' : '') + '"><span>' + _escHtml(c.ajLabel) + ' (' + c.ajPctTxt + '%)</span><span>' + (c.ajuste < 0 ? '−' : '+') + $f(Math.abs(c.ajuste)) + '</span></div>';
+            if (c.ajuste) h += '<div class="r' + (c.ajuste < 0 ? ' neg' : '') + '"><span>' + _escHtml(c.ajTxt) + '</span><span>' + (c.ajuste < 0 ? '−' : '+') + $f(Math.abs(c.ajuste)) + '</span></div>';
             if (c.ajuste || c.iva) h += '<div class="r"><span>Subtotal neto</span><span>' + $f(c.neto) + '</span></div>';
             if (c.iva) h += '<div class="r"><span>IVA ' + c.ivaPctTxt + '%</span><span>+' + $f(c.iva) + '</span></div>';
             if (c.envio) h += '<div class="r"><span>Envío</span><span>' + $f(c.envio) + '</span></div>';
@@ -5701,22 +5726,47 @@
         function poGenerar() {
             try { localStorage.setItem('mikra_pdf_opts', JSON.stringify(_po)); } catch (e) {}
             $('presOptsModal').classList.remove('show');
-            downloadPDF(_po);
+            if (!state.cart.length || !validateForm()) return;
+            const win = window.open('', '_blank');
+            if (!win) { toast('⚠️ El navegador bloqueó la ventana del PDF', 'error'); return; }
+            try { win.document.write('<p style="font-family:sans-serif;padding:30px;color:#555">Armando el PDF…</p>'); } catch (e) {}
+            // guardar el pedido/presupuesto para que el PDF salga con su número (#1023)
+            savePedidoCloud(false).catch(() => {}).then(() => downloadPDF(_po, win));
         }
         // Cuentas del presupuesto: productos → descuento/recargo → neto → IVA → envío → total
         function _calcPres(o) {
             let bruto = 0;
             state.cart.forEach(p => { bruto += p.qty * (articlePrices[p.titulo || p.articulo] || 0); });
-            const ajPct = o && o.aj !== 'no' ? (parseFloat(o.ajPct) || 0) : 0;
-            const ajuste = Math.round(bruto * ajPct / 100) * (o && o.aj === 'desc' ? -1 : 1);
+            const conAj = !!(o && o.aj && o.aj !== 'no');
+            const esMonto = conAj && o.ajTipo === 'monto';
+            const signo = o && o.aj === 'desc' ? -1 : 1;
+            let ajPct = 0, ajuste = 0, factor = 1;
+            if (esMonto) {
+                // monto fijo en pesos: va solo abajo, en los totales
+                ajuste = signo * (parseInt(String(o.ajMonto || '').replace(/\D/g, ''), 10) || 0);
+            } else if (conAj) {
+                ajPct = parseFloat(o.ajPct) || 0;
+                if (signo < 0 && ajPct > 0) {
+                    // descuento %: cada precio unitario con descuento (redondeado), así lo que se ve por fila suma justo
+                    factor = 1 - ajPct / 100;
+                    let netoProd = 0;
+                    state.cart.forEach(p => { netoProd += p.qty * Math.round((articlePrices[p.titulo || p.articulo] || 0) * factor); });
+                    ajuste = netoProd - bruto;
+                } else {
+                    ajuste = Math.round(bruto * ajPct / 100) * signo;
+                }
+            }
             const neto = bruto + ajuste;
             const ivaPct = o && o.iva !== 'no' ? parseFloat(o.iva) : 0;
             const iva = Math.round(neto * ivaPct / 100);
             const envio = getBudgetShipping();
             const fmtPct = n => String(n).replace('.', ',');
+            const ajLabel = o && o.aj === 'desc' ? (o.descLabel || 'Descuento') : (o && o.recLabel) || 'Recargo';
             return { bruto, ajuste, neto, iva, envio, total: neto + iva + envio,
-                     ajLabel: o && o.aj === 'desc' ? (o.descLabel || 'Descuento') : (o && o.recLabel) || 'Recargo',
-                     ajPctTxt: fmtPct(ajPct), ivaPctTxt: fmtPct(ivaPct) };
+                     ajLabel, ajPctTxt: fmtPct(ajPct), ivaPctTxt: fmtPct(ivaPct),
+                     ajTxt: ajLabel + (esMonto ? '' : ' (' + fmtPct(ajPct) + '%)'),
+                     colDesc: factor < 1,                                  // columna "C/desc." en el PDF
+                     unitDesc: precio => Math.round(precio * factor) };
         }
 
         // Orden global reutilizable: artículo → color → talle (S,M,L,XL,2XL… y numéricos por valor)
@@ -5743,8 +5793,8 @@
         }
 
         // PDF prolijo (A4): pedido o presupuesto. opts = opciones del presupuesto (IVA, descuento/recargo) o null
-        function downloadPDF(opts) {
-            if (!state.cart.length || !validateForm()) return;
+        function downloadPDF(opts, winYa) {
+            if (!state.cart.length || !validateForm()) { if (winYa) winYa.close(); return; }
             const esPres = state.orderType === 'presupuesto';
             const esDev = state.orderType === 'devolucion';
             const sl = _activeSlot();
@@ -5769,7 +5819,11 @@
             const prendas = state.cart.reduce((a, p) => a + p.qty, 0);
             const c = _calcPres(!esDev && opts ? opts : { iva: 'no', aj: 'no' });
 
-            let h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + titulo + (num ? ' ' + num : '') + ' - Mikra</title><style>' +
+            const colDesc = conPrecios && c.colDesc;
+            // el título es el nombre del archivo al guardar: "Presupuesto #1023 - Simon"
+            const nomCli = esDev ? '' : ($('clientName').value.trim() || '');
+            const tituloDoc = (titulo + (num ? ' #' + num : '') + (nomCli ? ' - ' + nomCli : '') + (num || nomCli ? '' : ' - Mikra')).replace(/[\\/:*?"<>|]+/g, ' ');
+            let h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(tituloDoc) + '</title><style>' +
                 '@page{size:A4;margin:14mm}*{box-sizing:border-box}' +
                 'body{font-family:Helvetica,Arial,sans-serif;color:#1f2937;font-size:12px;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
                 '.top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1a2744;padding-bottom:10px}' +
@@ -5801,6 +5855,8 @@
                 '.estado{margin-top:14px;padding:9px 12px;border-radius:6px;font-weight:800;font-size:13px}' +
                 '.estado.ok{background:#dcfce7;color:#166534}.estado.pend{background:#fef3c7;color:#92400e}' +
                 '.foot{margin-top:28px;color:#6b7280;font-size:10px;text-align:center;border-top:1px solid #e5e7eb;padding-top:10px}' +
+                'table.w7 th{letter-spacing:.2px;padding:8px 6px}table.w7 td{padding:8px 6px}' +
+                '.ug{color:#6b7280}.ud{font-weight:800;color:#111827}' +
                 '</style></head><body>';
 
             h += '<div class="top"><div class="brand">MIKRA<small>INDUMENTARIA</small></div>' +
@@ -5813,23 +5869,25 @@
                      (st.address ? '<div style="font-size:11px;margin-top:2px">' + esc(st.address).replace(/\n/g, '<br>') + '</div>' : '') + '</div></div>';
             }
 
-            h += '<table><thead><tr><th>Artículo</th><th>Color</th><th>Talles</th><th class="c">Cant.</th>' +
-                 (conPrecios ? '<th class="n">Precio unit.</th><th class="n">Importe</th>' : '') + '</tr></thead><tbody>';
+            h += '<table' + (colDesc ? ' class="w7"' : '') + '><thead><tr><th>Artículo</th><th>Color</th><th>Talles</th><th class="c">Cant.</th>' +
+                 (conPrecios ? (colDesc ? '<th class="n">Unit.</th><th class="n">C/desc.</th>' : '<th class="n">Precio unit.</th>') + '<th class="n">Importe</th>' : '') + '</tr></thead><tbody>';
             let artPrev = null;
             filas.forEach(r => {
                 const nuevo = r.art !== artPrev;   // primera fila del artículo: negrita y línea arriba
                 artPrev = r.art;
                 h += '<tr class="' + (nuevo ? 'g1' : 'gr') + '"><td><div class="art">' + esc(r.art) + '</div>' + '</td>' +
                      '<td>' + esc(r.color || '—') + '</td><td><div class="tz">' + r.talles.map(x => '<span><i>' + esc(x.t) + '</i><b>' + x.q + '</b></span>').join('') + '</div></td><td class="c qt">' + r.qty + '</td>' +
-                     (conPrecios ? '<td class="n">' + (r.precio ? $f(r.precio) : '—') + '</td><td class="n">' + (r.precio ? $f(r.precio * r.qty) : '—') + '</td>' : '') + '</tr>';
+                     (conPrecios ? (colDesc
+                        ? '<td class="n ug">' + (r.precio ? $f(r.precio) : '—') + '</td><td class="n ud">' + (r.precio ? $f(c.unitDesc(r.precio)) : '—') + '</td><td class="n">' + (r.precio ? $f(c.unitDesc(r.precio) * r.qty) : '—') + '</td>'
+                        : '<td class="n">' + (r.precio ? $f(r.precio) : '—') + '</td><td class="n">' + (r.precio ? $f(r.precio * r.qty) : '—') + '</td>') : '') + '</tr>';
             });
             h += '</tbody><tfoot><tr><td colspan="3" class="n">Total de prendas</td><td class="c qt">' + prendas + '</td>' +
-                 (conPrecios ? '<td></td><td></td>' : '') + '</tr></tfoot></table>';
+                 (conPrecios ? (colDesc ? '<td></td><td></td><td></td>' : '<td></td><td></td>') : '') + '</tr></tfoot></table>';
 
             h += '<div class="tots">';
             if (conPrecios) {
-                h += '<div class="r"><span>Subtotal productos</span><span>' + $f(c.bruto) + '</span></div>';
-                if (c.ajuste) h += '<div class="r' + (c.ajuste < 0 ? ' neg' : '') + '"><span>' + esc(c.ajLabel) + ' (' + c.ajPctTxt + '%)</span><span>' + (c.ajuste < 0 ? '−' : '+') + $f(Math.abs(c.ajuste)) + '</span></div>';
+                h += '<div class="r"><span>' + (colDesc ? 'Subtotal sin descuento' : 'Subtotal productos') + '</span><span>' + $f(c.bruto) + '</span></div>';
+                if (c.ajuste) h += '<div class="r' + (c.ajuste < 0 ? ' neg' : '') + '"><span>' + esc(c.ajTxt) + '</span><span>' + (c.ajuste < 0 ? '−' : '+') + $f(Math.abs(c.ajuste)) + '</span></div>';
                 if (c.ajuste || c.iva) h += '<div class="r"><span>Subtotal neto</span><span>' + $f(c.neto) + '</span></div>';
                 if (c.iva) h += '<div class="r"><span>IVA ' + c.ivaPctTxt + '%</span><span>' + $f(c.iva) + '</span></div>';
                 if (c.envio) h += '<div class="r"><span>Envío</span><span>' + $f(c.envio) + '</span></div>';
@@ -5846,8 +5904,9 @@
             h += '<div class="foot">' + (esPres ? 'Precios sujetos a disponibilidad de stock. ' : '') + 'Gracias por elegir Mikra.</div>';
             h += '</body></html>';
 
-            const win = window.open('', '_blank');
+            const win = winYa || window.open('', '_blank');
             if (!win) { toast('⚠️ El navegador bloqueó la ventana del PDF', 'error'); return; }
+            if (winYa) win.document.open();
             win.document.write(h); win.document.close();
             setTimeout(() => win.print(), 300);
         }

@@ -44,6 +44,29 @@
         .header-right { display: flex; gap: 6px; align-items: center; flex: none; }
         .hdr-color { display: inline-block; max-width: 128px; padding: 6px 11px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 700; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .hdr-color.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .hdr-mid { display: inline-flex; align-items: center; gap: 6px; }
+        /* En la compu: el color va arriba en el medio (en el celular queda al lado de ⚙️) */
+        @media (min-width: 768px) {
+            #page-products .header { position: relative; }
+            .hdr-mid { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+            .hdr-color { max-width: 260px; }
+        }
+        .hdr-share { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 32px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; }
+        .hdr-share:active { transform: scale(0.94); }
+        /* 📤 Compartir stock */
+        .clear-modal.ss-modal { max-width: 440px; width: 94%; text-align: left; max-height: 92dvh; display: flex; flex-direction: column; }
+        .ss-modal .clear-modal-title { text-align: center; }
+        .ss-art { text-align: center; font-size: 0.82em; color: var(--text-secondary); font-weight: 700; }
+        .po-seg.ss-seg2 { grid-template-columns: 1fr 1fr; }
+        .ss-hint { font-size: 0.72em; color: var(--text-secondary); margin-top: 5px; }
+        .ss-lnk { color: var(--primary); cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 700; }
+        .ss-colsbox { flex: 1; min-height: 120px; display: flex; flex-direction: column; }
+        .ss-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; overflow-y: auto; max-height: 38dvh; padding: 2px; }
+        .ss-col { display: flex; align-items: center; gap: 7px; padding: 4px 8px 4px 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); cursor: pointer; opacity: 0.45; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .ss-col.on { opacity: 1; border-color: var(--success); background: rgba(52,211,153,0.10); }
+        .ss-col img, .ss-col .ss-ph { width: 34px; height: 40px; border-radius: 6px; object-fit: cover; flex: none; background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 0.9em; }
+        .ss-col .ss-n { flex: 1; min-width: 0; font-size: 0.8em; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ss-col .ss-q { font-size: 0.7em; color: var(--text-secondary); flex: none; }
         .hdr-color-x { padding: 5px 9px; border-radius: 14px; border: 1px solid var(--danger); background: rgba(248,113,113,0.15); color: var(--danger); font-weight: 800; font-size: 0.78em; cursor: pointer; }
         .icon-btn { 
             background: none; border: none; font-size: 1.2em; cursor: pointer; padding: 4px; 
@@ -1407,8 +1430,8 @@
                 </div>
             </div>
             <div class="header-right">
-                <button class="hdr-color" id="hdrColorBtn" onclick="openColorPhotoOverlay()" style="display:none" title="Elegir color por foto">🎨 <span id="hdrColorTxt">Color</span></button>
-                <button class="hdr-color-x" id="hdrColorX" onclick="clearColorFilter(event)" style="display:none" title="Sacar el filtro de color">✕</button>
+                <span class="hdr-mid"><button class="hdr-color" id="hdrColorBtn" onclick="openColorPhotoOverlay()" style="display:none" title="Elegir color por foto">🎨 <span id="hdrColorTxt">Color</span></button><button class="hdr-color-x" id="hdrColorX" onclick="clearColorFilter(event)" style="display:none" title="Sacar el filtro de color">✕</button></span>
+                <button class="hdr-share" id="hdrShareBtn" onclick="openShareStock()" style="display:none" title="Compartir el stock de este artículo (imagen)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg></button>
                 <button class="icon-btn" onclick="openSettings()" title="Ajustes">⚙️</button>
             </div>
         </div>
@@ -1834,6 +1857,35 @@
                 <button class="clear-modal-btn" style="background:#8b5cf6;color:white;font-size:0.95em;font-weight:800;" onclick="closePdfTypeModal();sharePrepTicketPDF()">📤 Compartir Presupuesto (Ticket)</button>
                 <button class="clear-modal-btn" style="background:#dc2626;color:white;font-size:0.95em;" onclick="closePdfTypeModal();detallesPDF()">📋 Detalles PDF</button>
                 <button class="clear-modal-btn no" onclick="closePdfTypeModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <div class="clear-modal-overlay" id="shareStockModal" onclick="if(event.target===this)ssCerrar()">
+        <div class="clear-modal ss-modal">
+            <div class="clear-modal-title">📤 Compartir stock</div>
+            <div class="ss-art" id="ssArt"></div>
+            <div class="po-group">
+                <div class="po-lbl">Fotos</div>
+                <div class="po-seg ss-seg2" id="ssFotos">
+                    <button data-v="si" onclick="ssSet('fotos','si')">📷 Con fotos</button>
+                    <button data-v="no" onclick="ssSet('fotos','no')">Sin fotos</button>
+                </div>
+            </div>
+            <div class="po-group">
+                <div class="po-lbl">Stock</div>
+                <div class="po-seg ss-seg2" id="ssStock">
+                    <button data-v="aprox" onclick="ssSet('stock','aprox')">Aproximado</button>
+                    <button data-v="exacto" onclick="ssSet('stock','exacto')">Exacto</button>
+                </div>
+                <div class="ss-hint" id="ssHint"></div>
+            </div>
+            <div class="po-group ss-colsbox">
+                <div class="po-lbl" style="display:flex;justify-content:space-between;align-items:center;"><span id="ssColsTit">Colores</span><span><span class="ss-lnk" onclick="ssTodos(true)">Todos</span> · <span class="ss-lnk" onclick="ssTodos(false)">Ninguno</span></span></div>
+                <div class="ss-cols" id="ssCols"></div>
+            </div>
+            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;margin-top:12px;">
+                <button class="clear-modal-btn" id="ssGo" style="background:var(--success);color:#05301f;font-weight:800;padding:12px;" onclick="ssCompartir()">📤 Compartir imagen</button>
+                <button class="clear-modal-btn no" onclick="ssCerrar()">Cancelar</button>
             </div>
         </div>
     </div>
@@ -3470,6 +3522,7 @@
             $('hdrColorBtn').classList.toggle('on', hayColor);
             $('hdrColorTxt').textContent = nCol ? nCol + ' colores' : (state.color || 'Color');
             $('hdrColorX').style.display = ver && hayColor ? '' : 'none';
+            $('hdrShareBtn').style.display = ver && state.searchExact && state.search ? '' : 'none';   // solo dentro de un artículo
             // Talles fijos, repartidos en todo el ancho (hasta 8 por fila)
             // los talles sin stock no se muestran (salvo el elegido o con 🚫 "ver sin stock")
             const tbVis = _tbSizes.filter(t => t.avail > 0 || state.size === t.s || showZeroStock);
@@ -3710,6 +3763,194 @@
             articleColorFilter = state.color;
             closeColorPhotoOverlay();
             applyFilters();
+        }
+
+        // ─── 📤 COMPARTIR STOCK DEL ARTÍCULO COMO IMAGEN ─────────────────────
+        let _ss = { fotos: 'si', stock: 'aprox' };   // por defecto: con fotos y stock aproximado
+        try { Object.assign(_ss, JSON.parse(localStorage.getItem('mikra_share_stock') || '{}')); } catch (e) {}
+        let _ssData = null;   // { art, talle, colores: [{ color, img, talles: [{ t, n }], total }], sel: Set }
+        function _ssStockTxt(n, exacto) {   // aproximado: menos de 5 exacto; después +5 / +10 / +50
+            if (exacto || n < 5) return String(n);
+            return n >= 50 ? '+50' : n >= 10 ? '+10' : '+5';
+        }
+        function _ssDisponible(p) {
+            let n = (p.stock || 0) - getCartQty(p.id);
+            const ec = artEcomMap[String(p.codigo)];
+            if (ec !== undefined) n = Math.min(n, ec);   // si ya se consultó Ecom, no ofrecer más de lo real
+            return Math.max(0, n);
+        }
+        function openShareStock() {
+            if (!state.searchExact || !state.search) return;
+            const prods = (_byArticle.get(state.search.toLowerCase()) || []).filter(p => !state.size || p.talle === state.size);
+            if (!prods.length) { toast('No hay nada para compartir', 'warning'); return; }
+            const art = prods[0].titulo || prods[0].articulo || state.search;
+            const porColor = new Map();
+            prods.forEach(p => {
+                const c = p.color || 'Sin color';
+                let g = porColor.get(c);
+                if (!g) porColor.set(c, g = { color: c, img: '', talles: [], total: 0 });
+                if (!g.img) g.img = getProductImageFull(p.codigo, p) || '';
+                const n = _ssDisponible(p);
+                if (n > 0 && p.talle) { g.talles.push({ t: p.talle, n }); g.total += n; }
+            });
+            const colores = [...porColor.values()].filter(g => g.total > 0).sort((a, b) => a.color.localeCompare(b.color, 'es'));
+            if (!colores.length) { toast('No hay stock para compartir', 'warning'); return; }
+            colores.forEach(g => g.talles.sort((a, b) => _sizeRank(a.t) - _sizeRank(b.t)));
+            // preelegidos: los colores filtrados (si hay); si no, todos
+            const filtro = state.colors.length ? state.colors : state.color ? [state.color] : null;
+            const sel = new Set(colores.filter(g => !filtro || filtro.includes(g.color)).map(g => g.color));
+            if (!sel.size) colores.forEach(g => sel.add(g.color));
+            _ssData = { art, talle: state.size || '', colores, sel };
+            $('ssArt').textContent = art + (state.size ? ' · Talle ' + state.size : '');
+            ssPaint();
+            $('shareStockModal').classList.add('show');
+        }
+        function ssCerrar() { $('shareStockModal').classList.remove('show'); }
+        function ssSet(k, v) { _ss[k] = v; try { localStorage.setItem('mikra_share_stock', JSON.stringify(_ss)); } catch (e) {} ssPaint(); }
+        function ssTodos(on) { if (!_ssData) return; _ssData.sel = new Set(on ? _ssData.colores.map(g => g.color) : []); ssPaint(); }
+        function ssToggle(i) { const g = _ssData.colores[i]; if (_ssData.sel.has(g.color)) _ssData.sel.delete(g.color); else _ssData.sel.add(g.color); ssPaint(); }
+        function ssPaint() {
+            document.querySelectorAll('#ssFotos button').forEach(b => b.classList.toggle('on', b.dataset.v === _ss.fotos));
+            document.querySelectorAll('#ssStock button').forEach(b => b.classList.toggle('on', b.dataset.v === _ss.stock));
+            $('ssHint').textContent = _ss.stock === 'exacto' ? 'Muestra la cantidad exacta de cada talle.' : 'Menos de 5 muestra el número; después dice +5, +10 o +50.';
+            if (!_ssData) return;
+            const ex = _ss.stock === 'exacto';
+            $('ssColsTit').textContent = 'Colores (' + _ssData.sel.size + ' de ' + _ssData.colores.length + ')';
+            $('ssCols').innerHTML = _ssData.colores.map((g, i) =>
+                '<div class="ss-col' + (_ssData.sel.has(g.color) ? ' on' : '') + '" onclick="ssToggle(' + i + ')">' +
+                (g.img ? '<img src="' + g.img + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=ss-ph>📦</div>\'">' : '<div class="ss-ph">📦</div>') +
+                '<span class="ss-n">' + _escHtml(g.color) + '</span><span class="ss-q">' + _ssStockTxt(g.total, ex) + '</span></div>').join('');
+            $('ssGo').disabled = !_ssData.sel.size;
+            $('ssGo').style.opacity = _ssData.sel.size ? '' : '0.5';
+        }
+        function _ssCargarImg(url) {
+            return new Promise(res => {
+                if (!url) return res(null);
+                const im = new Image();
+                im.crossOrigin = 'anonymous';   // mlstatic permite CORS: así el canvas se puede exportar
+                const t = setTimeout(() => res(null), 7000);
+                im.onload = () => { clearTimeout(t); res(im); };
+                im.onerror = () => { clearTimeout(t); res(null); };
+                im.src = url;
+            });
+        }
+        function _ssRRect(ctx, x, y, w, h, r) {
+            ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+        }
+        function _ssCorta(ctx, txt, maxW) {   // cortar con "…" si no entra
+            if (ctx.measureText(txt).width <= maxW) return txt;
+            while (txt.length > 1 && ctx.measureText(txt + '…').width > maxW) txt = txt.slice(0, -1);
+            return txt + '…';
+        }
+        async function _ssDibujar() {
+            const d = _ssData, conFotos = _ss.fotos === 'si', ex = _ss.stock === 'exacto';
+            const cols = d.colores.filter(g => d.sel.has(g.color));
+            const imgs = conFotos ? await Promise.all(cols.map(g => _ssCargarImg(g.img))) : [];
+            const W = 1080, PAD = 40, GAP = 24, CHW = 82, CHH = 96, CHG = 8;
+            const NAVY = '#1a2744', GRIS = '#6b7280', FONT = 'Helvetica, Arial, sans-serif';
+            const cv = document.createElement('canvas'), ctx = cv.getContext('2d');
+            // alturas
+            const HEAD = 190, FOOT = 80;
+            let bloques;   // [{ y, h }] por fila de la grilla
+            const nCol = conFotos ? 2 : 1;
+            const cardW = (W - PAD * 2 - GAP * (nCol - 1)) / nCol;
+            const chipsPorFila = Math.max(1, Math.floor(((conFotos ? cardW - 28 : cardW - 380) + CHG) / (CHW + CHG)));
+            const altoChips = g => Math.ceil(g.talles.length / chipsPorFila) * (CHH + CHG) - CHG;
+            const FOTO_H = Math.round(cardW * 1.2);
+            const altoCard = g => conFotos ? FOTO_H + 70 + altoChips(g) + 22 : Math.max(126, altoChips(g) + 28);
+            const filas = [];
+            for (let i = 0; i < cols.length; i += nCol) filas.push(cols.slice(i, i + nCol));
+            const altos = filas.map(f => Math.max(...f.map(altoCard)));
+            const H = HEAD + altos.reduce((a, b) => a + b, 0) + GAP * Math.max(0, filas.length - 1) + FOOT + 20;
+            cv.width = W; cv.height = H;
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+            // encabezado
+            ctx.fillStyle = NAVY; ctx.font = '900 30px ' + FONT; ctx.textBaseline = 'top';
+            ctx.fillText('M I K R A', PAD, 34);
+            ctx.font = '600 15px ' + FONT; ctx.fillStyle = GRIS; ctx.fillText('INDUMENTARIA', PAD, 70);
+            const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+            ctx.textAlign = 'right'; ctx.font = '600 22px ' + FONT; ctx.fillText('Stock al ' + hoy, W - PAD, 40); ctx.textAlign = 'left';
+            ctx.fillStyle = NAVY; ctx.font = '800 46px ' + FONT;
+            ctx.fillText(_ssCorta(ctx, d.art, W - PAD * 2 - (d.talle ? 200 : 0)), PAD, 106);
+            if (d.talle) {
+                ctx.font = '800 30px ' + FONT; const tw = ctx.measureText('Talle ' + d.talle).width + 36;
+                ctx.fillStyle = NAVY; _ssRRect(ctx, W - PAD - tw, 104, tw, 50, 25); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText('Talle ' + d.talle, W - PAD - tw / 2, 114); ctx.textAlign = 'left';
+            }
+            ctx.fillStyle = NAVY; ctx.fillRect(PAD, HEAD - 22, W - PAD * 2, 4);
+            // chips de talles
+            const chips = (g, x0, y0) => {
+                g.talles.forEach((t, i) => {
+                    const x = x0 + (i % chipsPorFila) * (CHW + CHG), y = y0 + Math.floor(i / chipsPorFila) * (CHH + CHG);
+                    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 2;
+                    _ssRRect(ctx, x, y, CHW, CHH, 10); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = '#eef0f3'; _ssRRect(ctx, x + 1, y + 1, CHW - 2, 38, 9); ctx.fill();
+                    ctx.fillStyle = GRIS; ctx.font = '800 21px ' + FONT; ctx.textAlign = 'center';
+                    ctx.fillText(_ssCorta(ctx, t.t, CHW - 8), x + CHW / 2, y + 9);
+                    ctx.fillStyle = '#111827'; ctx.font = '800 ' + (_ssStockTxt(t.n, ex).length > 2 ? 28 : 33) + 'px ' + FONT;
+                    ctx.fillText(_ssStockTxt(t.n, ex), x + CHW / 2, y + 52);
+                    ctx.textAlign = 'left';
+                });
+            };
+            let y = HEAD;
+            filas.forEach((f, fi) => {
+                f.forEach((g, ci) => {
+                    const x = PAD + ci * (cardW + GAP), h = altos[fi];
+                    ctx.fillStyle = '#f3f4f6'; _ssRRect(ctx, x, y, cardW, h, 18); ctx.fill();
+                    if (conFotos) {
+                        const im = imgs[cols.indexOf(g)];
+                        ctx.save(); _ssRRect(ctx, x, y, cardW, FOTO_H, 18); ctx.clip();
+                        if (im) {   // recorte tipo "cover"
+                            const r = Math.max(cardW / im.width, FOTO_H / im.height), iw = im.width * r, ih = im.height * r;
+                            ctx.drawImage(im, x + (cardW - iw) / 2, y + (FOTO_H - ih) / 2, iw, ih);
+                        } else { ctx.fillStyle = '#e5e7eb'; ctx.fillRect(x, y, cardW, FOTO_H); }
+                        ctx.restore();
+                        ctx.fillStyle = NAVY; ctx.font = '800 32px ' + FONT;
+                        ctx.fillText(_ssCorta(ctx, g.color, cardW - 28), x + 14, y + FOTO_H + 18);
+                        chips(g, x + 14, y + FOTO_H + 66);
+                    } else {
+                        ctx.fillStyle = NAVY; ctx.font = '800 32px ' + FONT; ctx.textBaseline = 'middle';
+                        ctx.fillText(_ssCorta(ctx, g.color, 330), x + 22, y + Math.min(h, 126) / 2);
+                        ctx.textBaseline = 'top';
+                        chips(g, x + 370, y + 14);
+                    }
+                });
+                y += altos[fi] + GAP;
+            });
+            ctx.fillStyle = GRIS; ctx.font = '600 20px ' + FONT; ctx.textAlign = 'center';
+            ctx.fillText('Stock sujeto a disponibilidad · Mikra', W / 2, H - FOOT + 10);
+            ctx.textAlign = 'left';
+            return cv;
+        }
+        async function ssCompartir() {
+            if (!_ssData || !_ssData.sel.size) return;
+            const btn = $('ssGo'); btn.disabled = true; const txt0 = btn.textContent; btn.textContent = 'Armando la imagen…';
+            try {
+                const cv = await _ssDibujar();
+                const aBlob = tipo => new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('sin imagen')), tipo, 0.9));
+                const esCompu = matchMedia('(pointer: fine)').matches;
+                const blob = await aBlob(esCompu ? 'image/png' : 'image/jpeg');   // copiar al portapapeles solo acepta png; para compartir, jpg (más liviano)
+                const nombre = ('Stock ' + _ssData.art + (_ssData.talle ? ' talle ' + _ssData.talle : '')).replace(/[\\/:*?"<>|]+/g, ' ') + (esCompu ? '.png' : '.jpg');
+                const file = new File([blob], nombre, { type: blob.type });
+                if (!esCompu && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try { await navigator.share({ files: [file] }); ssCerrar(); }
+                    catch (e) { if (!e || e.name !== 'AbortError') throw e; }
+                    return;
+                }
+                // Compu: copiar la imagen para pegarla en WhatsApp Web (Ctrl+V); si no se puede, descargarla
+                try {
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                    toast('📋 Imagen copiada: pegala en WhatsApp con Ctrl+V', 'success');
+                } catch (e) {
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre;
+                    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+                    toast('⬇️ Imagen descargada', 'success');
+                }
+                ssCerrar();
+            } catch (e) {
+                toast('No se pudo armar la imagen (' + (e && e.message || e) + ')', 'error');
+            } finally { btn.disabled = false; btn.textContent = txt0; }
         }
 
         function closeColorPhotoOverlay() {
@@ -5003,7 +5244,7 @@
             $('locationSearch').style.display = 'none';
             $('filtersCollapse').style.display = 'none';
             $('talleBar').style.display = 'none';
-            $('hdrColorBtn').style.display = 'none'; $('hdrColorX').style.display = 'none'; document.body.classList.remove('hdr-col');
+            $('hdrColorBtn').style.display = 'none'; $('hdrColorX').style.display = 'none'; $('hdrShareBtn').style.display = 'none'; document.body.classList.remove('hdr-col');
 
             const esc = s => String(s).replace(/'/g, "\\'");
             let html = '';

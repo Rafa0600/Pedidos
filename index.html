@@ -470,7 +470,10 @@
         .article-compact-row:last-child { border-bottom: none; }
         .article-compact-row.selected { background: rgba(79,172,254,0.1); }
         /* Deslizar fila: → suma 1 (verde), ← resta 1 (rojo) */
-        .article-compact-row { position: relative; touch-action: pan-y; }
+        .article-compact-row { position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+        .article-compact-row, .article-size-cell { -webkit-touch-callout: none; }   /* mantener apretado copia el SKU (sin menú del celular) */
+        .sku-copiado { animation: skuCopiado .7s ease-out; }
+        @keyframes skuCopiado { 0% { box-shadow: inset 0 0 0 3px #fbbf24; background: rgba(251,191,36,0.25); } 100% { box-shadow: inset 0 0 0 3px transparent; } }
         .article-compact-row.sw-mas { background: rgba(52,211,153,0.10); }
         .article-compact-row.sw-menos { background: rgba(248,113,113,0.12); }
         .article-compact-row.sw-mas::before, .article-compact-row.sw-menos::after {
@@ -4368,6 +4371,7 @@
         // Tap size cell = add 1 to cart + select
         function articleTapSize(productId) {
             if (Date.now() - _swTapBlock < 450) return;   // venía de deslizar
+            if (_lpCopiado) { _lpCopiado = false; return; }   // venía de mantener apretado (copió el SKU)
             if (_copySel) {
                 if (_copySel.has(productId)) _copySel.delete(productId); else _copySel.add(productId);
                 renderArticleDetail();
@@ -4517,7 +4521,38 @@
             };
             cont.addEventListener('pointerup', fin);
             cont.addEventListener('pointercancel', fin);
+
+            // Mantener apretado un talle = copiar su SKU (no agrega al pedido)
+            let lp = null;
+            const lpCancel = () => { if (lp) { clearTimeout(lp.t); lp = null; } };
+            cont.addEventListener('pointerdown', e => {
+                _lpCopiado = false;
+                if (_copySel || (e.pointerType === 'mouse' && e.button !== 0)) return;
+                const el = e.target.closest('.article-size-cell[data-pid], .article-compact-row[data-pid]');
+                if (!el) return;
+                const x0 = e.clientX, y0 = e.clientY;
+                lpCancel();
+                lp = { x0, y0, t: setTimeout(() => {
+                    lp = null;
+                    const p = productById(+el.dataset.pid);
+                    if (!p) return;
+                    _lpCopiado = true;   // el click que viene al soltar no suma
+                    try { navigator.vibrate && navigator.vibrate(50); } catch (er) {}
+                    if (!p.codigo) { toast('Este talle no tiene SKU', 'warning'); return; }
+                    el.classList.add('sku-copiado'); setTimeout(() => el.classList.remove('sku-copiado'), 700);
+                    _copiarTexto(String(p.codigo)).then(ok => toast(ok
+                        ? '📋 SKU ' + p.codigo + ' copiado · ' + (p.color || '') + ' T:' + (p.talle || '')
+                        : 'No se pudo copiar el SKU', ok ? 'success' : 'error'));
+                }, 550) };
+            });
+            cont.addEventListener('pointermove', e => {
+                if (lp && (Math.abs(e.clientX - lp.x0) > 10 || Math.abs(e.clientY - lp.y0) > 10)) lpCancel();   // se movió: es scroll o deslizar
+            });
+            cont.addEventListener('pointerup', lpCancel);
+            cont.addEventListener('pointercancel', lpCancel);
+            cont.addEventListener('contextmenu', e => { if (e.target.closest('.article-size-cell[data-pid], .article-compact-row[data-pid]')) e.preventDefault(); });
         }
+        let _lpCopiado = false;
 
         function articleChangeQty(delta) {
             if (!articleSelectedId) return;

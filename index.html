@@ -2698,6 +2698,11 @@
             _updatePriceUI();
         }
         
+        // Recalcular precios, total y "Falta abonar" con el carrito actual (pedido o presupuesto).
+        // Antes solo se hacía en presupuesto y no al tocar + / − en el carrito: el monto quedaba viejo.
+        function _refrescarPrecios() {
+            if (state.orderType === 'pedido' || state.orderType === 'presupuesto') renderBudget();
+        }
         function renderBudget() {
             const grouped = {};
             state.cart.forEach(p => {
@@ -2740,7 +2745,7 @@
             const el = $('cartItems');
             if (!state.cart.length) {
                 el.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div><div>Pedido vacío</div></div>';
-                if (state.orderType === 'presupuesto') renderBudget();
+                _refrescarPrecios();
                 return;
             }
 
@@ -2827,7 +2832,7 @@
             });
 
             el.innerHTML = html;
-            if (state.orderType === 'presupuesto') renderBudget();
+            _refrescarPrecios();
         }
 
         function _escAttr(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
@@ -2948,6 +2953,7 @@
             // Actualizar header uds sin re-render
             _ciUpdateHeaderUds();
             saveCart(); updateBadge(); renderSlotTabs();
+            _refrescarPrecios();   // total y "Falta abonar" al día
         }
 
         function ciChipDel(ci, e) {
@@ -3028,7 +3034,7 @@
             if (slot) { slot.cart = []; slot.prices = {}; slot.formData = null; slot.nombre = 'Nuevo pedido'; slot.num = null; slot.printedCart = null; slot.printedAt = 0; }
             saveSlots();
             renderCart(); renderSlotTabs(); updateBadge(); render();
-            if (state.orderType === 'presupuesto') renderBudget();
+            _refrescarPrecios();
             // Resetear barra ecom
             const st = $('ecomStockStatus');
             if (st) st.innerHTML = '<span style="opacity:0.5;">Stock ecom: —</span>';

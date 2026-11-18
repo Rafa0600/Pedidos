@@ -653,6 +653,12 @@
         .cli-item b { font-size: 0.95em; }
         .cli-item span { font-size: 0.75em; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .precios-toggle { width: 100%; margin-top: 2px; padding: 9px; border: 1px dashed var(--border); background: none; color: var(--text-secondary); border-radius: 10px; font-size: 0.8em; font-weight: 600; cursor: pointer; }
+        .precio-aviso { background: rgba(251,191,36,0.12); border: 1px solid #f59e0b; border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; font-size: 0.82em; color: var(--text); }
+        .precio-aviso .pa-tit { font-weight: 800; color: #fbbf24; margin-bottom: 4px; }
+        .precio-aviso .pa-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-top: 1px dashed rgba(251,191,36,0.35); }
+        .precio-aviso .pa-n { flex: 1; min-width: 0; }
+        .precio-aviso button { flex: none; padding: 6px 10px; border-radius: 9px; border: 1px solid #f59e0b; background: #f59e0b; color: #1a1a1a; font-weight: 800; font-size: 0.9em; cursor: pointer; }
+        .precio-aviso button.pa-x { background: transparent; color: var(--text-secondary); border-color: var(--border); }
         .precio-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 700; font-size: 0.85em; cursor: pointer; }
         /* Opciones del PDF del presupuesto */
         .clear-modal.po-modal { max-width: 380px; width: 94%; text-align: left; }
@@ -1624,6 +1630,7 @@
                     <button onclick="fillMayoristaPrecios()" class="precio-btn">💲 Mayorista</button>
                     <button onclick="fillMinoristaPrecios()" class="precio-btn">🏷️ Minorista</button>
                 </div>
+                <div id="precioAviso" class="precio-aviso" style="display:none"></div>
                 <div id="budgetItems"></div>
                 <div id="budgetEnvioCostoRow" style="display:none;margin-top:8px;">
                     <div class="shipping-cost-row">
@@ -1945,17 +1952,43 @@
         // Si Cloudflare no contesta, se va a la planilla (lenta).
         const PRECIOS_CLOUD = 'https://mikra-print.rafaelassir.workers.dev/precios';
         let _gasPreciosPromise = null;
+        let _preciosInfo = { at: 0, fresco: false };   // fresco = recién leído de la planilla (no la copia de las 6 AM)
+        async function _gasDirecto() {
+            const d = await (await fetch(MAYORISTA_URL, { cache: 'no-store' })).json();
+            if (!d.success || !d.data || !d.data.length) throw new Error('Sin datos de precios');
+            _preciosInfo = { at: Date.now(), fresco: true };
+            return d;
+        }
         async function _leerPrecios(refresh) {
             try {
                 const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), refresh ? 40000 : 8000);
                 const r = await fetch(PRECIOS_CLOUD + (refresh ? '?refresh=1' : ''), { headers: { 'X-Key': 'AG4LFDaR5Yhl8QccEtwltnvH' }, cache: 'no-store', signal: ctrl.signal });
                 clearTimeout(tm);
                 const d = await r.json();
-                if (d.success && d.data && d.data.length) return d;
+                if (d.success && d.data && d.data.length) {
+                    if (refresh && d.stale) {   // la nube no pudo leer la planilla: probar directo desde acá
+                        try { return await _gasDirecto(); } catch (e) {}
+                    }
+                    _preciosInfo = { at: d.at || Date.now(), fresco: !!refresh && !d.stale };
+                    return d;
+                }
             } catch (e) {}
-            const d = await (await fetch(MAYORISTA_URL)).json();
-            if (!d.success || !d.data) throw new Error('Sin datos de precios');
-            return d;
+            return _gasDirecto();
+        }
+        // Mayorista / Minorista: SIEMPRE con la planilla de ahora (antes usaba la copia de las 6 AM
+        // y si cambiabas un precio en el día salía el viejo). Si se leyó hace menos de 1 min, se reusa.
+        let _preciosFrescosAt = 0;
+        async function _preciosFrescos() {
+            if (Date.now() - _preciosFrescosAt > 60000) {
+                await _fetchGasPrecios(true);
+                _preciosFrescosAt = _preciosInfo.fresco ? Date.now() : 0;
+            }
+        }
+        function _avisoPreciosViejos() {
+            if (_preciosInfo.fresco) return false;
+            const cuando = _preciosInfo.at ? new Date(_preciosInfo.at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '?';
+            toast('⚠️ No se pudo leer la planilla ahora: son los precios guardados del ' + cuando + '. Revisalos.', 'warning');
+            return true;
         }
         function _fetchGasPrecios(refresh) {
             if (!_gasPreciosPromise || refresh) {
@@ -1979,6 +2012,70 @@
                 toast('❌ No se pudo leer la planilla de precios', 'error');
             }
         }
+        // Revisa (de fondo) que los precios del pedido sigan iguales a la planilla.
+        let _verifPreciosAt = 0, _avisoPrecios = [], _avisoIgnorar = new Set();
+        function _buscaPrecio(map, key) {
+            if (map[key] !== undefined) return map[key];
+            const m = Object.entries(map).find(([k]) => key.startsWith(k) || k.startsWith(key));
+            return m ? m[1] : undefined;
+        }
+        async function verificarPreciosCarrito(forzar) {
+            const nombres = [...new Set(state.cart.map(p => p.titulo || p.articulo))].filter(n => (articlePrices[n] || 0) > 0);
+            if (!nombres.length) { _pintarAvisoPrecios([]); return; }
+            if (!forzar && Date.now() - _verifPreciosAt < 120000) { _pintarAvisoPrecios(_avisoPrecios); return; }
+            _verifPreciosAt = Date.now();
+            const oldMay = Object.assign({}, articlePricesMay), oldMin = Object.assign({}, articlePricesMin);
+            let may, min;
+            try {
+                await _fetchGasPrecios(true);
+                if (!_preciosInfo.fresco) return;
+                _preciosFrescosAt = Date.now();
+                [may, min] = await Promise.all([fetchMayoristaPrecios(), fetchMinoristaPrecios()]);
+            } catch (e) { return; }
+            Object.entries(may).forEach(([k, v]) => { if (v > 0) articlePricesMay[k] = v; });
+            Object.entries(min).forEach(([k, v]) => { if (v > 0) articlePricesMin[k] = v; });
+            try { localStorage.setItem('mikra_prices_may', JSON.stringify(articlePricesMay)); localStorage.setItem('mikra_prices_min', JSON.stringify(articlePricesMin)); } catch (e) {}
+            const cambios = [];
+            nombres.forEach(n => {
+                const key = n.trim().toLowerCase(), p = articlePrices[n];
+                const nMay = _buscaPrecio(may, key), nMin = _buscaPrecio(min, key);
+                if (p === nMay || p === nMin) return;               // coincide con una lista: bien
+                if (!(nMay > 0) && !(nMin > 0)) return;              // no está en la planilla
+                if (_avisoIgnorar.has(n + '|' + p)) return;          // ya dijiste que ese precio queda
+                // ¿de qué lista venía? (por el precio viejo guardado); si no se sabe, la más parecida
+                let lista = _buscaPrecio(oldMay, key) === p ? 'may' : _buscaPrecio(oldMin, key) === p ? 'min' : null;
+                if (!lista) lista = !(nMin > 0) || (nMay > 0 && Math.abs(nMay - p) <= Math.abs(nMin - p)) ? 'may' : 'min';
+                const a = lista === 'may' ? nMay : nMin;
+                if (a > 0) cambios.push({ n, de: p, a, lista: lista === 'may' ? 'mayorista' : 'minorista' });
+            });
+            _pintarAvisoPrecios(cambios);
+        }
+        function _pintarAvisoPrecios(cambios) {
+            _avisoPrecios = cambios || [];
+            const box = $('precioAviso');
+            if (!box) return;
+            if (!_avisoPrecios.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            const $f = n => '$' + Math.round(n).toLocaleString('es-AR');
+            box.innerHTML = '<div class="pa-tit">⚠️ La planilla tiene otro precio' + (_avisoPrecios.length > 1 ? ' (' + _avisoPrecios.length + ')' : '') + '</div>' +
+                _avisoPrecios.map((c, i) => '<div class="pa-row"><span class="pa-n"><b>' + _escHtml(c.n) + '</b><br>En el pedido ' + $f(c.de) + ' · ' + c.lista + ' ' + $f(c.a) + '</span>' +
+                    '<button onclick="precioAvisoAplicar(' + i + ')">Poner ' + $f(c.a) + '</button><button class="pa-x" onclick="precioAvisoIgnorar(' + i + ')" title="Dejar el precio del pedido">✕</button></div>').join('') +
+                (_avisoPrecios.length > 1 ? '<div style="text-align:right;margin-top:6px"><button onclick="precioAvisoAplicar(-1)">Actualizar todos</button></div>' : '');
+            box.style.display = '';
+        }
+        function precioAvisoAplicar(i) {
+            const lista = i < 0 ? _avisoPrecios : [_avisoPrecios[i]];
+            lista.forEach(c => { if (c) articlePrices[c.n] = c.a; });
+            try { localStorage.setItem('mikra_prices', JSON.stringify(articlePrices)); } catch (e) {}
+            _savePrices(); saveCart();
+            _pintarAvisoPrecios(i < 0 ? [] : _avisoPrecios.filter((c, j) => j !== i));
+            renderBudget();
+            toast('✅ Precio actualizado', 'success');
+        }
+        function precioAvisoIgnorar(i) {
+            const c = _avisoPrecios[i];
+            if (c) _avisoIgnorar.add(c.n + '|' + c.de);
+            _pintarAvisoPrecios(_avisoPrecios.filter((x, j) => j !== i));
+        }
         async function fetchMayoristaPrecios() {
             if (mayoristaCacheData) return mayoristaCacheData;
             const rows = await _fetchGasPrecios();
@@ -1995,8 +2092,9 @@
             if (!MAYORISTA_URL || MAYORISTA_URL.includes('REEMPLAZAR')) {
                 toast('⚠️ Configurar URL del GAS mayorista', 'error'); return;
             }
-            toast('Buscando precios mayoristas...', '');
+            toast('Leyendo la planilla de precios…', '');
             try {
+                await _preciosFrescos();
                 const map = await fetchMayoristaPrecios();
                 const grouped = {};
                 state.cart.forEach(p => { const n = p.titulo || p.articulo; if (!grouped[n]) grouped[n] = n; });
@@ -2023,7 +2121,9 @@
                 localStorage.setItem('mikra_prices', JSON.stringify(articlePrices)); _savePrices();
                 localStorage.setItem('mikra_prices_may', JSON.stringify(articlePricesMay));
                 renderBudget(); renderHomeScreen();
-                if (noEncontrados.length === 0) {
+                _pintarAvisoPrecios([]);
+                if (_avisoPreciosViejos()) {}
+                else if (noEncontrados.length === 0) {
                     toast('✅ ' + encontrados + ' precio' + (encontrados !== 1 ? 's' : '') + ' completado' + (encontrados !== 1 ? 's' : ''), 'success');
                 } else {
                     toast('✅ ' + encontrados + ' ok · ⚠️ sin precio: ' + noEncontrados.join(', '), 'warning');
@@ -2052,8 +2152,9 @@
         }
 
         async function fillMinoristaPrecios() {
-            toast('Buscando precios minoristas...', '');
+            toast('Leyendo la planilla de precios…', '');
             try {
+                await _preciosFrescos();
                 const map = await fetchMinoristaPrecios();
                 if (Object.keys(map).length === 0) {
                     toast('⚠️ El GAS no devuelve precio minorista (col C). Actualizá el script.', 'error');
@@ -2082,7 +2183,9 @@
                 localStorage.setItem('mikra_prices', JSON.stringify(articlePrices)); _savePrices();
                 localStorage.setItem('mikra_prices_min', JSON.stringify(articlePricesMin));
                 renderBudget(); renderHomeScreen();
-                if (noEncontrados.length === 0) {
+                _pintarAvisoPrecios([]);
+                if (_avisoPreciosViejos()) {}
+                else if (noEncontrados.length === 0) {
                     toast('✅ ' + encontrados + ' precio' + (encontrados !== 1 ? 's' : '') + ' minorista completado' + (encontrados !== 1 ? 's' : ''), 'success');
                 } else {
                     toast('✅ ' + encontrados + ' ok · ⚠️ sin precio: ' + noEncontrados.join(', '), 'warning');
@@ -7534,6 +7637,7 @@
             if (state.orderType === 'presupuesto' && typeof renderBudget === 'function') renderBudget();
             closePedidosModal();
             toast('🕘 Pedido #' + num + ' abierto — ' + (p.nombre || ''), 'success');
+            verificarPreciosCarrito(true);
         }
 
         function showPreparadosOptions() { $('preparadosOptModal').classList.add('show'); }
@@ -7932,6 +8036,7 @@
                 _inputFocused = false;
                 renderSlotTabs();
                 renderCart();
+                verificarPreciosCarrito();   // de fondo: avisa si un precio cambió en la planilla
             } else {
                 $('navStock').classList.add('active');
                 // Restaurar búsqueda guardada si existe

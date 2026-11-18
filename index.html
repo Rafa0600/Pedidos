@@ -3824,7 +3824,9 @@
             $('ssHint').textContent = _ss.stock === 'exacto' ? 'Muestra la cantidad exacta de cada talle.' : 'Menos de 5 muestra el número; después dice +5, +10 o +50.';
             if (!_ssData) return;
             const ex = _ss.stock === 'exacto';
+            const nImg = Math.ceil(_ssData.sel.size / _ssPorImagen());
             $('ssColsTit').textContent = 'Colores (' + _ssData.sel.size + ' de ' + _ssData.colores.length + ')';
+            $('ssGo').textContent = nImg > 1 ? '📤 Compartir ' + nImg + ' imágenes' : '📤 Compartir imagen';
             $('ssCols').innerHTML = _ssData.colores.map((g, i) =>
                 '<div class="ss-col' + (_ssData.sel.has(g.color) ? ' on' : '') + '" onclick="ssToggle(' + i + ')">' +
                 (g.img ? '<img src="' + g.img + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=ss-ph>📦</div>\'">' : '<div class="ss-ph">📦</div>') +
@@ -3852,9 +3854,16 @@
             while (txt.length > 1 && ctx.measureText(txt + '…').width > maxW) txt = txt.slice(0, -1);
             return txt + '…';
         }
-        async function _ssDibujar() {
+        // Una imagen larga se ve borrosa en WhatsApp (la achica): se reparte en varias imágenes
+        // de tamaño "de celular": con fotos 4 colores por imagen (2×2), sin fotos 10.
+        function _ssPorImagen() { return _ss.fotos === 'si' ? 4 : 10; }
+        function _ssPaginas() {
+            const cols = _ssData.colores.filter(g => _ssData.sel.has(g.color)), n = _ssPorImagen(), out = [];
+            for (let i = 0; i < cols.length; i += n) out.push(cols.slice(i, i + n));
+            return out;
+        }
+        async function _ssDibujar(cols, pag, nPags) {
             const d = _ssData, conFotos = _ss.fotos === 'si', ex = _ss.stock === 'exacto';
-            const cols = d.colores.filter(g => d.sel.has(g.color));
             const imgs = conFotos ? await Promise.all(cols.map(g => _ssCargarImg(g.img))) : [];
             const W = 1080, PAD = 40, GAP = 24, CHW = 82, CHH = 96, CHG = 8;
             const NAVY = '#1a2744', GRIS = '#6b7280', FONT = 'Helvetica, Arial, sans-serif';
@@ -3866,7 +3875,7 @@
             const cardW = (W - PAD * 2 - GAP * (nCol - 1)) / nCol;
             const chipsPorFila = Math.max(1, Math.floor(((conFotos ? cardW - 28 : cardW - 380) + CHG) / (CHW + CHG)));
             const altoChips = g => Math.ceil(g.talles.length / chipsPorFila) * (CHH + CHG) - CHG;
-            const FOTO_H = Math.round(cardW * 1.2);
+            const FOTO_H = Math.round(cardW * 1.05);
             const altoCard = g => conFotos ? FOTO_H + 70 + altoChips(g) + 22 : Math.max(126, altoChips(g) + 28);
             const filas = [];
             for (let i = 0; i < cols.length; i += nCol) filas.push(cols.slice(i, i + nCol));
@@ -3879,7 +3888,9 @@
             ctx.fillText('M I K R A', PAD, 34);
             ctx.font = '600 15px ' + FONT; ctx.fillStyle = GRIS; ctx.fillText('INDUMENTARIA', PAD, 70);
             const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-            ctx.textAlign = 'right'; ctx.font = '600 22px ' + FONT; ctx.fillText('Stock al ' + hoy, W - PAD, 40); ctx.textAlign = 'left';
+            ctx.textAlign = 'right'; ctx.font = '600 22px ' + FONT; ctx.fillText('Stock al ' + hoy, W - PAD, 40);
+            if (nPags > 1) { ctx.font = '800 22px ' + FONT; ctx.fillStyle = NAVY; ctx.fillText(pag + ' de ' + nPags, W - PAD, 70); ctx.fillStyle = GRIS; }
+            ctx.textAlign = 'left';
             ctx.fillStyle = NAVY; ctx.font = '800 46px ' + FONT;
             ctx.fillText(_ssCorta(ctx, d.art, W - PAD * 2 - (d.talle ? 200 : 0)), PAD, 106);
             if (d.talle) {
@@ -3936,25 +3947,35 @@
             if (!_ssData || !_ssData.sel.size) return;
             const btn = $('ssGo'); btn.disabled = true; const txt0 = btn.textContent; btn.textContent = 'Armando la imagen…';
             try {
-                const cv = await _ssDibujar();
-                const aBlob = tipo => new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('sin imagen')), tipo, 0.9));
                 const esCompu = matchMedia('(pointer: fine)').matches;
-                const blob = await aBlob(esCompu ? 'image/png' : 'image/jpeg');   // copiar al portapapeles solo acepta png; para compartir, jpg (más liviano)
-                const nombre = ('Stock ' + _ssData.art + (_ssData.talle ? ' talle ' + _ssData.talle : '')).replace(/[\\/:*?"<>|]+/g, ' ') + (esCompu ? '.png' : '.jpg');
-                const file = new File([blob], nombre, { type: blob.type });
-                if (!esCompu && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try { await navigator.share({ files: [file] }); ssCerrar(); }
+                const paginas = _ssPaginas(), nP = paginas.length;
+                const base = ('Stock ' + _ssData.art + (_ssData.talle ? ' talle ' + _ssData.talle : '')).replace(/[\\/:*?"<>|]+/g, ' ');
+                const files = [];
+                for (let i = 0; i < nP; i++) {
+                    btn.textContent = nP > 1 ? 'Armando imagen ' + (i + 1) + ' de ' + nP + '…' : 'Armando la imagen…';
+                    const cv = await _ssDibujar(paginas[i], i + 1, nP);
+                    // copiar al portapapeles solo acepta png; para compartir, jpg (más liviano)
+                    const blob = await new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('sin imagen')), esCompu ? 'image/png' : 'image/jpeg', 0.92));
+                    files.push(new File([blob], base + (nP > 1 ? ' (' + (i + 1) + ' de ' + nP + ')' : '') + (esCompu ? '.png' : '.jpg'), { type: blob.type }));
+                }
+                if (!esCompu && navigator.canShare && navigator.canShare({ files })) {
+                    try { await navigator.share({ files }); ssCerrar(); }   // WhatsApp las manda todas juntas
                     catch (e) { if (!e || e.name !== 'AbortError') throw e; }
                     return;
                 }
-                // Compu: copiar la imagen para pegarla en WhatsApp Web (Ctrl+V); si no se puede, descargarla
-                try {
-                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                    toast('📋 Imagen copiada: pegala en WhatsApp con Ctrl+V', 'success');
-                } catch (e) {
-                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre;
-                    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-                    toast('⬇️ Imagen descargada', 'success');
+                // Compu: 1 imagen → copiarla para pegar en WhatsApp Web (Ctrl+V); varias (o si no se puede copiar) → descargarlas
+                let copiada = false;
+                if (nP === 1) {
+                    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': files[0] })]); copiada = true; } catch (e) {}
+                }
+                if (copiada) toast('📋 Imagen copiada: pegala en WhatsApp con Ctrl+V', 'success');
+                else {
+                    for (const fl of files) {
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(fl); a.download = fl.name;
+                        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 6000);
+                        await new Promise(r => setTimeout(r, 350));
+                    }
+                    toast(nP > 1 ? '⬇️ Se descargaron ' + nP + ' imágenes: arrastralas a WhatsApp' : '⬇️ Imagen descargada', 'success');
                 }
                 ssCerrar();
             } catch (e) {

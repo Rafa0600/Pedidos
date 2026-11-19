@@ -316,6 +316,19 @@
         .acr-check { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.75em; font-weight: 900; color: transparent; }
         .copy-pick .acr-check { background: var(--success); border-color: var(--success); color: #fff; }
         .article-size-cell.copy-pick { box-shadow: inset 0 0 0 2px var(--success); }
+        .ctrl-bar { margin: 2px 10px 6px; padding: 7px 8px; border-radius: 10px; background: rgba(52,211,153,0.10); border: 1px dashed var(--success); font-size: 0.78em; color: var(--text); }
+        .ctrl-bar .ctrl-tit { margin-bottom: 6px; line-height: 1.3; }
+        .ctrl-tls { display: flex; flex-wrap: wrap; gap: 5px; }
+        .ctrl-tl { min-width: 40px; padding: 7px 8px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 800; font-size: 0.95em; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .ctrl-tl.algo { border-color: var(--success); color: var(--success); }
+        .ctrl-tl.on { background: var(--success); border-color: var(--success); color: #05301f; }
+        .article-size-cell.ctrl-pick { border-color: var(--success) !important; opacity: 1 !important; background: rgba(52,211,153,0.12); }
+        .article-compact-row.ctrl-pick { box-shadow: inset 0 0 0 2px var(--success); }
+        .asc-ctrl-dot { position: absolute; top: -5px; right: -5px; width: 15px; height: 15px; border-radius: 50%; background: var(--success); border: 2px solid var(--bg-card); }
+        .ctrl-color-btn { border-color: var(--success) !important; color: var(--success); }
+        .article-color-sticky.ctrl-tap { cursor: pointer; }
+        .icon-btn.ctrl-dot { position: relative; }
+        .icon-btn.ctrl-dot::after { content: ''; position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-radius: 50%; background: var(--success); }
         .asc-copy-ck { position: absolute; top: 1px; left: 3px; font-size: 0.62em; font-weight: 900; color: var(--success); }
         
         .article-color-strip {
@@ -1406,6 +1419,18 @@
                 <span class="setting-label">Mostrar ubicación</span>
                 <div class="setting-toggle" id="toggleUbic" onclick="toggleSetting('showUbic')"></div>
             </div>
+            <div class="setting-row">
+                <span class="setting-label">🧾 Modo controlar stock</span>
+                <div class="setting-toggle" id="toggleCtrl" onclick="toggleCtrl()"></div>
+            </div>
+            <div class="setting-row" id="ctrlBox" style="display:none;flex-direction:column;align-items:stretch;gap:8px;">
+                <span class="setting-label" id="ctrlInfo" style="font-weight:600;line-height:1.35"></span>
+                <button id="ctrlPrintBtn" onclick="ctrlImprimir()" style="padding:12px;border:none;border-radius:8px;background:var(--success);color:#05301f;font-weight:800;font-size:0.9em;cursor:pointer;">🖨️ Imprimir en el depósito</button>
+                <div style="display:flex;gap:6px;">
+                    <button id="ctrlBorrarBtn" onclick="ctrlBorrar()" style="flex:1;padding:9px;border-radius:8px;background:var(--bg-input);color:var(--text);font-weight:700;font-size:0.8em;cursor:pointer;border:1px solid var(--border);">🗑️ Desmarcar todo</button>
+                    <button id="ctrlReBtn" onclick="ctrlReimprimir()" style="flex:1;padding:9px;border-radius:8px;background:var(--bg-input);color:var(--text);font-weight:700;font-size:0.8em;cursor:pointer;border:1px solid var(--border);">🔁 Reimprimir el último</button>
+                </div>
+            </div>
             <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px;">
                 <span class="setting-label">Categorías del Inicio</span>
                 <div style="display:flex;gap:6px;">
@@ -1441,7 +1466,7 @@
             <div class="header-right">
                 <span class="hdr-mid"><button class="hdr-color" id="hdrColorBtn" onclick="openColorPhotoOverlay()" style="display:none" title="Elegir color por foto">🎨 <span id="hdrColorTxt">Color</span></button><button class="hdr-color-x" id="hdrColorX" onclick="clearColorFilter(event)" style="display:none" title="Sacar el filtro de color">✕</button></span>
                 <button class="hdr-share" id="hdrShareBtn" onclick="openShareStock()" style="display:none" title="Compartir el stock de este artículo (imagen)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg></button>
-                <button class="icon-btn" onclick="openSettings()" title="Ajustes">⚙️</button>
+                <button class="icon-btn" id="hdrGear" onclick="openSettings()" title="Ajustes">⚙️</button>
             </div>
         </div>
         
@@ -1543,7 +1568,6 @@
                 <button class="action-more-btn" onclick="waTicketPDF()">📤 Ticket por WhatsApp</button>
                 <button class="action-more-btn" onclick="actualizarPreciosAhora()">🔄 Actualizar precios</button>
                 <button class="action-more-btn" onclick="setOrderType('devolucion');toggleMoreActions(document.querySelector('.action-more-toggle'))">↩️ Devolución</button>
-                <button class="action-more-btn" onclick="revisarStockTicket()">🧾 Revisar stock</button>
             </div>
 
             <div class="unified-name-wrap">
@@ -2478,6 +2502,7 @@
         function updateSettingsUI() {
             $('toggleSku').classList.toggle('on', settings.showSku);
             $('toggleUbic').classList.toggle('on', settings.showUbic);
+            _ctrlPaintSettings();
         }
         function toggleSetting(key) {
             settings[key] = !settings[key];
@@ -3638,7 +3663,7 @@
             $('hdrShareBtn').style.display = ver && state.searchExact && state.search ? '' : 'none';   // solo dentro de un artículo
             // Talles fijos, repartidos en todo el ancho (hasta 8 por fila)
             // los talles sin stock no se muestran (salvo el elegido o con 🚫 "ver sin stock")
-            const tbVis = _tbSizes.filter(t => t.avail > 0 || state.size === t.s || showZeroStock);
+            const tbVis = _tbSizes.filter(t => t.avail > 0 || state.size === t.s || showZeroStock || _ctrl);
             bar.style.display = ver && tbVis.length ? '' : 'none';
             if (!ver || !tbVis.length) return;
             bar.style.gridTemplateColumns = 'repeat(' + Math.min(tbVis.length, 8) + ', minmax(0, 1fr))';
@@ -3920,22 +3945,88 @@
         }
         function ssCerrar() { $('shareStockModal').classList.remove('show'); }
 
-        // ─── 🧾 REVISAR STOCK: el pedido sale como ticket grande en el depósito para que cuenten ───
-        // (⋯ Más → Revisar stock). Lista artículo → color → talle con un cuadrito para anotar cuántos hay.
-        function _rvGrupos() {
+        // ─── 🧾 MODO CONTROLAR STOCK (⚙️ Ajustes) ───
+        // Con el modo prendido, tocar un talle lo MARCA (aunque esté en 0) en vez de sumarlo al pedido.
+        // Arriba: botones por talle (todo el XL del artículo); "✓ Color" (o tocar el nombre) marca toda la curva.
+        // Se puede ir a otro artículo y seguir marcando; en ⚙️ → 🖨️ Imprimir sale todo junto en el depósito.
+        let _ctrl = false, _ctrlSel = new Map();   // codigo → { a: artículo, c: color, t: talle }
+        try { _ctrl = localStorage.getItem('mikra_ctrl_on') === '1'; _ctrlSel = new Map(JSON.parse(localStorage.getItem('mikra_ctrl_sel') || '[]')); } catch (e) {}
+        function _ctrlSave() { try { localStorage.setItem('mikra_ctrl_on', _ctrl ? '1' : '0'); localStorage.setItem('mikra_ctrl_sel', JSON.stringify([..._ctrlSel])); } catch (e) {} }
+        function _ctrlHas(p) { return _ctrlSel.has(String(p.codigo)); }
+        function _ctrlSet(ps, on) {
+            ps.forEach(p => {
+                if (on) _ctrlSel.set(String(p.codigo), { a: p.titulo || p.articulo || 'Sin nombre', c: p.color || 'Sin color', t: p.talle || '-' });
+                else _ctrlSel.delete(String(p.codigo));
+            });
+            _ctrlSave();
+            _ctrlRefresh();
+        }
+        function _ctrlRefresh() { renderArticleDetail(); _ctrlPaintSettings(); }
+        function _ctrlArtProds() { return state.searchExact && state.search ? (_byArticle.get(state.search.toLowerCase()) || []) : []; }
+        function ctrlToggleP(id) { const p = productById(id); if (p) _ctrlSet([p], !_ctrlHas(p)); }
+        function ctrlTalle(t) { const ps = _ctrlArtProds().filter(p => p.talle === t); if (ps.length) _ctrlSet(ps, !ps.every(_ctrlHas)); }
+        function ctrlColor(c) { const ps = _ctrlArtProds().filter(p => (p.color || 'Sin color') === c); if (ps.length) _ctrlSet(ps, !ps.every(_ctrlHas)); }
+        function toggleCtrl() {
+            _ctrl = !_ctrl; _ctrlSave();
+            _copySel = null;
+            updateSettingsUI();
+            renderArticleDetail(); _pintarExtrasFiltro();
+            toast(_ctrl ? '🧾 Modo controlar stock: tocá los talles para marcarlos' : 'Modo controlar stock apagado' + (_ctrlSel.size ? ' (los marcados quedan guardados)' : ''), _ctrl ? 'success' : '');
+        }
+        function _ctrlPaintSettings() {
+            const box = $('ctrlBox');
+            if (!box) return;
+            $('toggleCtrl')?.classList.toggle('on', _ctrl);
+            $('hdrGear')?.classList.toggle('ctrl-dot', _ctrlSel.size > 0);
+            let last = null; try { last = JSON.parse(localStorage.getItem('mikra_ctrl_last') || 'null'); } catch (e) {}
+            box.style.display = _ctrl || _ctrlSel.size || last ? 'flex' : 'none';
+            const arts = [...new Set([..._ctrlSel.values()].map(e => e.a))];
+            $('ctrlInfo').innerHTML = _ctrlSel.size
+                ? '<b>' + _ctrlSel.size + '</b> marcado' + (_ctrlSel.size === 1 ? '' : 's') + ' en ' + arts.length + ' artículo' + (arts.length === 1 ? '' : 's') + ':<br><span style="color:var(--text-secondary);font-size:0.9em">' + arts.map(_escHtml).join(' · ') + '</span>'
+                : '<span style="color:var(--text-secondary)">No hay nada marcado. Entrá a un artículo y tocá los talles.</span>';
+            $('ctrlPrintBtn').disabled = !_ctrlSel.size;
+            $('ctrlPrintBtn').style.opacity = _ctrlSel.size ? '' : '0.5';
+            $('ctrlBorrarBtn').style.display = _ctrlSel.size ? '' : 'none';
+            $('ctrlReBtn').style.display = last && last.length ? '' : 'none';
+        }
+        function _ctrlGrupos(entries) {   // [{a,c,t}] → artículo → color → talles
             const arts = new Map();
-            state.cart.forEach(p => {
-                const a = p.titulo || p.articulo || 'Sin nombre', c = p.color || 'Sin color';
-                if (!arts.has(a)) arts.set(a, new Map());
-                const cols = arts.get(a);
-                if (!cols.has(c)) cols.set(c, new Set());
-                cols.get(c).add(p.talle || '-');
+            entries.forEach(e => {
+                if (!arts.has(e.a)) arts.set(e.a, new Map());
+                const cols = arts.get(e.a);
+                if (!cols.has(e.c)) cols.set(e.c, new Set());
+                cols.get(e.c).add(e.t);
             });
             return [...arts].map(([art, cols]) => ({
                 art,
-                colores: [...cols].sort((x, y) => x[0].localeCompare(y[0], 'es'))
-                    .map(([color, ts]) => ({ color, filas: [...ts].sort(_cmpTalle) }))
+                colores: [...cols].sort((x, y) => x[0].localeCompare(y[0], 'es')).map(([color, ts]) => ({ color, filas: [...ts].sort(_cmpTalle) }))
             }));
+        }
+        async function _ctrlMandar(entries, borrar) {
+            const grupos = _ctrlGrupos(entries);
+            toast('📦 Mandando al depósito…', '');
+            let res;
+            try { res = await _printApi('/job', { html: _rvHtml(grupos), title: 'Revisar stock ' + grupos.map(g => g.art).join(', '), target: 'deposito' }); }
+            catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
+            try { localStorage.setItem('mikra_ctrl_last', JSON.stringify(entries)); } catch (e) {}
+            if (borrar) { _ctrlSel.clear(); _ctrlSave(); _ctrlRefresh(); }
+            await _waitPrintJob(res, 'deposito', 'revisar');
+        }
+        function ctrlImprimir() {
+            if (!_ctrlSel.size) return;
+            const n = _ctrlSel.size, nA = new Set([..._ctrlSel.values()].map(e => e.a)).size;
+            closeSettings();
+            showModal('🖨️', 'Imprimir para controlar', 'Sale un ticket en el depósito con ' + n + ' renglon' + (n === 1 ? '' : 'es') + ' de ' + nA + ' artículo' + (nA === 1 ? '' : 's') + ', con un cuadrito para anotar cuántos hay. Después se desmarcan (queda "Reimprimir el último").', '🖨️ Imprimir', () => _ctrlMandar([..._ctrlSel.values()], true));
+        }
+        function ctrlBorrar() {
+            closeSettings();
+            showModal('🗑️', 'Desmarcar todo', '¿Sacar los ' + _ctrlSel.size + ' marcados para controlar?', 'Sí, desmarcar', () => { _ctrlSel.clear(); _ctrlSave(); _ctrlRefresh(); toast('Listo, no queda nada marcado', ''); });
+        }
+        function ctrlReimprimir() {
+            let last = null; try { last = JSON.parse(localStorage.getItem('mikra_ctrl_last') || 'null'); } catch (e) {}
+            if (!last || !last.length) return;
+            closeSettings();
+            showModal('🔁', 'Reimprimir el último', 'Vuelve a salir en el depósito el último ticket para controlar (' + last.length + ' renglones).', '🖨️ Imprimir', () => _ctrlMandar(last, false));
         }
         function _rvHtml(grupos) {
             const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) + ' ' +
@@ -3952,6 +4043,10 @@
                 '.f{display:flex;align-items:center;justify-content:space-between;margin:6px 0}' +
                 '.t{font-size:30px;line-height:1}' +
                 '.bx{width:26mm;height:13mm;border:3px solid #000;border-radius:4px;flex:none}' +
+                '.u{display:flex;align-items:center;gap:5px;margin-top:8px;padding-bottom:6px;border-bottom:2px dashed #000;page-break-inside:avoid}' +
+                '.u .cn1{flex:1;min-width:0;font-size:19px;line-height:1.1;text-transform:uppercase;overflow-wrap:break-word}' +
+                '.u .t{font-size:26px}' +
+                '.u .bx{width:22mm}' +
                 '.pie{margin-top:16px;font-size:15px;display:flex;align-items:flex-end;gap:6px}' +
                 '.pie span{flex:1;border-bottom:2px solid #000;height:8mm}' +
                 '</style></head><body>';
@@ -3959,6 +4054,10 @@
             grupos.forEach(g => {
                 h += '<div class="art">' + _escHtml(g.art) + '</div>';
                 g.colores.forEach(c => {
+                    if (c.filas.length === 1) {   // un solo talle (ej. "todo el XL"): color, talle y cuadro en un renglón
+                        h += '<div class="u"><span class="cn1">' + _escHtml(c.color) + '</span><span class="t">' + _escHtml(c.filas[0]) + '</span><span class="bx"></span></div>';
+                        return;
+                    }
                     h += '<div class="col"><div class="cn">' + _escHtml(c.color) + '</div>';
                     c.filas.forEach(t => { h += '<div class="f"><span class="t">' + _escHtml(t) + '</span><span class="bx"></span></div>'; });
                     h += '</div>';
@@ -3966,19 +4065,6 @@
             });
             h += '<div class="pie">Contó:<span></span></div>';
             return h + '</body></html>';
-        }
-        function revisarStockTicket() {
-            const mp = $('moreActionsPanel'); if (mp && mp.classList.contains('show')) toggleMoreActions(document.querySelector('.action-more-toggle'));
-            if (!state.cart.length) { toast('Agregá al pedido lo que querés que revisen', 'warning'); return; }
-            const grupos = _rvGrupos();
-            const n = grupos.reduce((a, g) => a + g.colores.reduce((b, c) => b + c.filas.length, 0), 0);
-            showModal('🧾', 'Revisar stock', 'Sale un ticket en el depósito con ' + n + ' renglon' + (n === 1 ? '' : 'es') + ' (artículo, color y talle) y un cuadrito para anotar cuántos hay. El pedido no se toca.', '🖨️ Mandar', async () => {
-                toast('📦 Mandando al depósito…', '');
-                let res;
-                try { res = await _printApi('/job', { html: _rvHtml(grupos), title: 'Revisar stock ' + grupos.map(g => g.art).join(', '), target: 'deposito' }); }
-                catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
-                await _waitPrintJob(res, 'deposito', 'revisar');
-            });
         }
         function ssSet(k, v) { _ss[k] = v; try { localStorage.setItem('mikra_share_stock', JSON.stringify(_ss)); } catch (e) {} ssPaint(); }
         function ssTodos(on) { if (!_ssData) return; _ssData.sel = new Set(on ? _ssData.colores.map(g => g.color) : []); ssPaint(); }
@@ -4305,20 +4391,30 @@
                 (totalColorsCero > 0 ? '<button class="article-photo-toggle" onclick="toggleZeroStock()" style="' + (showZeroStock ? 'background:rgba(248,113,113,0.2);color:var(--danger);' : '') + '" title="' + (showZeroStock ? 'Ocultar colores sin stock' : 'Ver ' + totalColorsCero + ' color(es) sin stock') + '">🚫' + (showZeroStock ? '✓' : totalColorsCero) + '</button>' : '') +
                 '<button class="article-photo-toggle" id="articlePhotoToggle" onclick="toggleArticlePhotos()">📷</button>' +
                 '<button class="article-photo-toggle" id="artEcomRefreshBtn" onclick="fetchEcomStockForArticle()" title="Actualizar stock ecom de este artículo" style="' + (Object.keys(artEcomMap).length ? 'color:var(--success);border-color:var(--success);' : '') + '">🔄</button>' +
-                ((state.size || state.color)
+                ((state.size || state.color) && !_ctrl
                     ? '<button class="article-photo-toggle' + (_copySel ? ' art-copy-on' : '') + '" id="artCopyBtn" onclick="artCopyTap()" title="' + (state.size ? 'Copiar los colores de este talle' : 'Copiar los talles de este color') + '">📋' + (_copySel ? ' Copiar ' + _copySel.size : '') + '</button>'
                     : '') +
                 '</div>';
             if (_copySel) {
                 html += '<div class="art-copy-bar"><span class="acb-txt">Tocá ' + (state.size ? 'los colores' : 'los talles') + ' que <b>no</b> querés ofrecer · 📋 de nuevo copia</span>' +
                     '<button onclick="artCopyTodos()" title="Marcar todos (también los que figuran sin stock) / ninguno">☑ Todos</button>' +
-                    '<button onclick="artCopyAlPedido()" title="Agregar 1 de cada uno de los marcados al pedido">➕ Pedido</button>' +
                     '<button onclick="fetchEcomStockForArticle()" title="Ver stock real en Ecom y sacar los que no hay">🔄 Ecom</button>' +
                     '<button onclick="artCopyCancel()" title="Cancelar">✕</button></div>';
             }
             
-            // Ocultar colores enteros sin stock, salvo que el toggle esté activo
-            const visibleColors = showZeroStock
+            if (_ctrl) {   // 🧾 barra del modo controlar: marcar todo un talle del artículo (aunque esté en 0)
+                const aps = _ctrlArtProds();
+                const tls = [...new Set(aps.map(p => p.talle).filter(Boolean))].sort(_cmpTalle);
+                const nAca = aps.filter(_ctrlHas).length;
+                html += '<div class="ctrl-bar"><div class="ctrl-tit">🧾 <b>Controlar stock</b> · ' + nAca + ' marcado' + (nAca === 1 ? '' : 's') + ' acá' +
+                    (_ctrlSel.size > nAca ? ' · ' + _ctrlSel.size + ' en total' : '') + ' · se imprime en ⚙️<br><span style="color:var(--text-secondary)">Todo un talle:</span></div><div class="ctrl-tls">' +
+                    tls.map(t => {
+                        const ps = aps.filter(p => p.talle === t), on = ps.every(_ctrlHas), algo = ps.some(_ctrlHas);
+                        return '<button class="ctrl-tl' + (on ? ' on' : algo ? ' algo' : '') + '" data-t="' + _escHtml(t) + '" onclick="ctrlTalle(this.dataset.t)">' + _escHtml(t) + '</button>';
+                    }).join('') + '</div></div>';
+            }
+            // Ocultar colores enteros sin stock, salvo que el toggle esté activo (o el modo controlar)
+            const visibleColors = showZeroStock || _ctrl
                 ? colorNames
                 : colorNames.filter(c => colorMeta[c].avail > 0 || colorMeta[c].cart > 0);
             
@@ -4341,12 +4437,14 @@
                     const ecHtml = ec !== null ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>' : '';
                     const colorImgUrl = colorMeta[color].imgUrl;
                     const cpCls = _copySel ? (_copySel.has(p.id) ? ' copy-pick' : ' copy-off') : '';
-                    html += '<div class="article-compact-row' + (isSelected && !_copySel ? ' selected' : '') + cpCls + '" data-pid="' + p.id + '" onclick="articleTapSize(' + p.id + ')">' +
+                    const ck = _ctrl && _ctrlHas(p);
+                    html += '<div class="article-compact-row' + (isSelected && !_copySel && !_ctrl ? ' selected' : '') + cpCls + (ck ? ' ctrl-pick' : '') + '" data-pid="' + p.id + '" onclick="articleTapSize(' + p.id + ')">' +
                         (_copySel ? '<div class="acr-check">✓</div>' : '') +
                         '<div class="acr-photo">' + (colorImgUrl ? '<img src="' + colorImgUrl + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '<div class="acr-photo-placeholder">📦</div>') + '</div>' +
                         '<div class="acr-color">🎨 ' + color + '</div>' +
-                        '<div class="article-size-cell' + (isZero ? ' zero' : '') + (inCart ? ' in-cart' : '') + (isSelected ? ' selected' : '') + '" data-pid="' + p.id + '" style="flex-shrink:0;">' +
-                            (inCart ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
+                        '<div class="article-size-cell' + (isZero ? ' zero' : '') + (inCart && !_ctrl ? ' in-cart' : '') + (isSelected && !_ctrl ? ' selected' : '') + (ck ? ' ctrl-pick' : '') + '" data-pid="' + p.id + '" style="flex-shrink:0;">' +
+                            (ck ? '<span class="asc-ctrl-dot"></span>' : '') +
+                            (inCart && !_ctrl ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
                             '<div class="asc-size">' + state.size + '</div>' +
                             '<div class="asc-stock ' + stockClass + '">' + available + '</div>' +
                             ecHtml +
@@ -4366,7 +4464,8 @@
                     const colorImgUrl = cm.imgUrl;
 
                     html += '<div class="article-color-section">';
-                    html += '<div class="article-color-sticky' + (colorIsZero ? '" style="opacity:0.5;border-bottom-color:var(--danger)"' : '"') + '>🎨 ' + color +
+                    html += '<div class="article-color-sticky' + (_ctrl ? ' ctrl-tap' : '') + (colorIsZero ? '" style="opacity:0.5;border-bottom-color:var(--danger)"' : '"') +
+                        (_ctrl ? ' onclick="ctrlColor(\'' + color.replace(/'/g, "\\'") + '\')"' : '') + '>🎨 ' + color +
                         (colorIsZero ? ' <span style="color:var(--danger);font-size:0.75em">✗</span>' : '') +
                         '<span class="color-stock-badge">' + colorAvail + '/' + colorStock + (colorCart ? ' 🛒' + colorCart : '') + '</span></div>';
 
@@ -4393,14 +4492,17 @@
                         const ecHtml = ec !== null ? '<div class="asc-ecom" style="color:' + (ec <= 0 ? 'var(--danger)' : ec <= 3 ? 'var(--warning)' : 'var(--success)') + '">▸' + ec + '</div>' : '';
 
                         const cpPick = _copySel && _copySel.has(p.id);
+                        const ck = _ctrl && _ctrlHas(p);
                         html += '<div class="article-size-cell' +
                             (isZero ? ' zero' : '') +
-                            (inCart ? ' in-cart' : '') +
-                            (isSelected && !_copySel ? ' selected' : '') +
+                            (inCart && !_ctrl ? ' in-cart' : '') +
+                            (isSelected && !_copySel && !_ctrl ? ' selected' : '') +
                             (_copySel ? (cpPick ? ' copy-pick' : ' copy-off') : '') +
+                            (ck ? ' ctrl-pick' : '') +
                             '" data-pid="' + p.id + '" onclick="articleTapSize(' + p.id + ')">' +
                             (cpPick ? '<span class="asc-copy-ck">✓</span>' : '') +
-                            (inCart ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
+                            (ck ? '<span class="asc-ctrl-dot"></span>' : '') +
+                            (inCart && !_ctrl ? '<span class="asc-cart-badge">' + cartQty + '</span>' : '') +
                             '<div class="asc-size">' + talle + '</div>' +
                             '<div class="asc-stock ' + stockClass + '">' + available + '</div>' +
                             ecHtml +
@@ -4410,8 +4512,9 @@
                     const colorKey = color.replace(/'/g, "\\'");
                     const colorProds = state.filtered.filter(p => (p.color || 'Sin color') === color);
                     const canRemoveCurva = colorProds.length > 0 && colorProds.every(p => getCartQty(p.id) >= 1);
-                    if (!_copySel) html += '<div class="article-size-cell curva-btn-cell" onclick="addCurvaColor(\'' + colorKey + '\')" title="Agregar 1 de cada talle"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">+<br>Curva</div></div>';
-                    if (canRemoveCurva && !_copySel) {
+                    if (_ctrl) html += '<div class="article-size-cell curva-btn-cell ctrl-color-btn" onclick="ctrlColor(\'' + colorKey + '\')" title="Marcar/desmarcar todo este color"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">✓<br>Color</div></div>';
+                    else if (!_copySel) html += '<div class="article-size-cell curva-btn-cell" onclick="addCurvaColor(\'' + colorKey + '\')" title="Agregar 1 de cada talle"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">+<br>Curva</div></div>';
+                    if (canRemoveCurva && !_copySel && !_ctrl) {
                         html += '<div class="article-size-cell minus-curva-btn-cell" onclick="removeCurvaColor(\'' + colorKey + '\')" title="Quitar 1 de cada talle"><div class="asc-size" style="font-size:0.6em;line-height:1.2;">−<br>Curva</div></div>';
                     }
                     html += '</div></div>';
@@ -4551,18 +4654,6 @@
             _copySel = ids.every(id => _copySel.has(id)) ? new Set() : new Set(ids);
             renderArticleDetail();
         }
-        // ➕ Pedido: suma 1 de cada marcado (ej. todos los colores de un talle) — los que ya estaban en el pedido no se repiten
-        function artCopyAlPedido() {
-            if (!_copySel) return;
-            const ps = _artCopyItems().filter(it => _copySel.has(it.p.id)).map(it => it.p);
-            if (!ps.length) { toast('No marcaste ninguno', 'warning'); return; }
-            let n = 0;
-            ps.forEach(p => { if (!state.cart.find(c => c.id === p.id)) { state.cart.push({ ...p, qty: 1 }); n++; } });
-            _rebuildCartCache(); saveCart(); updateBadge();
-            _copySel = null; renderArticleDetail();
-            toast(n ? '🛒 ' + n + ' agregado' + (n === 1 ? '' : 's') + ' al pedido' : 'Ya estaban todos en el pedido', n ? 'success' : '');
-        }
-
         function toggleArticlePhotos() {
             const view = $('articleDetailView');
             view.classList.toggle('show-photos');
@@ -4585,6 +4676,7 @@
         function articleTapSize(productId) {
             if (Date.now() - _swTapBlock < 450) return;   // venía de deslizar
             if (_lpCopiado) { _lpCopiado = false; return; }   // venía de mantener apretado (copió el SKU)
+            if (_ctrl) { ctrlToggleP(productId); return; }   // 🧾 modo controlar: marca/desmarca
             if (_copySel) {
                 if (_copySel.has(productId)) _copySel.delete(productId); else _copySel.add(productId);
                 renderArticleDetail();
@@ -4696,7 +4788,7 @@
             const UMBRAL = 85, MAX = 110;
             let sw = null;
             cont.addEventListener('pointerdown', e => {
-                if (_copySel || (e.pointerType === 'mouse' && e.button !== 0)) return;
+                if (_copySel || _ctrl || (e.pointerType === 'mouse' && e.button !== 0)) return;
                 const row = e.target.closest('.article-compact-row');
                 if (!row || !row.dataset.pid) return;
                 sw = { row, id: +row.dataset.pid, x0: e.clientX, y0: e.clientY, dx: 0, modo: null, pid: e.pointerId, vib: false };

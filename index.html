@@ -67,10 +67,6 @@
         .ss-col img, .ss-col .ss-ph { width: 34px; height: 40px; border-radius: 6px; object-fit: cover; flex: none; background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 0.9em; }
         .ss-col .ss-n { flex: 1; min-width: 0; font-size: 0.8em; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .ss-col .ss-q { font-size: 0.7em; color: var(--text-secondary); flex: none; }
-        .rv-talles { display: flex; flex-wrap: wrap; gap: 6px; }
-        .rv-t { min-width: 46px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 800; font-size: 0.85em; text-align: center; cursor: pointer; opacity: 0.45; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .rv-t.on { opacity: 1; border-color: var(--success); background: rgba(52,211,153,0.10); }
-        .ss-otro { background: var(--bg-input) !important; color: var(--text) !important; border: 1px solid var(--border) !important; font-weight: 700; }
         .hdr-color-x { padding: 5px 9px; border-radius: 14px; border: 1px solid var(--danger); background: rgba(248,113,113,0.15); color: var(--danger); font-weight: 800; font-size: 0.78em; cursor: pointer; }
         .icon-btn { 
             background: none; border: none; font-size: 1.2em; cursor: pointer; padding: 4px; 
@@ -312,8 +308,8 @@
         .article-photo-toggle.active { background: var(--primary); border-color: var(--primary); color: white; }
         /* 📋 Copiar colores / talles para ofrecer */
         .article-photo-toggle.art-copy-on { background: var(--success); border-color: var(--success); color: #05301f; font-weight: 800; white-space: nowrap; }
-        .art-copy-bar { display: flex; align-items: center; gap: 6px; margin: 2px 10px 6px; padding: 6px 8px 6px 10px; border-radius: 10px; background: rgba(52,211,153,0.12); border: 1px dashed var(--success); font-size: 0.76em; color: var(--text); }
-        .art-copy-bar .acb-txt { flex: 1; min-width: 0; line-height: 1.25; }
+        .art-copy-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 10px 6px; padding: 6px 8px 6px 10px; border-radius: 10px; background: rgba(52,211,153,0.12); border: 1px dashed var(--success); font-size: 0.76em; color: var(--text); }
+        .art-copy-bar .acb-txt { flex: 1 1 100%; min-width: 0; line-height: 1.25; }
         .art-copy-bar button { flex: none; padding: 5px 9px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-size: 0.95em; font-weight: 700; cursor: pointer; }
         .article-compact-row.copy-off, .article-size-cell.copy-off { opacity: 0.3; }
         .article-compact-row.copy-pick { background: rgba(52,211,153,0.10); }
@@ -1547,6 +1543,7 @@
                 <button class="action-more-btn" onclick="waTicketPDF()">📤 Ticket por WhatsApp</button>
                 <button class="action-more-btn" onclick="actualizarPreciosAhora()">🔄 Actualizar precios</button>
                 <button class="action-more-btn" onclick="setOrderType('devolucion');toggleMoreActions(document.querySelector('.action-more-toggle'))">↩️ Devolución</button>
+                <button class="action-more-btn" onclick="revisarStockTicket()">🧾 Revisar stock</button>
             </div>
 
             <div class="unified-name-wrap">
@@ -1899,34 +1896,7 @@
             </div>
             <div class="clear-modal-btns" style="flex-direction:column;gap:8px;margin-top:12px;">
                 <button class="clear-modal-btn" id="ssGo" style="background:var(--success);color:#05301f;font-weight:800;padding:12px;" onclick="ssCompartir()">📤 Compartir imagen</button>
-                <button class="clear-modal-btn ss-otro" onclick="openRevisar()">🔍 Mandar a revisar al depósito</button>
                 <button class="clear-modal-btn no" onclick="ssCerrar()">Cancelar</button>
-            </div>
-        </div>
-    </div>
-    <div class="clear-modal-overlay" id="revisarModal" onclick="if(event.target===this)rvCerrar()">
-        <div class="clear-modal ss-modal">
-            <div class="clear-modal-title">🔍 Revisar stock</div>
-            <div class="ss-art" id="rvArt"></div>
-            <div class="ss-hint" style="text-align:center">Sale un ticket grande en el depósito con un cuadrito al lado de cada talle para anotar cuántos hay.</div>
-            <div class="po-group">
-                <div class="po-lbl" style="display:flex;justify-content:space-between;align-items:center;"><span id="rvTallesTit">Talles</span><span><span class="ss-lnk" onclick="rvTodos('T',true)">Todos</span> · <span class="ss-lnk" onclick="rvTodos('T',false)">Ninguno</span></span></div>
-                <div class="rv-talles" id="rvTalles"></div>
-            </div>
-            <div class="po-group ss-colsbox">
-                <div class="po-lbl" style="display:flex;justify-content:space-between;align-items:center;"><span id="rvColsTit">Colores</span><span><span class="ss-lnk" onclick="rvTodos('C',true)">Todos</span> · <span class="ss-lnk" onclick="rvTodos('C',false)">Ninguno</span></span></div>
-                <div class="ss-cols" id="rvCols"></div>
-            </div>
-            <div class="po-group">
-                <div class="po-lbl">¿Poner lo que dice el sistema?</div>
-                <div class="po-seg ss-seg2" id="rvSist">
-                    <button data-v="no" onclick="rvSetSist(false)">No (que cuenten)</button>
-                    <button data-v="si" onclick="rvSetSist(true)">Sí, chiquito</button>
-                </div>
-            </div>
-            <div class="clear-modal-btns" style="flex-direction:column;gap:8px;margin-top:12px;">
-                <button class="clear-modal-btn" id="rvGo" style="background:var(--success);color:#05301f;font-weight:800;padding:12px;" onclick="rvMandar()">🖨️ Mandar al depósito</button>
-                <button class="clear-modal-btn no" onclick="rvCerrar()">Cancelar</button>
             </div>
         </div>
     </div>
@@ -3950,77 +3920,24 @@
         }
         function ssCerrar() { $('shareStockModal').classList.remove('show'); }
 
-        // ─── 🔍 REVISAR STOCK: ticket grande al depósito para que cuenten ───
-        let _rv = null;   // { art, prods, colores: [{ color, img, total }], talles: [t], selC: Set, selT: Set }
-        let _rvSist = false;
-        try { _rvSist = localStorage.getItem('mikra_rev_sist') === '1'; } catch (e) {}
-        function openRevisar() {
-            if (!state.searchExact || !state.search) return;
-            const prods = _byArticle.get(state.search.toLowerCase()) || [];
-            if (!prods.length) { toast('No hay nada para revisar', 'warning'); return; }
-            const art = prods[0].titulo || prods[0].articulo || state.search;
-            const porColor = new Map(), talles = new Set();
-            prods.forEach(p => {   // todos los colores y talles, aunque digan 0 (puede que haya)
-                const c = p.color || 'Sin color';
-                let g = porColor.get(c);
-                if (!g) porColor.set(c, g = { color: c, img: '', total: 0 });
-                if (!g.img) g.img = getProductImageFull(p.codigo, p) || '';
-                g.total += Math.max(0, p.stock || 0);
-                if (p.talle) talles.add(p.talle);
+        // ─── 🧾 REVISAR STOCK: el pedido sale como ticket grande en el depósito para que cuenten ───
+        // (⋯ Más → Revisar stock). Lista artículo → color → talle con un cuadrito para anotar cuántos hay.
+        function _rvGrupos() {
+            const arts = new Map();
+            state.cart.forEach(p => {
+                const a = p.titulo || p.articulo || 'Sin nombre', c = p.color || 'Sin color';
+                if (!arts.has(a)) arts.set(a, new Map());
+                const cols = arts.get(a);
+                if (!cols.has(c)) cols.set(c, new Set());
+                cols.get(c).add(p.talle || '-');
             });
-            const colores = [...porColor.values()].sort((a, b) => a.color.localeCompare(b.color, 'es'));
-            const tl = [...talles].sort((a, b) => _sizeRank(a) - _sizeRank(b));
-            // preelegidos: lo que estás filtrando (color/talle); si no filtraste color, elegís vos (todo el artículo es mucho)
-            const filtro = state.colors.length ? state.colors : state.color ? [state.color] : null;
-            const selC = new Set(colores.filter(g => filtro && filtro.includes(g.color)).map(g => g.color));
-            if (colores.length === 1) selC.add(colores[0].color);
-            const selT = new Set(state.size && tl.includes(state.size) ? [state.size] : tl);
-            _rv = { art, prods, colores, talles: tl, selC, selT };
-            $('rvArt').textContent = art;
-            rvPaint();
-            ssCerrar();
-            $('revisarModal').classList.add('show');
+            return [...arts].map(([art, cols]) => ({
+                art,
+                colores: [...cols].sort((x, y) => x[0].localeCompare(y[0], 'es'))
+                    .map(([color, ts]) => ({ color, filas: [...ts].sort(_cmpTalle) }))
+            }));
         }
-        function rvCerrar() { $('revisarModal').classList.remove('show'); }
-        function rvSetSist(v) { _rvSist = v; try { localStorage.setItem('mikra_rev_sist', v ? '1' : '0'); } catch (e) {} rvPaint(); }
-        function rvTodos(k, on) {
-            if (!_rv) return;
-            if (k === 'T') _rv.selT = new Set(on ? _rv.talles : []);
-            else _rv.selC = new Set(on ? _rv.colores.map(g => g.color) : []);
-            rvPaint();
-        }
-        function rvTogT(i) { const t = _rv.talles[i]; if (_rv.selT.has(t)) _rv.selT.delete(t); else _rv.selT.add(t); rvPaint(); }
-        function rvTogC(i) { const c = _rv.colores[i].color; if (_rv.selC.has(c)) _rv.selC.delete(c); else _rv.selC.add(c); rvPaint(); }
-        function _rvItems() {   // [{ color, filas: [{ t, n }] }] solo combinaciones que existen
-            const out = [];
-            _rv.colores.forEach(g => {
-                if (!_rv.selC.has(g.color)) return;
-                const filas = [];
-                _rv.talles.forEach(t => {
-                    if (!_rv.selT.has(t)) return;
-                    const ps = _rv.prods.filter(p => (p.color || 'Sin color') === g.color && p.talle === t);
-                    if (ps.length) filas.push({ t, n: ps.reduce((a, p) => a + Math.max(0, p.stock || 0), 0) });
-                });
-                if (filas.length) out.push({ color: g.color, filas });
-            });
-            return out;
-        }
-        function rvPaint() {
-            document.querySelectorAll('#rvSist button').forEach(b => b.classList.toggle('on', b.dataset.v === (_rvSist ? 'si' : 'no')));
-            if (!_rv) return;
-            $('rvTallesTit').textContent = 'Talles (' + _rv.selT.size + ' de ' + _rv.talles.length + ')';
-            $('rvColsTit').textContent = 'Colores (' + _rv.selC.size + ' de ' + _rv.colores.length + ')';
-            $('rvTalles').innerHTML = _rv.talles.map((t, i) => '<div class="rv-t' + (_rv.selT.has(t) ? ' on' : '') + '" onclick="rvTogT(' + i + ')">' + _escHtml(t) + '</div>').join('');
-            $('rvCols').innerHTML = _rv.colores.map((g, i) =>
-                '<div class="ss-col' + (_rv.selC.has(g.color) ? ' on' : '') + '" onclick="rvTogC(' + i + ')">' +
-                (g.img ? '<img src="' + g.img + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=ss-ph>📦</div>\'">' : '<div class="ss-ph">📦</div>') +
-                '<span class="ss-n">' + _escHtml(g.color) + '</span><span class="ss-q">' + g.total + '</span></div>').join('');
-            const n = _rvItems().reduce((a, c) => a + c.filas.length, 0);
-            $('rvGo').textContent = n ? '🖨️ Mandar al depósito (' + n + ' renglon' + (n === 1 ? '' : 'es') + ')' : '🖨️ Mandar al depósito';
-            $('rvGo').disabled = !n;
-            $('rvGo').style.opacity = n ? '' : '0.5';
-        }
-        function _rvHtml(items) {
+        function _rvHtml(grupos) {
             const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) + ' ' +
                           new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
             let h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Revisar stock</title><style>' +
@@ -4029,40 +3946,39 @@
                 'body{font-family:Arial,Helvetica,sans-serif;width:62mm;margin:3mm 4mm;color:#000;font-weight:900;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
                 '.hd{text-align:center;font-size:22px;letter-spacing:2px;border:3px solid #000;border-radius:4px;padding:4px 0}' +
                 '.fe{text-align:center;font-size:13px;margin:4px 0 6px}' +
-                '.art{background:#000;color:#fff;margin:0 -4mm;padding:8px 4mm;font-size:27px;line-height:1.12;text-transform:uppercase;text-align:center;overflow-wrap:break-word}' +
+                '.art{background:#000;color:#fff;margin:14px -4mm 0;padding:8px 4mm;font-size:27px;line-height:1.12;text-transform:uppercase;text-align:center;overflow-wrap:break-word}' +
                 '.col{margin-top:12px;page-break-inside:avoid}' +
                 '.cn{font-size:23px;line-height:1.1;text-transform:uppercase;border-bottom:3px solid #000;padding-bottom:3px;margin-bottom:5px;overflow-wrap:break-word}' +
-                '.f{display:flex;align-items:center;margin:6px 0}' +
+                '.f{display:flex;align-items:center;justify-content:space-between;margin:6px 0}' +
                 '.t{font-size:30px;line-height:1}' +
-                '.s{flex:1;text-align:right;font-size:12px;padding-right:6px}' +
                 '.bx{width:26mm;height:13mm;border:3px solid #000;border-radius:4px;flex:none}' +
                 '.pie{margin-top:16px;font-size:15px;display:flex;align-items:flex-end;gap:6px}' +
                 '.pie span{flex:1;border-bottom:2px solid #000;height:8mm}' +
                 '</style></head><body>';
             h += '<div class="hd">REVISAR STOCK</div><div class="fe">' + fecha + '</div>';
-            h += '<div class="art">' + _escHtml(_rv.art) + '</div>';
-            items.forEach(c => {
-                h += '<div class="col"><div class="cn">' + _escHtml(c.color) + '</div>';
-                c.filas.forEach(r => {
-                    h += '<div class="f"><span class="t">' + _escHtml(r.t) + '</span><span class="s">' + (_rvSist ? 'sist. ' + r.n : '') + '</span><span class="bx"></span></div>';
+            grupos.forEach(g => {
+                h += '<div class="art">' + _escHtml(g.art) + '</div>';
+                g.colores.forEach(c => {
+                    h += '<div class="col"><div class="cn">' + _escHtml(c.color) + '</div>';
+                    c.filas.forEach(t => { h += '<div class="f"><span class="t">' + _escHtml(t) + '</span><span class="bx"></span></div>'; });
+                    h += '</div>';
                 });
-                h += '</div>';
             });
             h += '<div class="pie">Contó:<span></span></div>';
             return h + '</body></html>';
         }
-        async function rvMandar() {
-            if (!_rv) return;
-            const items = _rvItems();
-            if (!items.length) return;
-            const btn = $('rvGo'); btn.disabled = true;
-            toast('📦 Mandando al depósito…', '');
-            let res;
-            try { res = await _printApi('/job', { html: _rvHtml(items), title: 'Revisar ' + _rv.art, target: 'deposito' }); }
-            catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); btn.disabled = false; return; }
-            btn.disabled = false;
-            rvCerrar();
-            await _waitPrintJob(res, 'deposito', 'revisar');
+        function revisarStockTicket() {
+            const mp = $('moreActionsPanel'); if (mp && mp.classList.contains('show')) toggleMoreActions(document.querySelector('.action-more-toggle'));
+            if (!state.cart.length) { toast('Agregá al pedido lo que querés que revisen', 'warning'); return; }
+            const grupos = _rvGrupos();
+            const n = grupos.reduce((a, g) => a + g.colores.reduce((b, c) => b + c.filas.length, 0), 0);
+            showModal('🧾', 'Revisar stock', 'Sale un ticket en el depósito con ' + n + ' renglon' + (n === 1 ? '' : 'es') + ' (artículo, color y talle) y un cuadrito para anotar cuántos hay. El pedido no se toca.', '🖨️ Mandar', async () => {
+                toast('📦 Mandando al depósito…', '');
+                let res;
+                try { res = await _printApi('/job', { html: _rvHtml(grupos), title: 'Revisar stock ' + grupos.map(g => g.art).join(', '), target: 'deposito' }); }
+                catch (e) { toast('⚠️ No se pudo mandar: ' + e.message, 'error'); return; }
+                await _waitPrintJob(res, 'deposito', 'revisar');
+            });
         }
         function ssSet(k, v) { _ss[k] = v; try { localStorage.setItem('mikra_share_stock', JSON.stringify(_ss)); } catch (e) {} ssPaint(); }
         function ssTodos(on) { if (!_ssData) return; _ssData.sel = new Set(on ? _ssData.colores.map(g => g.color) : []); ssPaint(); }
@@ -4395,6 +4311,8 @@
                 '</div>';
             if (_copySel) {
                 html += '<div class="art-copy-bar"><span class="acb-txt">Tocá ' + (state.size ? 'los colores' : 'los talles') + ' que <b>no</b> querés ofrecer · 📋 de nuevo copia</span>' +
+                    '<button onclick="artCopyTodos()" title="Marcar todos (también los que figuran sin stock) / ninguno">☑ Todos</button>' +
+                    '<button onclick="artCopyAlPedido()" title="Agregar 1 de cada uno de los marcados al pedido">➕ Pedido</button>' +
                     '<button onclick="fetchEcomStockForArticle()" title="Ver stock real en Ecom y sacar los que no hay">🔄 Ecom</button>' +
                     '<button onclick="artCopyCancel()" title="Cancelar">✕</button></div>';
             }
@@ -4625,6 +4543,25 @@
             });
         }
         function artCopyCancel() { _copySel = null; renderArticleDetail(); }
+        function artCopyTodos() {
+            if (!_copySel) return;
+            // los que se ven: si los sin stock están ocultos (🚫), no se marcan
+            const ids = _artCopyItems().filter(it => showZeroStock || (it.p.stock || 0) > 0).map(it => it.p.id);
+            if (!ids.length) { toast('No hay ninguno con stock: tocá 🚫 para ver los que figuran sin stock', 'warning'); return; }
+            _copySel = ids.every(id => _copySel.has(id)) ? new Set() : new Set(ids);
+            renderArticleDetail();
+        }
+        // ➕ Pedido: suma 1 de cada marcado (ej. todos los colores de un talle) — los que ya estaban en el pedido no se repiten
+        function artCopyAlPedido() {
+            if (!_copySel) return;
+            const ps = _artCopyItems().filter(it => _copySel.has(it.p.id)).map(it => it.p);
+            if (!ps.length) { toast('No marcaste ninguno', 'warning'); return; }
+            let n = 0;
+            ps.forEach(p => { if (!state.cart.find(c => c.id === p.id)) { state.cart.push({ ...p, qty: 1 }); n++; } });
+            _rebuildCartCache(); saveCart(); updateBadge();
+            _copySel = null; renderArticleDetail();
+            toast(n ? '🛒 ' + n + ' agregado' + (n === 1 ? '' : 's') + ' al pedido' : 'Ya estaban todos en el pedido', n ? 'success' : '');
+        }
 
         function toggleArticlePhotos() {
             const view = $('articleDetailView');

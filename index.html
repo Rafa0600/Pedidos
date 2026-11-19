@@ -165,6 +165,9 @@
         .tb-chip:active { transform: scale(0.95); }
         .tb-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
         .tb-chip.zero { opacity: 0.4; text-decoration: line-through; }
+        .tb-chip.ck { background: var(--success); border-color: var(--success); color: #05301f; }
+        .tb-chip.ck-algo { border-color: var(--success); color: var(--success); }
+        .tb-chip.on.ck, .tb-chip.on.ck-algo { box-shadow: inset 0 -4px 0 var(--primary); }
         .tb-chip.tb-color { font-weight: 700; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .tb-chip.tb-x { min-width: 0; padding: 7px 9px; background: rgba(248,113,113,0.15); border-color: var(--danger); color: var(--danger); }
         .tb-sep { flex: none; width: 1px; margin: 4px 1px; background: var(--border); }
@@ -329,6 +332,22 @@
         .article-color-sticky.ctrl-tap { cursor: pointer; }
         .icon-btn.ctrl-dot { position: relative; }
         .icon-btn.ctrl-dot::after { content: ''; position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-radius: 50%; background: var(--success); }
+        .ctrl-art { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; margin: 0 0 8px; }
+        .ctrl-art-h { display: flex; align-items: center; gap: 8px; }
+        .ctrl-art-n { flex: 1; min-width: 0; font-weight: 800; color: var(--primary); cursor: pointer; }
+        .ctrl-art-q { font-size: 0.75em; color: var(--text-secondary); flex: none; }
+        .ctrl-x { flex: none; border: 1px solid var(--border); background: var(--bg-input); color: var(--danger); border-radius: 9px; padding: 5px 9px; font-weight: 800; cursor: pointer; font-size: 0.85em; }
+        .ctrl-col { display: flex; align-items: center; gap: 8px; padding: 5px 0 0; margin-top: 5px; border-top: 1px dashed var(--border); font-size: 0.85em; }
+        .ctrl-col .cc-n { flex: 1; min-width: 0; }
+        .ctrl-col .cc-n b { color: var(--text); }
+        .ctrl-col .cc-t { color: var(--text-secondary); }
+        .ctrl-acts { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+        .ctrl-acts button { flex: 1; padding: 11px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-weight: 700; font-size: 0.85em; cursor: pointer; }
+        .ctrl-acts button.cp-go { background: var(--success); border-color: var(--success); color: #05301f; font-weight: 800; font-size: 0.95em; padding: 13px; }
+        .ctrl-prev-lbl { font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin: 6px 0; text-align: center; }
+        .ctrl-prev { display: flex; justify-content: center; padding-bottom: 90px; }
+        .ctrl-prev iframe { width: 290px; height: 200px; border: 0; border-radius: 6px; background: #fff; box-shadow: 0 4px 18px rgba(0,0,0,0.35); }
+        .ctrl-vacio { text-align: center; color: var(--text-secondary); padding: 30px 10px; font-size: 0.9em; line-height: 1.5; }
         .asc-copy-ck { position: absolute; top: 1px; left: 3px; font-size: 0.62em; font-weight: 900; color: var(--success); }
         
         .article-color-strip {
@@ -1690,6 +1709,25 @@
         </div>
     </div>
     
+    <div class="page" id="page-ctrl">
+        <div class="header">
+            <div class="header-left"><span class="header-title">🧾 Resumen para controlar</span></div>
+        </div>
+        <div class="container">
+            <div class="ctrl-acts">
+                <button id="ctrlPgPrint" class="cp-go" onclick="ctrlImprimir()">🖨️ Imprimir en el depósito</button>
+                <div style="display:flex;gap:6px;">
+                    <button id="ctrlPgRe" onclick="ctrlReimprimir()">🔁 Reimprimir el último</button>
+                    <button id="ctrlPgBorrar" onclick="ctrlBorrar()">🗑️ Desmarcar todo</button>
+                </div>
+                <button onclick="toggleCtrl()" style="opacity:0.8">Salir del modo controlar (volver al pedido)</button>
+            </div>
+            <div id="ctrlList"></div>
+            <div class="ctrl-prev-lbl" id="ctrlPrevLbl">Así sale el ticket</div>
+            <div class="ctrl-prev"><iframe id="ctrlPrev" title="Vista del ticket"></iframe></div>
+        </div>
+    </div>
+
     <nav class="footer-nav" id="footerNav">
         <div class="footer-inner">
             <button class="nav-btn" id="navHome" onclick="goHome()">
@@ -1700,7 +1738,7 @@
                 <span class="nav-icon">📦</span>
                 <span class="nav-label">Stock</span>
             </button>
-            <button class="nav-btn" id="navCart" onclick="switchPage('cart')">
+            <button class="nav-btn" id="navCart" onclick="switchPage(_ctrl ? 'ctrl' : 'cart')">
                 <span class="nav-icon">🛒</span>
                 <span class="nav-badge" id="cartBadge" style="display:none">0</span>
                 <span class="nav-label">Pedido</span>
@@ -2781,6 +2819,7 @@
             const units = state.cart.reduce((a, p) => a + p.qty, 0);
             $('cartBadge').textContent = units;
             $('cartBadge').style.display = units > 0 ? 'block' : 'none';
+            try { _ctrlNav(); } catch (e) {}
             $('cartItemCount').textContent = state.cart.length;
             $('cartUnitCount').textContent = units;
             if ($('cartUnitLbl')) $('cartUnitLbl').textContent = units === 1 ? 'prenda' : 'prendas';
@@ -3668,15 +3707,36 @@
             if (!ver || !tbVis.length) return;
             bar.style.gridTemplateColumns = 'repeat(' + Math.min(tbVis.length, 8) + ', minmax(0, 1fr))';
             let h = '';
+            const aps = _ctrl ? _ctrlArtProds() : [];
             tbVis.forEach(t => {
-                h += '<div class="tb-chip' + (state.size === t.s ? ' on' : '') + (t.avail <= 0 && state.size !== t.s ? ' zero' : '') + '" data-s="' + _escHtml(t.s) + '" onclick="tbTalle(this.dataset.s)">' + _escHtml(t.s) + '</div>';
+                let ck = '';
+                if (_ctrl) { const ps = aps.filter(p => p.talle === t.s); ck = ps.length && ps.every(_ctrlHas) ? ' ck' : ps.some(_ctrlHas) ? ' ck-algo' : ''; }
+                h += '<div class="tb-chip' + (state.size === t.s ? ' on' : '') + (t.avail <= 0 && state.size !== t.s && !_ctrl ? ' zero' : '') + ck + '" data-s="' + _escHtml(t.s) + '"' +
+                    (_ctrl ? ' onpointerdown="tbDown(this)" onpointerup="tbUp()" onpointerleave="tbUp()" onpointercancel="tbUp()" oncontextmenu="return false"' : '') +
+                    ' onclick="tbTalle(this.dataset.s)">' + _escHtml(t.s) + '</div>';
             });
             bar.innerHTML = h;
         }
+        let _tbLP = null, _tbLPfired = false;
         function tbTalle(t) {   // tocar el talle activo lo saca
+            if (_ctrl) {   // 🧾 modo controlar: tocar = marcar todo el talle; mantener apretado = filtrar
+                if (_tbLPfired) { _tbLPfired = false; return; }
+                ctrlTalle(t); return;
+            }
             state.size = state.size === t ? '' : t;
             applyFilters();
         }
+        function tbDown(el) {
+            clearTimeout(_tbLP); _tbLPfired = false;
+            _tbLP = setTimeout(() => {
+                _tbLPfired = true;
+                try { navigator.vibrate && navigator.vibrate(40); } catch (e) {}
+                const t = el.dataset.s;
+                state.size = state.size === t ? '' : t;
+                applyFilters();
+            }, 500);
+        }
+        function tbUp() { clearTimeout(_tbLP); }
         function toggleLocationSearch() {
             const vis = $('locationSearch').style.display !== 'block';
             $('locationSearch').style.display = vis ? 'block' : 'none';
@@ -3846,14 +3906,15 @@
                 const cm = colorStockMap[c];
                 if (!cm) return;
                 const isZero = cm.avail <= 0;
-                const isActive = _cpMulti ? _cpMulti.has(c) : state.color === c;
-                // ocultar sin stock, salvo que esté seleccionado o activado 🚫 "mostrar ocultos"
-                if (isZero && !isActive && !showZeroStock) return;
+                const cps = _ctrl ? _ctrlArtProds().filter(p => (p.color || 'Sin color') === c) : [];
+                const isActive = _ctrl ? cps.length > 0 && cps.every(_ctrlHas) : _cpMulti ? _cpMulti.has(c) : state.color === c;
+                // ocultar sin stock, salvo que esté seleccionado o activado 🚫 "mostrar ocultos" (o modo controlar)
+                if (isZero && !isActive && !showZeroStock && !_ctrl) return;
                 const imgUrl = cm.imgUrl;
                 const thumbUrl = imgUrl || '';
 
                 html += '<div class="color-photo-card' + (isActive ? ' active' : '') + (isZero ? ' zero-stock' : '') + '" data-c="' + _escHtml(c) + '" onclick="cpTap(this)" onpointerdown="cpDown(this)" onpointerup="cpUp()" onpointerleave="cpUp()" onpointercancel="cpUp()" oncontextmenu="return false">';
-                if (_cpMulti) html += '<div class="cp-ck">✓</div>';
+                if (_cpMulti || _ctrl) html += '<div class="cp-ck">✓</div>';
                 if (thumbUrl) {
                     html += '<img class="cp-img" src="' + thumbUrl + '" loading="lazy" onerror="this.outerHTML=\'<div class=cp-placeholder>📦</div>\'">';
                 } else {
@@ -3866,10 +3927,10 @@
             
             $('colorPhotoGrid').innerHTML = html;
             const n = _cpMulti ? _cpMulti.size : 0;
-            $('cpMultiBar').classList.toggle('show', !!_cpMulti);
+            $('cpMultiBar').classList.toggle('show', !!_cpMulti && !_ctrl);
             $('cpMultiTxt').textContent = n === 1 ? '1 color' : n + ' colores';
             $('cpApplyBtn').textContent = 'Aplicar' + (n ? ' (' + n + ')' : '');
-            $('cpHint').textContent = _cpMulti ? 'Tocá para sumar o sacar colores' : 'Mantené apretado un color para elegir varios';
+            $('cpHint').textContent = _ctrl ? '🧾 Tocá un color para marcarlo entero · mantené apretado para filtrar' : _cpMulti ? 'Tocá para sumar o sacar colores' : 'Mantené apretado un color para elegir varios';
         }
         // Toque largo = pasar a elegir varios (o sumar/sacar si ya estás eligiendo)
         function cpDown(el) {
@@ -3877,6 +3938,10 @@
             _cpLP = setTimeout(() => {
                 _cpLPfired = true;
                 const c = el.dataset.c;
+                if (_ctrl) {   // modo controlar: mantener apretado = filtrar por ese color
+                    try { navigator.vibrate && navigator.vibrate(40); } catch (e) {}
+                    selectColorFromOverlay(c); return;
+                }
                 if (!_cpMulti) _cpMulti = new Set(state.color && state.color !== c ? [state.color] : []);
                 if (_cpMulti.has(c)) _cpMulti.delete(c); else _cpMulti.add(c);
                 try { navigator.vibrate && navigator.vibrate(40); } catch (e) {}
@@ -3887,6 +3952,7 @@
         function cpTap(el) {
             if (_cpLPfired) { _cpLPfired = false; return; }   // el click que viene después del toque largo
             const c = el.dataset.c;
+            if (_ctrl) { ctrlColor(c); _cpPaint(); return; }   // 🧾 marcar/desmarcar todo el color
             if (_cpMulti) {
                 if (_cpMulti.has(c)) _cpMulti.delete(c); else _cpMulti.add(c);
                 _cpPaint();
@@ -3951,6 +4017,7 @@
         // Se puede ir a otro artículo y seguir marcando; en ⚙️ → 🖨️ Imprimir sale todo junto en el depósito.
         let _ctrl = false, _ctrlSel = new Map();   // codigo → { a: artículo, c: color, t: talle }
         try { _ctrl = localStorage.getItem('mikra_ctrl_on') === '1'; _ctrlSel = new Map(JSON.parse(localStorage.getItem('mikra_ctrl_sel') || '[]')); } catch (e) {}
+        setTimeout(() => { try { _ctrlNav(); } catch (e) {} }, 0);   // pestaña "🧾 Resumen" si quedó prendido
         function _ctrlSave() { try { localStorage.setItem('mikra_ctrl_on', _ctrl ? '1' : '0'); localStorage.setItem('mikra_ctrl_sel', JSON.stringify([..._ctrlSel])); } catch (e) {} }
         function _ctrlHas(p) { return _ctrlSel.has(String(p.codigo)); }
         function _ctrlSet(ps, on) {
@@ -3961,7 +4028,51 @@
             _ctrlSave();
             _ctrlRefresh();
         }
-        function _ctrlRefresh() { renderArticleDetail(); _ctrlPaintSettings(); }
+        function _ctrlRefresh() {
+            renderArticleDetail(); _ctrlPaintSettings(); _ctrlNav(); _pintarExtrasFiltro();
+            if ($('page-ctrl').classList.contains('active')) renderCtrlPage();
+        }
+        // Pestaña de abajo: en modo controlar "🧾 Resumen" (con cuántos hay marcados) en vez de "🛒 Pedido"
+        function _ctrlNav() {
+            const b = $('navCart'); if (!b) return;
+            b.querySelector('.nav-icon').textContent = _ctrl ? '🧾' : '🛒';
+            b.querySelector('.nav-label').textContent = _ctrl ? 'Resumen' : 'Pedido';
+            if (_ctrl) { $('cartBadge').textContent = _ctrlSel.size; $('cartBadge').style.display = _ctrlSel.size ? 'block' : 'none'; }
+            else { const u = state.cart.reduce((a, p) => a + p.qty, 0); $('cartBadge').textContent = u; $('cartBadge').style.display = u > 0 ? 'block' : 'none'; }
+        }
+        function renderCtrlPage() {
+            const entries = [..._ctrlSel.entries()];
+            const grupos = _ctrlGrupos(entries.map(e => e[1]));
+            let last = null; try { last = JSON.parse(localStorage.getItem('mikra_ctrl_last') || 'null'); } catch (e) {}
+            $('ctrlPgRe').style.display = last && last.length ? '' : 'none';
+            $('ctrlPgBorrar').style.display = entries.length ? '' : 'none';
+            $('ctrlPgPrint').style.display = entries.length ? '' : 'none';
+            $('ctrlPgPrint').textContent = '🖨️ Imprimir en el depósito (' + entries.length + ' renglon' + (entries.length === 1 ? '' : 'es') + ')';
+            if (!entries.length) {
+                $('ctrlList').innerHTML = '<div class="ctrl-vacio">🧾 No hay nada marcado.<br>Andá a <b>Stock</b>, entrá a un artículo y tocá los talles que querés que controlen.</div>';
+                $('ctrlPrevLbl').style.display = 'none'; $('ctrlPrev').parentNode.style.display = 'none';
+                return;
+            }
+            $('ctrlList').innerHTML = grupos.map((g, gi) => {
+                const n = g.colores.reduce((a, c) => a + c.filas.length, 0);
+                return '<div class="ctrl-art"><div class="ctrl-art-h"><span class="ctrl-art-n" data-a="' + _escHtml(g.art) + '" onclick="ctrlIrArt(this.dataset.a)">' + _escHtml(g.art) + ' ›</span>' +
+                    '<span class="ctrl-art-q">' + n + ' renglon' + (n === 1 ? '' : 'es') + '</span>' +
+                    '<button class="ctrl-x" data-a="' + _escHtml(g.art) + '" onclick="ctrlQuitar(this.dataset.a)" title="Sacar el artículo">🗑️</button></div>' +
+                    g.colores.map(c => '<div class="ctrl-col"><span class="cc-n"><b>' + _escHtml(c.color) + '</b> <span class="cc-t">· ' + c.filas.map(_escHtml).join(', ') + '</span></span>' +
+                        '<button class="ctrl-x" data-a="' + _escHtml(g.art) + '" data-c="' + _escHtml(c.color) + '" onclick="ctrlQuitar(this.dataset.a, this.dataset.c)" title="Sacar este color">✕</button></div>').join('') +
+                    '</div>';
+            }).join('');
+            $('ctrlPrevLbl').style.display = ''; $('ctrlPrev').parentNode.style.display = '';
+            const fr = $('ctrlPrev');
+            fr.onload = () => { try { fr.style.height = (fr.contentDocument.documentElement.scrollHeight + 10) + 'px'; } catch (e) {} };
+            fr.srcdoc = _rvHtml(grupos);
+        }
+        function ctrlQuitar(a, c) {
+            for (const [k, e] of [..._ctrlSel]) if (e.a === a && (c === undefined || e.c === c)) _ctrlSel.delete(k);
+            _ctrlSave(); _ctrlRefresh();
+            toast('Sacado: ' + a + (c !== undefined ? ' · ' + c : ''), '');
+        }
+        function ctrlIrArt(a) { switchPage('products'); searchArticle(a); }
         function _ctrlArtProds() { return state.searchExact && state.search ? (_byArticle.get(state.search.toLowerCase()) || []) : []; }
         function ctrlToggleP(id) { const p = productById(id); if (p) _ctrlSet([p], !_ctrlHas(p)); }
         function ctrlTalle(t) { const ps = _ctrlArtProds().filter(p => p.talle === t); if (ps.length) _ctrlSet(ps, !ps.every(_ctrlHas)); }
@@ -3969,7 +4080,8 @@
         function toggleCtrl() {
             _ctrl = !_ctrl; _ctrlSave();
             _copySel = null;
-            updateSettingsUI();
+            updateSettingsUI(); _ctrlNav();
+            if (!_ctrl && $('page-ctrl').classList.contains('active')) switchPage('cart');
             renderArticleDetail(); _pintarExtrasFiltro();
             toast(_ctrl ? '🧾 Modo controlar stock: tocá los talles para marcarlos' : 'Modo controlar stock apagado' + (_ctrlSel.size ? ' (los marcados quedan guardados)' : ''), _ctrl ? 'success' : '');
         }
@@ -4044,9 +4156,9 @@
                 '.t{font-size:30px;line-height:1}' +
                 '.bx{width:26mm;height:13mm;border:3px solid #000;border-radius:4px;flex:none}' +
                 '.u{display:flex;align-items:center;gap:5px;margin-top:8px;padding-bottom:6px;border-bottom:2px dashed #000;page-break-inside:avoid}' +
-                '.u .cn1{flex:1;min-width:0;font-size:19px;line-height:1.1;text-transform:uppercase;overflow-wrap:break-word}' +
-                '.u .t{font-size:26px}' +
-                '.u .bx{width:22mm}' +
+                '.u .cn1{flex:1;min-width:0;font-size:16px;line-height:1.1;text-transform:uppercase}' +
+                '.u .t{font-size:24px;flex:none}' +
+                '.u .bx{width:20mm}' +
                 '.pie{margin-top:16px;font-size:15px;display:flex;align-items:flex-end;gap:6px}' +
                 '.pie span{flex:1;border-bottom:2px solid #000;height:8mm}' +
                 '</style></head><body>';
@@ -4402,16 +4514,11 @@
                     '<button onclick="artCopyCancel()" title="Cancelar">✕</button></div>';
             }
             
-            if (_ctrl) {   // 🧾 barra del modo controlar: marcar todo un talle del artículo (aunque esté en 0)
-                const aps = _ctrlArtProds();
-                const tls = [...new Set(aps.map(p => p.talle).filter(Boolean))].sort(_cmpTalle);
-                const nAca = aps.filter(_ctrlHas).length;
+            if (_ctrl) {   // 🧾 barra del modo controlar (los talles de arriba marcan todo el talle)
+                const nAca = _ctrlArtProds().filter(_ctrlHas).length;
                 html += '<div class="ctrl-bar"><div class="ctrl-tit">🧾 <b>Controlar stock</b> · ' + nAca + ' marcado' + (nAca === 1 ? '' : 's') + ' acá' +
-                    (_ctrlSel.size > nAca ? ' · ' + _ctrlSel.size + ' en total' : '') + ' · se imprime en ⚙️<br><span style="color:var(--text-secondary)">Todo un talle:</span></div><div class="ctrl-tls">' +
-                    tls.map(t => {
-                        const ps = aps.filter(p => p.talle === t), on = ps.every(_ctrlHas), algo = ps.some(_ctrlHas);
-                        return '<button class="ctrl-tl' + (on ? ' on' : algo ? ' algo' : '') + '" data-t="' + _escHtml(t) + '" onclick="ctrlTalle(this.dataset.t)">' + _escHtml(t) + '</button>';
-                    }).join('') + '</div></div>';
+                    (_ctrlSel.size > nAca ? ' · ' + _ctrlSel.size + ' en total' : '') + '</div>' +
+                    '<div style="color:var(--text-secondary);line-height:1.3">Talle o 🎨 Color de arriba = marca todo · mantené apretado para filtrar · lo ves en 🧾 Resumen</div></div>';
             }
             // Ocultar colores enteros sin stock, salvo que el toggle esté activo (o el modo controlar)
             const visibleColors = showZeroStock || _ctrl
@@ -8205,7 +8312,11 @@
             $('navStock').classList.remove('active');
             $('navCart').classList.remove('active');
             $('page-' + page).classList.add('active');
-            if (page === 'cart') {
+            if (page === 'ctrl') {
+                $('navCart').classList.add('active');
+                $('articleEditBar').classList.remove('show');
+                renderCtrlPage();
+            } else if (page === 'cart') {
                 $('navCart').classList.add('active');
                 $('articleEditBar').classList.remove('show');
                 _inputFocused = false;

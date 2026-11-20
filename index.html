@@ -4106,7 +4106,7 @@
         }
         function renderCtrlPage() {
             const entries = [..._ctrlSel.entries()];
-            const grupos = _ctrlGrupos(entries.map(e => e[1]));
+            const grupos = _ctrlGrupos(_ctrlEntries());
             let last = null; try { last = JSON.parse(localStorage.getItem('mikra_ctrl_last') || 'null'); } catch (e) {}
             $('ctrlPgRe').style.display = last && last.length ? '' : 'none';
             $('ctrlPgBorrar').style.display = entries.length ? '' : 'none';
@@ -4122,7 +4122,7 @@
                 return '<div class="ctrl-art"><div class="ctrl-art-h"><span class="ctrl-art-n" data-a="' + _escHtml(g.art) + '" onclick="ctrlIrArt(this.dataset.a)">' + _escHtml(g.art) + ' ›</span>' +
                     '<span class="ctrl-art-q">' + n + ' renglon' + (n === 1 ? '' : 'es') + '</span>' +
                     '<button class="ctrl-x" data-a="' + _escHtml(g.art) + '" onclick="ctrlQuitar(this.dataset.a)" title="Sacar el artículo">🗑️</button></div>' +
-                    g.colores.map(c => '<div class="ctrl-col"><span class="cc-n"><b>' + _escHtml(c.color) + '</b> <span class="cc-t">· ' + c.filas.map(_escHtml).join(', ') + '</span></span>' +
+                    g.colores.map(c => '<div class="ctrl-col"><span class="cc-n"><b>' + _escHtml(c.color) + '</b> <span class="cc-t">· ' + c.filas.map(f => _escHtml(f.t) + (f.n !== undefined ? ' (' + f.n + ')' : '')).join(', ') + '</span></span>' +
                         '<button class="ctrl-x" data-a="' + _escHtml(g.art) + '" data-c="' + _escHtml(c.color) + '" onclick="ctrlQuitar(this.dataset.a, this.dataset.c)" title="Sacar este color">✕</button></div>').join('') +
                     '</div>';
             }).join('');
@@ -4165,17 +4165,22 @@
             $('ctrlBorrarBtn').style.display = _ctrlSel.size ? '' : 'none';
             $('ctrlReBtn').style.display = last && last.length ? '' : 'none';
         }
-        function _ctrlGrupos(entries) {   // [{a,c,t}] → artículo → color → talles
+        function _ctrlEntries() {   // [{a,c,t,n}] n = lo que dice el sistema ahora
+            const porCod = new Map(PRODUCTS.map(p => [String(p.codigo), p]));
+            return [..._ctrlSel].map(([k, e]) => { const p = porCod.get(k); return Object.assign({}, e, { n: p ? Math.max(0, p.stock || 0) : undefined }); });
+        }
+        function _ctrlGrupos(entries) {   // [{a,c,t,n}] → artículo → color → [{t,n}]
             const arts = new Map();
             entries.forEach(e => {
                 if (!arts.has(e.a)) arts.set(e.a, new Map());
                 const cols = arts.get(e.a);
-                if (!cols.has(e.c)) cols.set(e.c, new Set());
-                cols.get(e.c).add(e.t);
+                if (!cols.has(e.c)) cols.set(e.c, new Map());
+                cols.get(e.c).set(e.t, e.n);
             });
             return [...arts].map(([art, cols]) => ({
                 art,
-                colores: [...cols].sort((x, y) => x[0].localeCompare(y[0], 'es')).map(([color, ts]) => ({ color, filas: [...ts].sort(_cmpTalle) }))
+                colores: [...cols].sort((x, y) => x[0].localeCompare(y[0], 'es'))
+                    .map(([color, ts]) => ({ color, filas: [...ts].map(([t, n]) => ({ t, n })).sort((x, y) => _cmpTalle(x.t, y.t)) }))
             }));
         }
         async function _ctrlMandar(entries, borrar) {
@@ -4192,7 +4197,7 @@
             if (!_ctrlSel.size) return;
             const n = _ctrlSel.size, nA = new Set([..._ctrlSel.values()].map(e => e.a)).size;
             closeSettings();
-            showModal('🖨️', 'Imprimir para controlar', 'Sale un ticket en el depósito con ' + n + ' renglon' + (n === 1 ? '' : 'es') + ' de ' + nA + ' artículo' + (nA === 1 ? '' : 's') + ', con un cuadrito para anotar cuántos hay. Después se desmarcan (queda "Reimprimir el último").', '🖨️ Imprimir', () => _ctrlMandar([..._ctrlSel.values()], true));
+            showModal('🖨️', 'Imprimir para controlar', 'Sale un ticket en el depósito con ' + n + ' renglon' + (n === 1 ? '' : 'es') + ' de ' + nA + ' artículo' + (nA === 1 ? '' : 's') + ', con un cuadrito para anotar cuántos hay. Después se desmarcan (queda "Reimprimir el último").', '🖨️ Imprimir', () => _ctrlMandar(_ctrlEntries(), true));
         }
         function ctrlBorrar() {
             closeSettings();
@@ -4214,29 +4219,24 @@
                 '.hd{text-align:center;font-size:22px;letter-spacing:2px;border:3px solid #000;border-radius:4px;padding:4px 0}' +
                 '.fe{text-align:center;font-size:13px;margin:4px 0 6px}' +
                 '.art{background:#000;color:#fff;margin:14px -4mm 0;padding:8px 4mm;font-size:27px;line-height:1.12;text-transform:uppercase;text-align:center;overflow-wrap:break-word}' +
-                '.col{margin-top:12px;page-break-inside:avoid}' +
-                '.cn{font-size:23px;line-height:1.1;text-transform:uppercase;border-bottom:3px solid #000;padding-bottom:3px;margin-bottom:5px;overflow-wrap:break-word}' +
-                '.f{display:flex;align-items:center;justify-content:space-between;margin:6px 0}' +
-                '.t{font-size:30px;line-height:1}' +
-                '.bx{width:26mm;height:13mm;border:3px solid #000;border-radius:4px;flex:none}' +
-                '.u{display:flex;align-items:center;gap:5px;margin-top:8px;padding-bottom:6px;border-bottom:2px dashed #000;page-break-inside:avoid}' +
-                '.u .cn1{flex:1;min-width:0;font-size:16px;line-height:1.1;text-transform:uppercase}' +
-                '.u .t{font-size:24px;flex:none}' +
-                '.u .bx{width:20mm}' +
+                '.b{display:flex;gap:6px;padding:7px 0;border-bottom:2px solid #000;page-break-inside:avoid}' +
+                '.b .cn1{flex:1;min-width:0;font-size:16px;line-height:1.15;text-transform:uppercase;padding-top:3px}' +
+                '.rs{flex:none;display:flex;flex-direction:column;gap:6px}' +
+                '.r{display:flex;align-items:center;gap:5px}' +
+                '.r .t{width:17mm;text-align:right;font-size:24px;line-height:1}' +
+                '.r .t small{display:block;font-size:13px;margin-top:2px;letter-spacing:0}' +
+                '.r .bx{width:18mm;height:11mm;border:3px solid #000;border-radius:4px;flex:none}' +
                 '.pie{margin-top:16px;font-size:15px;display:flex;align-items:flex-end;gap:6px}' +
                 '.pie span{flex:1;border-bottom:2px solid #000;height:8mm}' +
                 '</style></head><body>';
             h += '<div class="hd">REVISAR STOCK</div><div class="fe">' + fecha + '</div>';
             grupos.forEach(g => {
                 h += '<div class="art">' + _escHtml(g.art) + '</div>';
+                // cada color: nombre a la izquierda, sus talles uno abajo del otro (con lo que dice el sistema) y una línea antes del color siguiente
                 g.colores.forEach(c => {
-                    if (c.filas.length === 1) {   // un solo talle (ej. "todo el XL"): color, talle y cuadro en un renglón
-                        h += '<div class="u"><span class="cn1">' + _escHtml(c.color) + '</span><span class="t">' + _escHtml(c.filas[0]) + '</span><span class="bx"></span></div>';
-                        return;
-                    }
-                    h += '<div class="col"><div class="cn">' + _escHtml(c.color) + '</div>';
-                    c.filas.forEach(t => { h += '<div class="f"><span class="t">' + _escHtml(t) + '</span><span class="bx"></span></div>'; });
-                    h += '</div>';
+                    h += '<div class="b"><span class="cn1">' + _escHtml(c.color) + '</span><div class="rs">' +
+                        c.filas.map(f => '<div class="r"><span class="t">' + _escHtml(f.t) + (f.n !== undefined ? '<small>sist. ' + f.n + '</small>' : '') + '</span><span class="bx"></span></div>').join('') +
+                        '</div></div>';
                 });
             });
             h += '<div class="pie">Contó:<span></span></div>';

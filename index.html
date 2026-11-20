@@ -36,7 +36,7 @@
         .header { gap: 8px; }
         .header-title { font-size: 1em; font-weight: 700; color: var(--primary); white-space: nowrap; flex: none; }
         .sync-inline { display: flex; align-items: center; gap: 5px; font-size: 0.68em; color: var(--text-secondary); white-space: nowrap; overflow: hidden; min-width: 0; }
-        body.hdr-col #syncTime { display: none; }   /* con el botón de color arriba no entra la hora */
+        #syncTime { display: none; }   /* arriba va "hace X min" del stock de Ecom (la hora del catálogo confundía) */
         .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
         .sync-dot.loading { background: var(--warning); animation: pulse 1s infinite; }
         .sync-dot.error { background: var(--danger); }
@@ -3337,6 +3337,7 @@
             const { prods, imgs, migrated } = await _readCachedCatalog();
             if (!prods || !prods.length) return false;
             PRODUCTS = prods;
+            _aplicarEcomReal();
             setImagesMap(imgs || {});
             buildSearchIndex(!migrated);
             updateUniqueArticles();
@@ -3460,7 +3461,7 @@
                         clearTimeout(_timeout);
                         _stopSyncProgress(true);
                         $('syncDot').classList.remove('loading', 'error');
-                        $('syncStatus').textContent = 'Listo';
+                        _pintarEdad();
                         $('syncTime').textContent = '• Al día';
                         localStorage.setItem('mikra_lastSync', new Date().toISOString());
                         if (manual) toast('✓ Ya estaba al día', 'success');
@@ -3479,6 +3480,7 @@
                 if (!data.success || !data.products || !data.products.length) throw new Error('Sin productos');
 
                 PRODUCTS = filterOutCombos(data.products);
+                _aplicarEcomReal();   // el stock de este catálogo queda viejo: se pisa con el de Ecom
 
                 // Imágenes
                 let imagesChanged = false;
@@ -3496,7 +3498,7 @@
                 applyFilters();
                 _stopSyncProgress(true);
                 $('syncDot').classList.remove('loading', 'error');
-                $('syncStatus').textContent = 'Sincronizado';
+                _pintarEdad();
                 $('syncTime').textContent = '• ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 $('loadingScreen').classList.add('hidden');
                 $('loadingText').textContent = 'Cargando inventario...';
@@ -3540,6 +3542,7 @@
         function manualSync() {
             if (!PRODUCTS.length) { loadData(); return; }
             syncFromAPI(true, true);
+            cargarEcomReal(true);
         }
         
         const PRICES_MAX_AGE_MS = 60 * 60 * 1000; // 1 h (lo lee de Cloudflare: es rápido)
@@ -3580,7 +3583,7 @@
             if (hasCache) {
                 $('loadingScreen').classList.add('hidden');
                 $('syncDot').classList.remove('loading', 'error');
-                $('syncStatus').textContent = 'Caché';
+                _pintarEdad();
                 syncFromAPI(true);
             } else {
                 $('loadingText').textContent = 'Cargando inventario...';
@@ -3589,6 +3592,7 @@
             }
             // Precios: actualizar en 2do plano una vez por día (sin bloquear carga)
             setTimeout(syncPricesBackground, 3000);
+            cargarEcomReal(true);
         }
 
         // La app suele quedar abierta horas: al volver a ella, re-chequear si pasaron +10 min
@@ -3597,7 +3601,67 @@
             if (document.visibilityState !== 'visible' || !PRODUCTS.length || _syncController) return;
             const last = new Date(localStorage.getItem('mikra_lastSync') || 0).getTime();
             if (Date.now() - last > RECHECK_MS) syncFromAPI(true);
+            cargarEcomReal();
         });
+
+        // ===== STOCK REAL DE ECOM (Worker mikra-mayorista: copia TODO el inventario de Ecom
+        // cada 1 h de 8 a 20 h + 23 h y 6 h). El catálogo de mikra-stock-cache trae nombres,
+        // colores, talles y fotos, pero su stock queda viejo: se reemplaza por el de Ecom.
+        // Los SKU que Ecom no tiene quedan con el stock del catálogo.
+        const ECOM_REAL_URL = 'https://mikra-mayorista.rafaelassir.workers.dev/stock';
+        const ECOM_REAL_KEY = 'a1kn74sIapOZ-NSbOQaMKyZK';
+        let _ecomReal = null, _ecomCheckAt = 0, _ecomTimer = null, _ecomCargando = false;
+        try { _ecomReal = JSON.parse(localStorage.getItem('mikra_ecom_real') || 'null'); } catch (e) {}
+        function _aplicarEcomReal() {
+            if (!_ecomReal || !_ecomReal.stock || !PRODUCTS.length) return 0;
+            const st = _ecomReal.stock;
+            let n = 0;
+            for (const p of PRODUCTS) {
+                const v = st[String(p.codigo)];
+                if (v !== undefined && p.stock !== v) { p.stock = v; n++; }
+            }
+            return n;
+        }
+        async function cargarEcomReal(forzar) {
+            if (_ecomCargando || !PRODUCTS.length && !forzar) return;
+            if (!forzar && Date.now() - _ecomCheckAt < 4 * 60000) return;
+            _ecomCargando = true;
+            try {
+                const since = _ecomReal && _ecomReal.at ? '?since=' + _ecomReal.at : '';
+                const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 15000);
+                const r = await fetch(ECOM_REAL_URL + since, { headers: { 'X-Key': ECOM_REAL_KEY }, cache: 'no-store', signal: ctrl.signal });
+                clearTimeout(tm);
+                const d = await r.json();
+                _ecomCheckAt = Date.now();
+                if (d && d.stock && d.at) {   // vino una copia nueva
+                    _ecomReal = { at: d.at, stock: d.stock };
+                    try { localStorage.setItem('mikra_ecom_real', JSON.stringify(_ecomReal)); } catch (e) {}
+                    if (PRODUCTS.length && _aplicarEcomReal()) {
+                        updateUniqueArticles();
+                        applyFilters();
+                        _scheduleProductsSave();
+                    }
+                }
+            } catch (e) {}
+            _ecomCargando = false;
+            _pintarEdad();
+            // la próxima copia sale ~1 h después de la última: volver a mirar a esa hora (si la app está a la vista)
+            clearTimeout(_ecomTimer);
+            const prox = _ecomReal && _ecomReal.at ? _ecomReal.at + 62 * 60000 - Date.now() : 0;
+            _ecomTimer = setTimeout(() => { if (document.visibilityState === 'visible') cargarEcomReal(true); }, Math.max(5 * 60000, prox));
+        }
+        // Arriba: "hace 12 min" = cuándo se copió el stock de Ecom
+        function _pintarEdad() {
+            const dot = $('syncDot'), el = $('syncStatus');
+            if (!el || dot.classList.contains('loading') || dot.classList.contains('error')) return;
+            if (!_ecomReal || !_ecomReal.at) { el.textContent = 'Listo'; el.style.color = ''; el.title = ''; return; }
+            const min = Math.max(0, Math.floor((Date.now() - _ecomReal.at) / 60000));
+            const h = Math.floor(min / 60);
+            el.textContent = min < 1 ? 'recién' : 'hace ' + (h ? h + ' h' + (min % 60 ? ' ' + (min % 60) + ' min' : '') : min + ' min');
+            el.style.color = min > 120 ? 'var(--warning)' : '';
+            el.title = 'Stock de Ecom copiado a las ' + new Date(_ecomReal.at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+        setInterval(_pintarEdad, 30000);   // solo reescribe el texto (no consulta nada)
         
         function updateUniqueArticles() {
             ARTICLE_IMG_CACHE = {};

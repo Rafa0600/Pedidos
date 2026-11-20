@@ -9081,12 +9081,12 @@
                 const dec = await _regDecidir(num);
                 if (!dec) return;   // cancelado
                 const hecho = [];
-                // 1) Ticket al depósito (si ya se imprimió igual, no se repite; si cambió, solo lo que cambió)
+                // 1) Ticket al depósito (si ya se imprimió igual, no se repite; si cambió, el pedido ENTERO marcado MODIFICADO)
                 const slot = _activeSlot();
                 let mode = 'full', imprimir = true;
                 if (slot && slot.printedCart) {
                     const d = _cartDiff(slot.printedCart, state.cart);
-                    if (!d.added.length && !d.removed.length) imprimir = false; else mode = 'diff';
+                    if (!d.added.length && !d.removed.length) imprimir = false; else mode = 'fullmod';
                 }
                 const tareas = [];
                 if (imprimir) {
@@ -9098,7 +9098,7 @@
                     const html = downloadTicketPreparados('html');
                     const title = '#' + num + ' ' + ($('clientName').value.trim() || 'Pedido');
                     tareas.push(_printApi('/job', { html, title, target: 'deposito' })
-                        .then(r => hecho.push(r.agentOnline ? '🖨️ ticket al depósito' + (mode === 'diff' ? ' (lo que cambió)' : '') : '🕓 ticket en cola (la PC está apagada)'))
+                        .then(r => hecho.push(r.agentOnline ? '🖨️ ticket al depósito' + (mode === 'fullmod' ? ' (completo, MODIFICADO)' : '') : '🕓 ticket en cola (la PC está apagada)'))
                         .catch(e => toast('⚠️ El ticket no salió: ' + e.message, 'error')));
                 } else hecho.push('🖨️ el ticket ya estaba impreso');
                 // 2) Registrar en Ecom

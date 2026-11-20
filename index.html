@@ -789,6 +789,16 @@
         .ab-ver  { --ab-bg: rgba(56,189,248,0.10);  --ab-bd: rgba(56,189,248,0.35);  --ab-fg: #bae6fd; }
         .ab-reg  { --ab-bg: rgba(251,191,36,0.10);  --ab-bd: rgba(251,191,36,0.38);  --ab-fg: #fde68a; }
         .ab-del  { --ab-bg: transparent;            --ab-bd: rgba(248,113,113,0.40); --ab-fg: #fca5a5; }
+        .ab-ok   { --ab-bg: rgba(34,197,94,0.16);   --ab-bd: rgba(34,197,94,0.55);   --ab-fg: #86efac; }
+        .reg-sec { font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin: 10px 0 4px; }
+        .reg-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed var(--border); font-size: 0.82em; text-align: left; }
+        .reg-row b { flex: none; min-width: 34px; text-align: right; }
+        .reg-row span { flex: 1; min-width: 0; }
+        .reg-row.mas b { color: #fbbf24; }
+        .reg-row.menos b { color: #60a5fa; }
+        .reg-row.ok b { color: var(--success); }
+        .reg-list { max-height: 34vh; overflow-y: auto; }
+        .ped-tag.reg { background: rgba(251,191,36,0.16); color: #fbbf24; margin-top: 3px; }
         .action-more-toggle {
             flex: 1; min-width: 52px; padding: 9px 4px; border: 1px solid var(--border); border-radius: 10px;
             background: var(--bg-card); color: var(--text-secondary); font-size: 0.7em; font-weight: 700;
@@ -1696,7 +1706,7 @@
                     <button class="action-compact-btn ab-tk" onclick="downloadTicketDirectPrint()"><span class="ab-ic">🖨️</span>Ticket</button>
                     <button class="action-compact-btn ab-rec" onclick="startReciboPrint()"><span class="ab-ic">🧾</span>Recibo</button>
                     <button class="action-compact-btn ab-reg" id="btnRegistrar" onclick="pedirPinVenta()"><span class="ab-ic">📤</span>Registrar</button>
-                    <button class="action-compact-btn ab-del" onclick="clearCart()"><span class="ab-ic">🗑️</span>Vaciar</button>
+                    <button class="action-compact-btn ab-ok" id="btnListo" onclick="pedidoListo()" title="Ticket al depósito + registrar en Ecom + WhatsApp"><span class="ab-ic">✅</span>Listo</button>
                 </div>
             </div>
             <div class="ecom-stock-bar">
@@ -1875,6 +1885,13 @@
     </div>
 
     <!-- MODAL REGISTRAR VENTA -->
+    <div class="clear-modal-overlay" id="regModal">
+        <div class="clear-modal" style="max-width:420px;width:94%;text-align:center;">
+            <div class="clear-modal-title" id="regModalTit"></div>
+            <div id="regModalBody" style="font-size:0.88em;"></div>
+            <div class="clear-modal-btns" id="regModalBtns" style="flex-direction:column;gap:8px;margin-top:14px;"></div>
+        </div>
+    </div>
     <div class="clear-modal-overlay" id="ventaModal">
         <div class="clear-modal" style="max-width:440px;width:95%;">
             <div class="clear-modal-title">📤 Registrando Venta</div>
@@ -2862,6 +2879,7 @@
             $('pedidoForm').style.display = (type === 'pedido' || type === 'presupuesto') ? 'block' : 'none';
             $('reposicionForm').style.display = type === 'devolucion' ? 'block' : 'none';
             if ($('btnRegistrar')) $('btnRegistrar').style.display = type === 'devolucion' ? 'none' : '';
+            if ($('btnListo')) $('btnListo').style.display = type === 'devolucion' ? 'none' : '';
             if (type === 'presupuesto') _setPayment('pendiente');
             _updatePriceUI();
         }
@@ -6183,11 +6201,11 @@
             try { navigator.vibrate?.(60); } catch (e) {}
             setTimeout(() => { if (inp) inp.focus(); }, 60);
         }
-        async function _shareWaDirect() {
+        async function _shareWaDirect(yaNum) {
             if (!validateForm()) return;
             const isPres = state.orderType === 'presupuesto';
             const name = $('clientName').value.trim();
-            const pedNum = await savePedidoCloud(false);
+            const pedNum = (typeof yaNum === 'number' && yaNum) || await savePedidoCloud(false);
             const numTxt = pedNum ? ' #' + pedNum : '';
             const st = getTicketStatus();
             const cart = getSortedCart();
@@ -6207,7 +6225,8 @@
                 text += '\n─────────────────\nTOTAL: ' + _prendas(cart.reduce((a, p) => a + p.qty, 0)) + '\n';
             }
             text += '\nCODIGOS:\n'; cart.forEach(p => { text += p.codigo + '\t-' + p.qty + '\n'; });
-            window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+            const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
+            if (!window.open(waUrl, '_blank')) location.href = waUrl;
         }
         function _openWaSheetViejo() {
             const isPedido = state.orderType === 'pedido';
@@ -7853,7 +7872,8 @@
                     // Columna derecha fija: arriba si está impreso, abajo si es pedido o presupuesto
                     const tipo = p.orderType === 'presupuesto' ? '<span class="ped-tag pres">Presupuesto</span>'
                                : '<span class="ped-tag ped">Pedido</span>';
-                    const imp = p.printedAt ? '<span class="ped-tag imp">✓ Impreso</span>' : '<span class="ped-tag noimp">Sin imprimir</span>';
+                    const imp = (p.printedAt ? '<span class="ped-tag imp">✓ Impreso</span>' : '<span class="ped-tag noimp">Sin imprimir</span>') +
+                        (p.regAt ? '<span class="ped-tag reg"' + (p.regEstado && p.regEstado !== 'ok' ? ' style="color:var(--danger)"' : '') + '>📤 Registrado</span>' : '');
                     const nv = p.versiones || (p.printedAt ? 1 : 0);
                     const vers = nv > 1 ? '<span class="ped-vers" onclick="event.stopPropagation();openVers(' + p.num + ')">🕓 ' + nv + ' versiones</span>' : '';
                     return '<div class="ped-row" onclick="openPedidoCloud(' + p.num + ')" oncontextmenu="event.preventDefault();openVers(' + p.num + ')">' +
@@ -8874,8 +8894,10 @@
         }
 
         // ─── PIN ──────────────────────────────────────────────────────────────
-        function pedirPinVenta() {
+        let _pinNext = null;
+        function pedirPinVenta(next) {
             if (!state.cart.length) { toast('El carrito está vacío', 'warning'); return; }
+            _pinNext = typeof next === 'function' ? next : null;
             $('pinInput').value = ''; $('pinError').textContent = '';
             $('pinModal').classList.add('show');
             setTimeout(() => $('pinInput').focus(), 150);
@@ -8887,7 +8909,8 @@
                 $('pinError').textContent = '❌ PIN incorrecto';
                 $('pinInput').value = ''; $('pinInput').focus(); return;
             }
-            cerrarPin(); registrarVenta();
+            const next = _pinNext || registrarVenta; _pinNext = null;
+            cerrarPin(); next();
         }
 
         // ─── REGISTRAR VENTA (paralelo + ordenado + progreso) ─────────────────
@@ -8896,8 +8919,198 @@
         async function registrarVenta() {
             if (_ventaEnCurso) return;
             _ventaEnCurso = true;
-            try { await _registrarVenta(); }
+            try { await _registrarNube(true); }
             finally { _ventaEnCurso = false; }
+        }
+
+        // ─── REGISTRAR DESDE LA NUBE ──────────────────────────────────────────
+        // El pedido (con número) guarda qué se descontó de Ecom. Si se vuelve a registrar:
+        // avisa "ya está registrado" y, si cambió, muestra las diferencias y pregunta.
+        // El descuento lo hace la nube (mikra-print → ecomm-token-proxy): aunque se cierre la app, sigue.
+        function _regDesc(p) { return (p.titulo || p.articulo || '') + (p.color ? ' · ' + p.color : '') + (p.talle ? ' T.' + p.talle : ''); }
+        function _regCur() {   // sku → { q, d } del pedido actual
+            const m = new Map();
+            state.cart.forEach(p => {
+                if (!p.codigo) return;
+                const k = String(p.codigo), e = m.get(k);
+                if (e) e.q += p.qty; else m.set(k, { q: p.qty, d: _regDesc(p) });
+            });
+            return m;
+        }
+        function _regDescSku(k, reg) {
+            const p = PRODUCTS.find(x => String(x.codigo) === k);
+            if (p) return _regDesc(p);
+            for (const l of (reg && reg.log) || []) for (const i of l.res || []) if (i.sku === k && i.d) return i.d;
+            return 'SKU ' + k;
+        }
+        const _regCuando = at => at ? new Date(at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        // → { delta: [{sku,q,d}], reg } · null = cancelado
+        async function _regDecidir(num) {
+            let reg = null;
+            try { reg = (await _pedApi('/pedido/reg?num=' + num, undefined, 6000)).reg; }
+            catch (e) { toast('⚠️ No pude ver si el pedido ya se registró (' + e.message + '). No registré nada.', 'error'); return null; }
+            if (reg && reg.pend && Date.now() - reg.pend.at < 120000) { toast('⏳ El pedido #' + num + ' se está registrando ahora mismo', 'warning'); return null; }
+            const cur = _regCur(), ya = (reg && reg.items) || {};
+            const delta = [];
+            cur.forEach((v, k) => { const d = v.q - (ya[k] || 0); if (d) delta.push({ sku: k, q: d, d: v.d }); });
+            Object.keys(ya).forEach(k => { if (!cur.has(k) && ya[k]) delta.push({ sku: k, q: -ya[k], d: _regDescSku(k, reg) }); });
+            if (!Object.keys(ya).length) return { delta, reg };   // nunca se registró: todo
+            return new Promise(res => _regModal(num, reg, delta, cur, res));
+        }
+        function _regModal(num, reg, delta, cur, res) {
+            const ya = reg.items || {}, uYa = Object.values(ya).reduce((a, n) => a + n, 0);
+            const esc = _escHtml;
+            const fila = (cls, n, d) => '<div class="reg-row ' + cls + '"><b>' + n + '</b><span>' + esc(d) + '</span></div>';
+            let h = '<div style="color:var(--text-secondary)">Se registró el <b>' + _regCuando(reg.at) + '</b> (' + _prendas(uYa) + ' descontadas de Ecom).</div>';
+            if (reg.ultimo && reg.ultimo.estado !== 'ok')
+                h += '<div style="color:var(--danger);margin-top:6px">⚠️ La última vez hubo problemas: ' + (reg.ultimo.estado === 'clave' ? 'clave incorrecta, no se descontó' : 'algunos no se descontaron') + '.</div>';
+            if (delta.length) {
+                const mas = delta.filter(x => x.q > 0), menos = delta.filter(x => x.q < 0);
+                if (mas.length) h += '<div class="reg-sec">❗ Esto NO se registró (falta descontar)</div><div class="reg-list">' + mas.map(x => fila('mas', '−' + x.q, x.d)).join('') + '</div>';
+                if (menos.length) h += '<div class="reg-sec">↩ Se registró pero ya no está en el pedido (vuelve al stock)</div><div class="reg-list">' + menos.map(x => fila('menos', '+' + (-x.q), x.d)).join('') + '</div>';
+            }
+            const ok = Object.keys(ya).filter(k => ya[k] > 0);
+            h += '<details style="margin-top:8px;text-align:left"><summary style="cursor:pointer;color:var(--text-secondary);font-size:0.9em">✅ Lo que ya se registró (' + ok.length + ')</summary><div class="reg-list">' +
+                ok.map(k => fila('ok', '−' + ya[k], (cur.get(k) || {}).d || _regDescSku(k, reg))).join('') + '</div></details>';
+            $('regModalTit').textContent = delta.length ? '⚠️ El pedido #' + num + ' ya se registró y cambió' : '✅ El pedido #' + num + ' ya está registrado';
+            $('regModalBody').innerHTML = h;
+            const cerrar = v => { $('regModal').classList.remove('show'); res(v); };
+            const btns = [];
+            if (delta.length) {
+                btns.push(['Registrar solo las diferencias', 'background:var(--success);color:#05301f;font-weight:800;padding:12px', () => cerrar({ delta, reg })]);
+                btns.push(['No registrar nada', '', () => cerrar({ delta: [], reg, nada: true })]);
+            } else {
+                btns.push(['Entendido, no registrar de nuevo', 'background:var(--success);color:#05301f;font-weight:800;padding:12px', () => cerrar({ delta: [], reg, nada: true })]);
+            }
+            btns.push(['Cancelar', 'opacity:0.75', () => cerrar(null)]);
+            $('regModalBtns').innerHTML = '';
+            btns.forEach(([t, st, fn]) => {
+                const b = document.createElement('button');
+                b.className = 'clear-modal-btn' + (st ? '' : ' no'); b.style.cssText = st; b.textContent = t; b.onclick = fn;
+                $('regModalBtns').appendChild(b);
+            });
+            $('regModal').classList.add('show');
+        }
+        // Manda a la nube. Devuelve el id del registro (o null).
+        async function _regEnviar(num, delta) {
+            if (!claveStock()) {
+                await pedirClaveStock(false);
+                if (!claveStock()) { toast('Sin clave: no se descontó nada', 'warning'); return null; }
+            }
+            const nombre = ($('clientName').value || '').trim();
+            try {
+                const r = await fetch(PRINT_URL + '/pedido/registrar', { method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Key': PRINT_KEY, 'X-Clave-Stock': claveStock() },
+                    body: JSON.stringify({ num, items: delta, motivo: ('Pedido #' + num + (nombre ? ' ' + nombre : '')).slice(0, 80) }) });
+                const d = await r.json().catch(() => ({}));
+                if (!r.ok) { toast('⚠️ No se registró: ' + (d.error || 'HTTP ' + r.status), 'error'); return null; }
+                return d.id;
+            } catch (e) { toast('⚠️ No se pudo mandar a registrar (sin conexión). No se descontó nada.', 'error'); return null; }
+        }
+        // Espera el resultado (si la app sigue abierta) y avisa
+        async function _regSeguir(num, id, conModal) {
+            for (let i = 0; i < 30; i++) {
+                await new Promise(r => setTimeout(r, 2000));
+                let reg;
+                try { reg = (await _pedApi('/pedido/reg?num=' + num, undefined, 6000)).reg; } catch (e) { continue; }
+                const u = reg && reg.ultimo;
+                if (!u || u.id !== id) continue;
+                const okR = u.res.filter(x => x.ok), mal = u.res.filter(x => !x.ok);
+                if (okR.length) guardarHistorial(okR.map(x => ({ sku: x.sku, descripcion: x.d, qty: x.q, stock_anterior: x.antes, stock_nuevo: x.despues, num })));
+                if (u.estado === 'clave') { _claveGuardar(''); toast('🔑 Clave del stock incorrecta: NO se descontó nada. Tocá Registrar de nuevo.', 'error'); }
+                else if (u.estado === 'ok') toast('✅ Pedido #' + num + ' registrado en Ecom (' + okR.length + ' código' + (okR.length === 1 ? '' : 's') + ')', 'success');
+                else toast('⚠️ Pedido #' + num + ': ' + mal.length + ' no se pudieron descontar. Tocá Registrar para reintentar solo esos.', 'error');
+                if (conModal) _regPintarResultado(u);
+                return u;
+            }
+            if (conModal) { $('ventaProgress').style.display = 'none'; $('ventaSummary').innerHTML = '<span style="color:var(--warning)">⏳ Sigue en la nube. Fijate en un rato tocando Registrar.</span>'; }
+            return null;
+        }
+        function _regPintarResultado(u) {
+            $('ventaProgress').style.display = 'none';
+            $('ventaContent').innerHTML = u.res.map(x => {
+                const sale = x.q < 0 ? 'Vuelve: ' + (-x.q) : 'Vendido: ' + x.q;
+                return '<div style="background:' + (x.ok ? 'rgba(34,197,94,0.07)' : 'rgba(239,68,68,0.1)') + ';border-radius:8px;padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+                    '<div style="min-width:0"><div style="font-size:0.88em;font-weight:700">' + (x.ok ? '✅' : '❌') + ' ' + _escHtml(x.d || '') + '</div>' +
+                    '<div style="font-size:0.75em;opacity:0.6;margin-top:2px">SKU ' + _escHtml(x.sku) + ' · ' + sale + (x.ok ? '' : ' — ' + _escHtml(x.error || '')) + '</div></div>' +
+                    (x.ok ? '<div style="white-space:nowrap"><span style="opacity:0.45;font-size:0.82em">' + x.antes + ' →</span> <b style="color:var(--success)">' + x.despues + '</b></div>' : '') + '</div>';
+            }).join('');
+            const mal = u.res.filter(x => !x.ok).length;
+            $('ventaSummary').style.background = mal ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)';
+            $('ventaSummary').innerHTML = u.estado === 'clave' ? '<span style="color:var(--danger)">🔑 Clave incorrecta: no se descontó nada</span>'
+                : mal ? '<span style="color:var(--danger)">⚠️ ' + mal + ' no se descontaron — tocá Registrar para reintentar</span>'
+                : '<span style="color:var(--success)">✅ ' + u.res.length + ' código' + (u.res.length === 1 ? '' : 's') + ' registrados en Ecom</span>';
+        }
+        // 📤 Registrar (solo): pide el número del pedido, controla lo ya registrado y lo manda
+        async function _registrarNube(conModal) {
+            if (!(state.orderType === 'pedido' || state.orderType === 'presupuesto')) { await _registrarVenta(); return; }
+            const num = await savePedidoCloud(false);
+            if (!num) { toast('⚠️ Sin número de pedido no se puede registrar (¿hay internet?)', 'error'); return; }
+            const dec = await _regDecidir(num);
+            if (!dec || !dec.delta.length) return;
+            if (conModal) {
+                $('ventaContent').innerHTML = dec.delta.map(x => '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:0.88em;font-weight:700">⏳ ' + _escHtml(x.d) +
+                    '<div style="font-size:0.85em;opacity:0.5;font-weight:400">SKU ' + _escHtml(x.sku) + ' · ' + (x.q < 0 ? 'vuelve ' + (-x.q) : x.q + ' uds') + '</div></div>').join('');
+                $('ventaProgress').style.display = 'block'; $('ventaProgressBar').style.width = '50%';
+                $('ventaProgressText').textContent = 'en la nube';
+                $('ventaSummary').style.background = ''; $('ventaSummary').innerHTML = '<span style="opacity:0.7;font-weight:600">☁️ Lo está registrando la nube: aunque cierres la app, se hace igual.</span>';
+                $('ventaModal').classList.add('show');
+            }
+            const id = await _regEnviar(num, dec.delta);
+            if (!id) { if (conModal) $('ventaModal').classList.remove('show'); return; }
+            await _regSeguir(num, id, conModal);
+        }
+
+        // ✅ LISTO: ticket al depósito + registrar en Ecom + WhatsApp, de una.
+        // El ticket y el registro los termina la nube (se puede cerrar la app).
+        function pedidoListo() {
+            if (!state.cart.length) { toast('El pedido está vacío', 'warning'); return; }
+            if (!(state.orderType === 'pedido' || state.orderType === 'presupuesto')) return;
+            const falta = _faltaElegir();
+            if (falta.length) { _avisarFaltaElegir(falta); return; }
+            _pedirNombreY(() => { if (validateForm()) pedirPinVenta(_listoSeguir); });
+        }
+        let _listoEnCurso = false;
+        async function _listoSeguir() {
+            if (_listoEnCurso) return;
+            _listoEnCurso = true;
+            try {
+                toast('☁️ Guardando el pedido…', '');
+                const num = await savePedidoCloud(false);
+                if (!num) { toast('⚠️ No se pudo guardar el pedido en la nube: no hice nada', 'error'); return; }
+                const dec = await _regDecidir(num);
+                if (!dec) return;   // cancelado
+                const hecho = [];
+                // 1) Ticket al depósito (si ya se imprimió igual, no se repite; si cambió, solo lo que cambió)
+                const slot = _activeSlot();
+                let mode = 'full', imprimir = true;
+                if (slot && slot.printedCart) {
+                    const d = _cartDiff(slot.printedCart, state.cart);
+                    if (!d.added.length && !d.removed.length) imprimir = false; else mode = 'diff';
+                }
+                const tareas = [];
+                if (imprimir) {
+                    _printKind = 'preparado'; _printDonde = 'deposito';
+                    const ctx = { mode, prev: (slot && slot.printedCart) || null, prevAt: (slot && slot.printedAt) || 0 };
+                    _ticketCtx = ctx;
+                    await savePedidoCloud(true);
+                    _ticketCtx = ctx;
+                    const html = downloadTicketPreparados('html');
+                    const title = '#' + num + ' ' + ($('clientName').value.trim() || 'Pedido');
+                    tareas.push(_printApi('/job', { html, title, target: 'deposito' })
+                        .then(r => hecho.push(r.agentOnline ? '🖨️ ticket al depósito' + (mode === 'diff' ? ' (lo que cambió)' : '') : '🕓 ticket en cola (la PC está apagada)'))
+                        .catch(e => toast('⚠️ El ticket no salió: ' + e.message, 'error')));
+                } else hecho.push('🖨️ el ticket ya estaba impreso');
+                // 2) Registrar en Ecom
+                let regId = null;
+                if (dec.delta.length) tareas.push(_regEnviar(num, dec.delta).then(id => { regId = id; if (id) hecho.push('📤 registrando en Ecom'); }));
+                else hecho.push(dec.nada ? '📤 no se registró de nuevo' : '📤 nada para registrar');
+                await Promise.all(tareas);
+                // 3) WhatsApp
+                toast('✅ #' + num + ': ' + hecho.join(' · '), 'success');
+                _shareWaDirect(num);
+                if (regId) _regSeguir(num, regId, false);   // si la app sigue abierta, avisa cómo terminó
+            } finally { _listoEnCurso = false; }
         }
         async function _registrarVenta() {
             const snap = sortCart(state.cart.filter(p => p.codigo));
@@ -9058,10 +9271,21 @@
             const h = JSON.parse(localStorage.getItem('mikra_ventas_historial') || '[]');
             let ok = 0, err = 0;
 
+            const porNum = new Map();   // registrados por la nube: se revierten por la nube, por pedido
+            checks.forEach(cb => {
+                const vi = parseInt(cb.dataset.vi), ii = parseInt(cb.dataset.ii);
+                const item = h[vi]?.items[ii];
+                if (item && !item.revertido && item.num) { if (!porNum.has(item.num)) porNum.set(item.num, []); porNum.get(item.num).push([vi, ii, item]); }
+            });
+            for (const [num, lista] of porNum) {
+                const id = await _regEnviar(num, lista.map(([, , it]) => ({ sku: it.sku, q: -it.qty, d: it.descripcion })));
+                lista.forEach(([vi, ii]) => { if (id) { h[vi].items[ii].revertido = true; ok++; } else err++; });
+                if (id) _regSeguir(num, id, false);
+            }
             await Promise.all(checks.map(async cb => {
                 const vi = parseInt(cb.dataset.vi), ii = parseInt(cb.dataset.ii);
                 const item = h[vi]?.items[ii];
-                if (!item || item.revertido) return;
+                if (!item || item.revertido || item.num) return;
                 try {
                     // qty negativo = sumar stock
                     const res = await fetchConClave(`${WORKER_BASE}/update-stock?sku=${item.sku}&qty=${-Math.abs(item.qty)}`).then(r => r.json());

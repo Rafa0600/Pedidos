@@ -790,6 +790,35 @@
         .ab-reg  { --ab-bg: rgba(251,191,36,0.10);  --ab-bd: rgba(251,191,36,0.38);  --ab-fg: #fde68a; }
         .ab-del  { --ab-bg: transparent;            --ab-bd: rgba(248,113,113,0.40); --ab-fg: #fca5a5; }
         .ab-ok   { --ab-bg: rgba(34,197,94,0.16);   --ab-bd: rgba(34,197,94,0.55);   --ab-fg: #86efac; }
+        .clear-modal.mov-modal { max-width: 480px; width: 96%; height: 88dvh; display: flex; flex-direction: column; text-align: left; padding: 14px 12px; }
+        .mov-head { display: flex; align-items: center; gap: 6px; }
+        .mov-head .clear-modal-title { flex: 1; text-align: left; }
+        .mov-x { flex: none; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); border-radius: 9px; padding: 6px 10px; cursor: pointer; }
+        .mov-hint { font-size: 0.72em; color: var(--text-secondary); margin: 6px 0 8px; }
+        .mov-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .mov-dia { font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin: 10px 2px 5px; }
+        .mov-card { background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+        .mov-ch { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 0.85em; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: pointer; }
+        .mov-ch .mh-h { font-weight: 900; font-size: 1.05em; flex: none; }
+        .mov-ch .mh-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mov-ch .mh-e { flex: none; font-size: 0.85em; }
+        .mov-it { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-top: 1px dashed var(--border); font-size: 0.8em; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: pointer; }
+        .mov-it .mi-ck { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: none; align-items: center; justify-content: center; font-size: 0.75em; font-weight: 900; }
+        .mov-sel .mov-it .mi-ck { display: flex; }
+        .mov-it.on { background: rgba(251,191,36,0.12); }
+        .mov-it.on .mi-ck { background: #fbbf24; border-color: #fbbf24; color: #1a1a1a; }
+        .mov-it .mi-d { flex: 1; min-width: 0; }
+        .mov-it .mi-q { flex: none; font-weight: 900; }
+        .mov-it .mi-s { flex: none; color: var(--text-secondary); font-size: 0.9em; white-space: nowrap; }
+        .mov-it.off { opacity: 0.45; }
+        .mov-it.off .mi-ck { visibility: hidden; }
+        .mov-tag { font-size: 0.8em; padding: 1px 6px; border-radius: 999px; background: rgba(148,163,184,0.18); color: var(--text-secondary); margin-left: 4px; white-space: nowrap; }
+        .mov-bar { display: none; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); margin-top: 6px; font-size: 0.85em; }
+        .mov-sel .mov-bar { display: flex; }
+        .mov-bar span { flex: 1; font-weight: 700; }
+        .mov-cancel { border: 1px solid var(--border); background: var(--bg-input); color: var(--text); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+        .mov-rev { border: none; background: #fbbf24; color: #1a1a1a; font-weight: 900; border-radius: 10px; padding: 10px 14px; cursor: pointer; }
+        .mov-rev.seguro { background: var(--danger); color: #fff; }
         .reg-sec { font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin: 10px 0 4px; }
         .reg-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed var(--border); font-size: 0.82em; text-align: left; }
         .reg-row b { flex: none; min-width: 34px; text-align: right; }
@@ -1448,6 +1477,9 @@
                 <span class="setting-label">Mostrar ubicación</span>
                 <div class="setting-toggle" id="toggleUbic" onclick="toggleSetting('showUbic')"></div>
             </div>
+            <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <button onclick="closeSettings();abrirMovimientos()" style="padding:11px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);font-weight:700;font-size:0.88em;cursor:pointer;">🕘 Últimos movimientos en Ecom (revertir)</button>
+            </div>
             <div class="setting-row">
                 <span class="setting-label">🧾 Modo controlar stock</span>
                 <div class="setting-toggle" id="toggleCtrl" onclick="toggleCtrl()"></div>
@@ -1885,6 +1917,19 @@
     </div>
 
     <!-- MODAL REGISTRAR VENTA -->
+    <div class="clear-modal-overlay" id="movModal" onclick="if(event.target===this)cerrarMovimientos()">
+        <div class="clear-modal mov-modal">
+            <div class="mov-head"><span class="clear-modal-title" style="margin:0">🕘 Movimientos en Ecom</span>
+                <button class="mov-x" onclick="cargarMovimientos()" title="Actualizar">🔄</button><button class="mov-x" onclick="cerrarMovimientos()">✕</button></div>
+            <div class="mov-hint" id="movHint">Mantené apretado un renglón para elegir qué revertir (apretado en la hora = todo ese registro)</div>
+            <div class="mov-list" id="movList"></div>
+            <div class="mov-bar" id="movBar">
+                <span id="movSelTxt"></span>
+                <button class="mov-cancel" onclick="movSalirSel()">✕</button>
+                <button class="mov-rev" id="movRevBtn" onclick="movRevertir()">↩ Revertir</button>
+            </div>
+        </div>
+    </div>
     <div class="clear-modal-overlay" id="regModal">
         <div class="clear-modal" style="max-width:420px;width:94%;text-align:center;">
             <div class="clear-modal-title" id="regModalTit"></div>
@@ -7353,6 +7398,13 @@
                     if (diff.added.length) html += '<div class="grand"><span>AGREGAR:</span><span>' + unitsOf(diff.added) + ' uds</span></div>';
                     if (diff.removed.length) html += '<div class="grand" style="margin-top:2px"><span>SACAR:</span><span>' + unitsOf(diff.removed) + ' uds</span></div>';
                     html += '<div class="center" style="font-size:13px;margin-top:6px">Total del pedido ahora: ' + unitsOf(state.cart) + ' uds</div>';
+                } else if (ctx.mode === 'aviso') {   // ✅ Listo: el pedido entero normal, solo avisa que reemplaza al anterior
+                    html += '<div class="banner">⚠ PEDIDO MODIFICADO</div>';
+                    if (cuando) html += '<div class="center" style="font-size:11px">(reemplaza al ticket del ' + cuando + ')</div>';
+                    const r = renderArticles(state.cart);
+                    html += r.html;
+                    html += '<div class="line-thick"></div>';
+                    html += '<div class="grand"><span>TOTAL:</span><span>' + r.total + ' uds</span></div>';
                 } else {
                     html += '<div class="banner">⚠ PEDIDO MODIFICADO</div>';
                     html += '<div class="center" style="font-size:11px">★ = cambió' + (cuando ? ' desde la impresión del ' + cuando : '') + '</div>';
@@ -7926,7 +7978,7 @@
             catch (e) { toast('⚠️ ' + e.message, 'error'); return; }
             const vs = (p.versiones && p.versiones.length) ? p.versiones
                      : (p.printedCart && p.printedAt ? [{ at: p.printedAt, nombre: p.nombre, modo: 'full', cart: p.printedCart }] : []);
-            const MODO = { full: 'Completo', fullmod: 'Completo (modificado)', diff: 'Solo los cambios' };
+            const MODO = { full: 'Completo', fullmod: 'Completo (modificado)', aviso: 'Completo (modificado)', diff: 'Solo los cambios' };
             const DONDE = { deposito: '📦 Depósito', oficina: '🏢 Oficina', aqui: '📱 En el celular' };
             const u = c => (c || []).reduce((a, x) => a + (Number(x.qty) || 0), 0);
             $('versTitle').textContent = '🕓 Pedido #' + num;
@@ -8992,7 +9044,7 @@
             $('regModal').classList.add('show');
         }
         // Manda a la nube. Devuelve el id del registro (o null).
-        async function _regEnviar(num, delta) {
+        async function _regEnviar(num, delta, revierte) {
             if (!claveStock()) {
                 await pedirClaveStock(false);
                 if (!claveStock()) { toast('Sin clave: no se descontó nada', 'warning'); return null; }
@@ -9001,7 +9053,8 @@
             try {
                 const r = await fetch(PRINT_URL + '/pedido/registrar', { method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Key': PRINT_KEY, 'X-Clave-Stock': claveStock() },
-                    body: JSON.stringify({ num, items: delta, motivo: ('Pedido #' + num + (nombre ? ' ' + nombre : '')).slice(0, 80) }) });
+                    body: JSON.stringify({ num, items: delta, revierte: revierte || null,
+                        motivo: ((revierte ? 'Revierte pedido #' : 'Pedido #') + num + (nombre && !revierte ? ' ' + nombre : '')).slice(0, 80) }) });
                 const d = await r.json().catch(() => ({}));
                 if (!r.ok) { toast('⚠️ No se registró: ' + (d.error || 'HTTP ' + r.status), 'error'); return null; }
                 return d.id;
@@ -9061,6 +9114,114 @@
             await _regSeguir(num, id, conModal);
         }
 
+        // ─── 🕘 MOVIMIENTOS EN ECOM (Ajustes): todos los registros por hora, revertir de a uno o varios ───
+        let _movRegs = [], _movSel = null, _movLP = null, _movLPfired = false, _movSeguro = 0;
+        function abrirMovimientos() { $('movModal').classList.add('show'); cargarMovimientos(); }
+        function cerrarMovimientos() { $('movModal').classList.remove('show'); movSalirSel(); }
+        async function cargarMovimientos() {
+            $('movList').innerHTML = '<div class="ctrl-vacio">⏳ Cargando…</div>';
+            try { _movRegs = (await _pedApi('/registros?limit=250', undefined, 12000)).registros || []; }
+            catch (e) { $('movList').innerHTML = '<div class="ctrl-vacio">⚠️ ' + _escHtml(e.message) + '</div>'; return; }
+            _movPintar();
+        }
+        function _movSePuede(r, i) { return i.ok && !i.revertido && r.estado !== 'clave'; }
+        function _movPintar() {
+            if (!_movRegs.length) { $('movList').innerHTML = '<div class="ctrl-vacio">Todavía no hay movimientos registrados desde la nube.</div>'; return; }
+            const hoy = new Date().toDateString(), ayer = new Date(Date.now() - 864e5).toDateString();
+            let dia = '', h = '';
+            _movRegs.forEach((r, ri) => {
+                const d = new Date(r.at), ds = d.toDateString();
+                if (ds !== dia) { dia = ds; h += '<div class="mov-dia">' + (ds === hoy ? 'Hoy' : ds === ayer ? 'Ayer' : d.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: '2-digit' })) + '</div>'; }
+                const ok = r.res.filter(i => i.ok), u = ok.reduce((a, i) => a + i.q, 0);
+                const est = r.estado === 'ok' ? '✅' : r.estado === 'clave' ? '🔑 clave mal, no se hizo' : r.estado === 'parcial' ? '⚠️ parcial' : '❌ error';
+                const titulo = (r.revierte ? '↩ Revierte ' : '') + '#' + r.num + (r.nombre ? ' ' + r.nombre : '');
+                h += '<div class="mov-card"><div class="mov-ch" data-r="' + ri + '" onpointerdown="movDown(this)" onpointerup="movUp()" onpointerleave="movUp()" onpointercancel="movUp()" oncontextmenu="return false" onclick="movTapReg(' + ri + ')">' +
+                    '<span class="mh-h">' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + '</span>' +
+                    '<span class="mh-n">' + _escHtml(titulo) + '</span><span class="mh-e">' + (r.estado === 'ok' ? (u < 0 ? '+' + (-u) : '−' + u) + ' ' : '') + est + '</span></div>';
+                r.res.forEach((i, ii) => {
+                    const puede = _movSePuede(r, i), on = _movSel && _movSel.has(ri + ':' + ii);
+                    const q = i.q > 0 ? '−' + i.q : '+' + (-i.q);
+                    h += '<div class="mov-it' + (puede ? '' : ' off') + (on ? ' on' : '') + '" data-k="' + ri + ':' + ii + '" onpointerdown="movDown(this)" onpointerup="movUp()" onpointerleave="movUp()" onpointercancel="movUp()" oncontextmenu="return false" onclick="movTapIt(this.dataset.k)">' +
+                        '<span class="mi-ck">✓</span><span class="mi-d">' + _escHtml(i.d || ('SKU ' + i.sku)) +
+                        (i.revertido ? '<span class="mov-tag">revertido</span>' : '') + (!i.ok ? '<span class="mov-tag" style="color:var(--danger)">no se hizo</span>' : '') + '</span>' +
+                        '<span class="mi-q" style="color:' + (i.q > 0 ? '#fbbf24' : '#60a5fa') + '">' + q + '</span>' +
+                        (i.ok && i.antes !== undefined ? '<span class="mi-s">' + i.antes + '→' + i.despues + '</span>' : '') + '</div>';
+                });
+                h += '</div>';
+            });
+            const sc = $('movList').scrollTop;
+            $('movList').innerHTML = h;
+            $('movList').scrollTop = sc;
+            _movBar();
+        }
+        function _movBar() {
+            $('movModal').querySelector('.mov-modal').classList.toggle('mov-sel', !!_movSel);
+            if (!_movSel) return;
+            const n = _movSel.size;
+            $('movSelTxt').textContent = n + ' elegido' + (n === 1 ? '' : 's');
+            _movSeguro = 0; $('movRevBtn').classList.remove('seguro');
+            $('movRevBtn').textContent = '↩ Revertir' + (n ? ' ' + n : '');
+            $('movRevBtn').disabled = !n; $('movRevBtn').style.opacity = n ? '' : '0.5';
+        }
+        // mantener apretado: entra a elegir (renglón = ese; hora = todo el registro)
+        function movDown(el) {
+            clearTimeout(_movLP); _movLPfired = false;
+            _movLP = setTimeout(() => {
+                _movLPfired = true;
+                try { navigator.vibrate && navigator.vibrate(40); } catch (e) {}
+                if (!_movSel) _movSel = new Set();
+                if (el.dataset.k) _movToggle(el.dataset.k);
+                else _movToggleReg(+el.dataset.r);
+                _movPintar();
+            }, 450);
+        }
+        function movUp() { clearTimeout(_movLP); }
+        function _movToggle(k) {
+            const [ri, ii] = k.split(':').map(Number), r = _movRegs[ri], i = r && r.res[ii];
+            if (!i || !_movSePuede(r, i)) { toast(i && i.revertido ? 'Ese ya se revirtió' : 'Ese no se puede revertir (no se hizo)', 'warning'); return; }
+            if (_movSel.has(k)) _movSel.delete(k); else _movSel.add(k);
+        }
+        function _movToggleReg(ri) {
+            const r = _movRegs[ri]; if (!r) return;
+            const ks = r.res.map((i, ii) => _movSePuede(r, i) ? ri + ':' + ii : null).filter(Boolean);
+            if (!ks.length) { toast('Ese registro no tiene nada para revertir', 'warning'); return; }
+            const todos = ks.every(k => _movSel.has(k));
+            ks.forEach(k => todos ? _movSel.delete(k) : _movSel.add(k));
+        }
+        function movTapIt(k) {
+            if (_movLPfired) { _movLPfired = false; return; }
+            if (!_movSel) return;   // fuera del modo elegir, tocar no hace nada (no se revierte sin querer)
+            _movToggle(k); _movPintar();
+        }
+        function movTapReg(ri) {
+            if (_movLPfired) { _movLPfired = false; return; }
+            if (!_movSel) return;
+            _movToggleReg(ri); _movPintar();
+        }
+        function movSalirSel() { _movSel = null; _movSeguro = 0; if ($('movModal').classList.contains('show')) _movPintar(); else _movBar(); }
+        async function movRevertir() {
+            if (!_movSel || !_movSel.size) return;
+            if (Date.now() - _movSeguro > 4000) {   // primer toque: pide confirmar
+                _movSeguro = Date.now();
+                $('movRevBtn').classList.add('seguro');
+                $('movRevBtn').textContent = '¿Seguro? Tocá de nuevo';
+                return;
+            }
+            const grupos = new Map();   // por registro (cada uno es de un pedido)
+            [..._movSel].forEach(k => { const [ri, ii] = k.split(':').map(Number); if (!grupos.has(ri)) grupos.set(ri, []); grupos.get(ri).push(_movRegs[ri].res[ii]); });
+            $('movRevBtn').disabled = true; $('movRevBtn').textContent = 'Mandando…';
+            let ok = 0, mal = 0;
+            for (const [ri, items] of grupos) {
+                const r = _movRegs[ri];
+                const id = await _regEnviar(r.num, items.map(i => ({ sku: i.sku, q: -i.q, d: i.d })), { id: r.id, skus: items.map(i => i.sku) });
+                if (id) { ok += items.length; _regSeguir(r.num, id, false); } else mal += items.length;
+            }
+            _movSel = null;
+            toast(ok ? '↩ Revirtiendo ' + ok + ' en Ecom (lo hace la nube)' + (mal ? ' · ⚠️ ' + mal + ' no se mandaron' : '') : '⚠️ No se pudo revertir', ok ? 'success' : 'error');
+            setTimeout(() => { if ($('movModal').classList.contains('show')) cargarMovimientos(); }, 3500);
+            _movPintar();
+        }
+
         // ✅ LISTO: ticket al depósito + registrar en Ecom + WhatsApp, de una.
         // El ticket y el registro los termina la nube (se puede cerrar la app).
         function pedidoListo() {
@@ -9081,12 +9242,12 @@
                 const dec = await _regDecidir(num);
                 if (!dec) return;   // cancelado
                 const hecho = [];
-                // 1) Ticket al depósito (si ya se imprimió igual, no se repite; si cambió, el pedido ENTERO marcado MODIFICADO)
+                // 1) Ticket al depósito (si ya se imprimió igual, no se repite; si cambió, el pedido entero normal con aviso arriba)
                 const slot = _activeSlot();
                 let mode = 'full', imprimir = true;
                 if (slot && slot.printedCart) {
                     const d = _cartDiff(slot.printedCart, state.cart);
-                    if (!d.added.length && !d.removed.length) imprimir = false; else mode = 'fullmod';
+                    if (!d.added.length && !d.removed.length) imprimir = false; else mode = 'aviso';
                 }
                 const tareas = [];
                 if (imprimir) {
@@ -9098,7 +9259,7 @@
                     const html = downloadTicketPreparados('html');
                     const title = '#' + num + ' ' + ($('clientName').value.trim() || 'Pedido');
                     tareas.push(_printApi('/job', { html, title, target: 'deposito' })
-                        .then(r => hecho.push(r.agentOnline ? '🖨️ ticket al depósito' + (mode === 'fullmod' ? ' (completo, MODIFICADO)' : '') : '🕓 ticket en cola (la PC está apagada)'))
+                        .then(r => hecho.push(r.agentOnline ? '🖨️ ticket al depósito' + (mode === 'aviso' ? ' (completo, modificado)' : '') : '🕓 ticket en cola (la PC está apagada)'))
                         .catch(e => toast('⚠️ El ticket no salió: ' + e.message, 'error')));
                 } else hecho.push('🖨️ el ticket ya estaba impreso');
                 // 2) Registrar en Ecom

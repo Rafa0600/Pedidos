@@ -790,6 +790,7 @@
         .ab-reg  { --ab-bg: rgba(251,191,36,0.10);  --ab-bd: rgba(251,191,36,0.38);  --ab-fg: #fde68a; }
         .ab-del  { --ab-bg: transparent;            --ab-bd: rgba(248,113,113,0.40); --ab-fg: #fca5a5; }
         .ab-ok   { --ab-bg: rgba(34,197,94,0.16);   --ab-bd: rgba(34,197,94,0.55);   --ab-fg: #86efac; }
+        #pinModal { z-index: 650; }
         .clear-modal.mov-modal { max-width: 480px; width: 96%; height: 88dvh; display: flex; flex-direction: column; text-align: left; padding: 14px 12px; }
         .mov-head { display: flex; align-items: center; gap: 6px; }
         .mov-head .clear-modal-title { flex: 1; text-align: left; }
@@ -8949,7 +8950,11 @@
         let _pinNext = null;
         function pedirPinVenta(next) {
             if (!state.cart.length) { toast('El carrito está vacío', 'warning'); return; }
+            _pedirPin(next);
+        }
+        function _pedirPin(next, titulo) {
             _pinNext = typeof next === 'function' ? next : null;
+            $('pinModal').querySelector('.clear-modal-title').textContent = titulo || '🔒 Registrar Venta';
             $('pinInput').value = ''; $('pinError').textContent = '';
             $('pinModal').classList.add('show');
             setTimeout(() => $('pinInput').focus(), 150);
@@ -9124,7 +9129,7 @@
             catch (e) { $('movList').innerHTML = '<div class="ctrl-vacio">⚠️ ' + _escHtml(e.message) + '</div>'; return; }
             _movPintar();
         }
-        function _movSePuede(r, i) { return i.ok && !i.revertido && r.estado !== 'clave'; }
+        function _movSePuede(r, i) { return i.ok && !i.revertido && !r.revierte && r.estado !== 'clave'; }
         function _movPintar() {
             if (!_movRegs.length) { $('movList').innerHTML = '<div class="ctrl-vacio">Todavía no hay movimientos registrados desde la nube.</div>'; return; }
             const hoy = new Date().toDateString(), ayer = new Date(Date.now() - 864e5).toDateString();
@@ -9159,7 +9164,6 @@
             if (!_movSel) return;
             const n = _movSel.size;
             $('movSelTxt').textContent = n + ' elegido' + (n === 1 ? '' : 's');
-            _movSeguro = 0; $('movRevBtn').classList.remove('seguro');
             $('movRevBtn').textContent = '↩ Revertir' + (n ? ' ' + n : '');
             $('movRevBtn').disabled = !n; $('movRevBtn').style.opacity = n ? '' : '0.5';
         }
@@ -9178,7 +9182,7 @@
         function movUp() { clearTimeout(_movLP); }
         function _movToggle(k) {
             const [ri, ii] = k.split(':').map(Number), r = _movRegs[ri], i = r && r.res[ii];
-            if (!i || !_movSePuede(r, i)) { toast(i && i.revertido ? 'Ese ya se revirtió' : 'Ese no se puede revertir (no se hizo)', 'warning'); return; }
+            if (!i || !_movSePuede(r, i)) { toast(i && i.revertido ? 'Ese ya se revirtió: no se puede revertir de nuevo' : r && r.revierte ? 'Eso ya es una reversión: no se revierte' : 'Ese no se puede revertir (no se hizo)', 'warning'); return; }
             if (_movSel.has(k)) _movSel.delete(k); else _movSel.add(k);
         }
         function _movToggleReg(ri) {
@@ -9199,26 +9203,38 @@
             _movToggleReg(ri); _movPintar();
         }
         function movSalirSel() { _movSel = null; _movSeguro = 0; if ($('movModal').classList.contains('show')) _movPintar(); else _movBar(); }
-        async function movRevertir() {
+        function movRevertir() {
             if (!_movSel || !_movSel.size) return;
-            if (Date.now() - _movSeguro > 4000) {   // primer toque: pide confirmar
-                _movSeguro = Date.now();
-                $('movRevBtn').classList.add('seguro');
-                $('movRevBtn').textContent = '¿Seguro? Tocá de nuevo';
-                return;
-            }
-            const grupos = new Map();   // por registro (cada uno es de un pedido)
-            [..._movSel].forEach(k => { const [ri, ii] = k.split(':').map(Number); if (!grupos.has(ri)) grupos.set(ri, []); grupos.get(ri).push(_movRegs[ri].res[ii]); });
+            _pedirPin(_movRevertirYa, '🔒 Revertir en Ecom');
+        }
+        async function _movRevertirYa() {
+            if (!_movSel || !_movSel.size) return;
+            // Por pedido: todo junto en una sola mandada (si se mandaba de a un registro, la nube
+            // frenaba el 2º porque el pedido "ya se estaba registrando"). Mismo SKU → se suma.
+            const porNum = new Map();
+            [..._movSel].forEach(k => {
+                const [ri, ii] = k.split(':').map(Number), r = _movRegs[ri], it = r && r.res[ii];
+                if (!it || !_movSePuede(r, it)) return;
+                if (!porNum.has(r.num)) porNum.set(r.num, { items: new Map(), revs: new Map(), marcas: [] });
+                const g = porNum.get(r.num);
+                const e = g.items.get(it.sku);
+                if (e) e.q += -it.q; else g.items.set(it.sku, { sku: it.sku, q: -it.q, d: it.d });
+                if (!g.revs.has(r.id)) g.revs.set(r.id, []);
+                g.revs.get(r.id).push(it.sku);
+                g.marcas.push(it);
+            });
             $('movRevBtn').disabled = true; $('movRevBtn').textContent = 'Mandando…';
             let ok = 0, mal = 0;
-            for (const [ri, items] of grupos) {
-                const r = _movRegs[ri];
-                const id = await _regEnviar(r.num, items.map(i => ({ sku: i.sku, q: -i.q, d: i.d })), { id: r.id, skus: items.map(i => i.sku) });
-                if (id) { ok += items.length; _regSeguir(r.num, id, false); } else mal += items.length;
+            for (const [num, g] of porNum) {
+                const items = [...g.items.values()].filter(x => x.q);
+                const id = items.length ? await _regEnviar(num, items, [...g.revs].map(([id, skus]) => ({ id, skus }))) : null;
+                if (id) { ok += g.marcas.length; g.marcas.forEach(it => { it.revertido = Date.now(); }); _regSeguir(num, id, false); }
+                else mal += g.marcas.length;
             }
             _movSel = null;
-            toast(ok ? '↩ Revirtiendo ' + ok + ' en Ecom (lo hace la nube)' + (mal ? ' · ⚠️ ' + mal + ' no se mandaron' : '') : '⚠️ No se pudo revertir', ok ? 'success' : 'error');
-            setTimeout(() => { if ($('movModal').classList.contains('show')) cargarMovimientos(); }, 3500);
+            if (ok && !mal) toast('↩ Revirtiendo ' + ok + ' en Ecom (lo hace la nube)', 'success');
+            else if (ok) toast('↩ Revirtiendo ' + ok + ' · ⚠️ ' + mal + ' NO se mandaron (mirá el aviso)', 'warning');
+            setTimeout(() => { if ($('movModal').classList.contains('show')) cargarMovimientos(); }, 4000);
             _movPintar();
         }
 
